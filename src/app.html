@@ -139,7 +139,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     <div class="step">
       <h2>3 · POSTER</h2>
       <label class="f">Format</label>
-      <select id="format"><option value="portrait">A3 hoch (1123 × 1587)</option><option value="landscape">A3 quer (1587 × 1123)</option></select>
+      <select id="format"><option value="portrait">Hochformat</option><option value="landscape">Querformat</option></select>
+      <label class="f">Papiergröße (Export, 300 dpi)</label>
+      <select id="paper"><option value="A4">A4 · 210 × 297 mm</option><option value="A3" selected>A3 · 297 × 420 mm</option><option value="A2">A2 · 420 × 594 mm</option></select>
       <label class="f">Kartenstil</label>
       <select id="style">
         <option value="https://tiles.openfreemap.org/styles/dark">Dunkel (OpenFreeMap)</option>
@@ -151,8 +153,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
     <div class="step">
       <h2>4 · EXPORT</h2>
-      <button class="btn primary" id="expng">PNG (300 dpi) <small>A3</small></button>
-      <button class="btn" id="expdf">PDF <small>A3, 300 dpi</small></button>
+      <button class="btn primary" id="expng">PNG <small>300 dpi</small></button>
+      <button class="btn" id="expdf">PDF <small>300 dpi</small></button>
       <button class="btn" id="save">Layout speichern <small>im Browser</small></button>
       <button class="btn" id="exjson">Layout als JSON <small>Sicherung</small></button>
       <label class="btn" id="ldjson">Layout aus JSON laden <small>Tour + Layout</small><input type="file" accept=".json,application/json" style="display:none"></label>
@@ -188,8 +190,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const $ = s => document.querySelector(s);
   const stage = $('#stage'), tilesEl = $('#tiles'), pinsEl = $('#pins'), statusEl = $('#status');
   let CW = 1123, CH = 1587;
-  const S = 3508 / 1123;                       // Druckfaktor
-  const state = { format: 'portrait', stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const PAPER = { A4: [2480, 3508, 210, 297], A3: [3508, 4961, 297, 420], A2: [4961, 7016, 420, 594] };   // px bei 300 dpi, mm
+  let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
+  const state = { format: 'portrait', paper: 'A3', stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  $('#paper').addEventListener('change', e => { state.paper = e.target.value; });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
   let cropMode = null;
@@ -677,12 +681,13 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const P = v => v * S;
   async function renderPrint() {
     await fontsReady();
+    const pp = PAPER[state.paper] || PAPER.A3; S = pp[0] / 1123;
     const W = Math.round(CW * S), H = Math.round(CH * S);
     const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
     g.fillStyle = '#0d1a26'; g.fillRect(0, 0, W, H);
     // Karte in hoher Auflösung rendern
     if (map) {
-      const ratio = Math.min(S, 3); const old = map.getPixelRatio ? map.getPixelRatio() : window.devicePixelRatio;
+      const ratio = Math.min(S, 4); const old = map.getPixelRatio ? map.getPixelRatio() : window.devicePixelRatio;
       say('Karte wird in Druckauflösung gerendert …');
       try { map.setPixelRatio(ratio); await new Promise(r => { map.once('idle', r); map.triggerRepaint(); setTimeout(r, 4000); }); g.drawImage(map.getCanvas(), 0, 0, W, H); }
       finally { map.setPixelRatio(old); }
@@ -729,8 +734,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function loadImg(src, big) { return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
   function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
   const fname = () => (state.title || 'Tourposter').replace(/\s+/g, '_').replace(/[^\wäöüÄÖÜß_-]/g, '');
-  $('#expng').addEventListener('click', async () => { try { say('Rendert …'); const c = await renderPrint(); c.toBlob(b => { download(b, fname() + '_A3.png'); say('PNG gespeichert.', 'ok'); }, 'image/png'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
-  $('#expdf').addEventListener('click', async () => { try { say('Rendert …'); const c = await renderPrint(); const land = state.format === 'landscape'; const pdf = new jsPDF({ orientation: land ? 'landscape' : 'portrait', unit: 'mm', format: 'a3', compress: true }); pdf.addImage(c.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, land ? 420 : 297, land ? 297 : 420); pdf.save(fname() + '_A3.pdf'); say('PDF gespeichert.', 'ok'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
+  $('#expng').addEventListener('click', async () => { try { say('Rendert …'); const c = await renderPrint(); c.toBlob(b => { download(b, fname() + '_' + state.paper + '.png'); say('PNG gespeichert.', 'ok'); }, 'image/png'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
+  $('#expdf').addEventListener('click', async () => { try { say('Rendert …'); const c = await renderPrint(); const land = state.format === 'landscape'; const pp = PAPER[state.paper] || PAPER.A3; const pdf = new jsPDF({ orientation: land ? 'landscape' : 'portrait', unit: 'mm', format: state.paper.toLowerCase(), compress: true }); pdf.addImage(c.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, land ? pp[3] : pp[2], land ? pp[2] : pp[3]); pdf.save(fname() + '_' + state.paper + '.pdf'); say('PDF gespeichert.', 'ok'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
 
   // ------------------------------------------------------------ Speichern (nur im Browser) / JSON
   const KEY = 'tourposter-proto';
@@ -738,7 +743,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   $('#save').addEventListener('click', () => { try { localStorage.setItem(KEY, JSON.stringify(serial())); say('Layout im Browser gespeichert (Fotos nur als Vorschau – Originale beim nächsten Mal wieder hinzufügen).', 'ok'); } catch (e) { say('Speichern fehlgeschlagen: ' + e.message, 'err'); } });
   $('#exjson').addEventListener('click', () => download(new Blob([JSON.stringify(serial(), null, 1)], { type: 'application/json' }), fname() + '.json'));
   function restore(obj) {
-    Object.assign(state, obj); $('#format').value = state.format || 'portrait'; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); $('#format').value = state.format || 'portrait'; $('#paper').value = state.paper || 'A3'; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
     render();
   }

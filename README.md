@@ -2,7 +2,7 @@
 
 Radtour-Poster (A3, 300 dpi) aus FIT/GPX/TCX-Dateien und Fotos – **komplett im Browser**. Es gibt keinen Server: Tourdaten und Fotos verlassen den Rechner nicht. Einzige Netzwerkzugriffe sind die Kartenkacheln (OpenFreeMap, sieht nur die Region) und die Schrift Montserrat (Google Fonts).
 
-**Live:** `https://fkaule.github.io/tourposter/` (GitHub Pages, siehe unten) – oder `index.html` herunterladen und doppelklicken.
+**Live:** `https://<user>.github.io/tourposter/` (GitHub Pages, siehe unten) – oder `index.html` herunterladen und doppelklicken.
 
 ## Funktionen
 
@@ -10,7 +10,7 @@ Radtour-Poster (A3, 300 dpi) aus FIT/GPX/TCX-Dateien und Fotos – **komplett im
 - Karte: MapLibre GL mit dunklen Vektorkacheln, Route, Marker für Start/Ziel/Übernachtungen; verschieben/zoomen, „auf Route einpassen“.
 - Ortsnamen für Start, Ziel und Übernachtungen automatisch aus den Kartendaten (Detail-Kachel Zoom 12; Städte bevorzugt); ziehen = verschieben, Doppelklick = Text ändern.
 - Fotos hineinziehen: Ort (genauer Ort aus den Kartendaten) und Datum aus EXIF, Nummern-Pins auf der Route. Ziehen mit Einrasten an Kanten/gleichen Abständen, vier Ecken zum Skalieren (Shift = Seitenverhältnis), Mehrfachauswahl + Ausrichten, Bildausschnitt mit Zoom/Verschieben (Doppelklick, Mausrad, Slider).
-- Titel, Untertitel, Kennzahlen direkt im Poster tippen. Hoch- und Querformat.
+- Titel, Untertitel, Kennzahlen direkt im Poster tippen. Hoch- und Querformat, Papiergröße A4 / A3 / A2 (300 dpi).
 - Höhenprofil mit Etappengrenzen.
 - Export PNG und PDF (A3, 300 dpi). Layout im Browser speichern oder als JSON sichern/laden (Fotos danach wieder hinzufügen, Zuordnung per Dateiname).
 
