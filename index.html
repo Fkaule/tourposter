@@ -356,12 +356,13 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
   // ------------------------------------------------------------ Ortsnamen (Start / Ziel / Übernachtungen)
   function buildPlaces() {
-    const old = new Map(state.places.map(p => [p.key, p])); const out = [];
+    // Vorhandene Namen anhand der Koordinate übernehmen (nicht anhand der Rolle – nach dem Löschen einer Etappe wird aus einer Übernachtung das Ziel)
+    const ck = p => p.lat.toFixed(4) + ',' + p.lon.toFixed(4); const old = new Map(state.places.map(p => [ck(p), p])); const out = [];
     state.stages.forEach((s, i) => {
       if (i === 0) out.push({ key: 'start', kind: 'start', lat: s.points[0][0], lon: s.points[0][1] });
       const e = s.points.at(-1); out.push(i < state.stages.length - 1 ? { key: 'night' + i, kind: 'night', lat: e[0], lon: e[1] } : { key: 'end', kind: 'end', lat: e[0], lon: e[1] });
     });
-    state.places = out.map(p => Object.assign({ text: '', dx: 12, dy: -16, edited: false }, old.get(p.key) || {}, p));
+    state.places = out.map(p => { const o = old.get(ck(p)); return Object.assign({ text: '', dx: 12, dy: -16, edited: false }, o ? { text: o.text, dx: o.dx, dy: o.dy, edited: o.edited, detailTried: o.detailTried } : {}, p); });
   }
   function nearestPlace(lat, lon, mode = 'near') {
     if (!map || !map.isStyleLoaded()) return null;
