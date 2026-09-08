@@ -42,28 +42,29 @@ select, input.t { width:100%; box-sizing:border-box; background:var(--panel2); c
 .hint { font-size:11px; color:#5f7288; margin-top:6px; }
 main { position:relative; overflow:hidden; display:grid; place-items:center; background:#08111a; }
 #frame { position:relative; }
-#stage { position:absolute; left:0; top:0; width:1123px; height:1587px; transform-origin:top left; background:#0d1a26; box-shadow:0 30px 80px rgba(0,0,0,.6); user-select:none; overflow:hidden; }
+#stage { --pa:#ff5a36; --pbg:#0d1a26; --pvig:13,26,38; --ptext:#ffffff; --pcap:#e6edf3; --psub:#b7c5d3; --pmuted:#8fa3b8; --pband:rgba(6,12,18,.8); --pline:#283440; --phalo:#0d1a26; --ppill:rgba(13,26,38,.85);
+  position:absolute; left:0; top:0; width:1123px; height:1587px; transform-origin:top left; background:var(--pbg); box-shadow:0 30px 80px rgba(0,0,0,.6); user-select:none; overflow:hidden; }
 #map { position:absolute; inset:0; }
 #map.locked { pointer-events:none; }
 #stage.mapmode #overlay { pointer-events:none; }
 #overlay { position:absolute; inset:0; }
-#vig { position:absolute; left:0; top:0; width:100%; height:420px; background:linear-gradient(rgba(13,26,38,.88), rgba(13,26,38,0)); pointer-events:none; }
+#vig { position:absolute; left:0; top:0; width:100%; height:420px; background:linear-gradient(rgba(var(--pvig),.88), rgba(var(--pvig),0)); pointer-events:none; }
 #title { position:absolute; left:56px; top:52px; }
-#title .date { color:var(--accent); font-weight:700; font-size:12px; letter-spacing:.32em; display:flex; align-items:center; gap:12px; }
-#title .date::before { content:""; width:28px; height:2px; background:var(--accent); display:inline-block; }
-#title .h { font-weight:900; font-size:80px; line-height:.92; letter-spacing:-.02em; color:#fff; margin-top:14px; white-space:pre-line; }
-#title .sub { color:#b7c5d3; font-size:16px; line-height:1.4; max-width:420px; margin-top:14px; white-space:pre-line; }
+#title .date { color:var(--pa); font-weight:700; font-size:12px; letter-spacing:.32em; display:flex; align-items:center; gap:12px; }
+#title .date::before { content:""; width:28px; height:2px; background:var(--pa); display:inline-block; }
+#title .h { font-weight:900; font-size:80px; line-height:.92; letter-spacing:-.02em; color:var(--ptext); margin-top:14px; white-space:pre-line; }
+#title .sub { color:var(--psub); font-size:16px; line-height:1.4; max-width:420px; margin-top:14px; white-space:pre-line; }
 #stats { position:absolute; left:56px; top:322px; display:flex; gap:28px; }
-#stats div { display:flex; flex-direction:column; gap:4px; padding-right:28px; border-right:1px solid rgba(255,255,255,.15); }
+#stats div { display:flex; flex-direction:column; gap:4px; padding-right:28px; border-right:1px solid var(--pline); }
 #stats div:last-child { border:0; }
-#stats b { font-weight:800; font-size:38px; line-height:1; color:#fff; }
-#stats span { font-size:11px; letter-spacing:.22em; color:var(--muted); }
+#stats b { font-weight:800; font-size:38px; line-height:1; color:var(--ptext); }
+#stats span { font-size:11px; letter-spacing:.22em; color:var(--pmuted); }
 [contenteditable] { outline:none; border-radius:4px; cursor:text; }
 [contenteditable]:hover { box-shadow:0 0 0 1.5px rgba(255,90,54,.6); }
 [contenteditable]:focus { box-shadow:0 0 0 2px var(--accent); }
-#band { position:absolute; left:0; bottom:0; width:100%; height:113px; background:rgba(6,12,18,.8); border-top:1px solid #283440; pointer-events:none; }
+#band { position:absolute; left:0; bottom:0; width:100%; height:113px; background:var(--pband); border-top:1px solid var(--pline); pointer-events:none; }
 #band svg { position:absolute; inset:0; width:100%; height:100%; }
-.place { position:absolute; transform:translate(0,-50%); white-space:nowrap; color:#e6edf3; font:600 17px Montserrat, Arial, sans-serif; text-shadow:0 0 3px #0d1a26,0 0 3px #0d1a26,0 0 2px #0d1a26; cursor:move; padding:2px 4px; margin:-2px -4px; border-radius:4px; touch-action:none; }
+.place { position:absolute; transform:translate(0,-50%); white-space:nowrap; color:var(--pcap); font:600 17px Montserrat, Arial, sans-serif; text-shadow:0 0 3px var(--phalo),0 0 3px var(--phalo),0 0 2px var(--phalo); cursor:move; padding:2px 4px; margin:-2px -4px; border-radius:4px; touch-action:none; }
 .place.night { font-weight:700; }
 .place:hover, .place.sel { outline:1.5px dashed var(--accent); }
 .place[contenteditable="true"] { outline:2px solid var(--accent); cursor:text; }
@@ -75,7 +76,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .tile.crop .clip { outline:2px dashed var(--accent); outline-offset:-2px; cursor:move; }
 .tile.crop::before { content:"Ausschnitt: ziehen = verschieben · Rad = zoomen · Doppelklick = fertig"; position:absolute; left:50%; top:-22px; transform:translateX(-50%); background:var(--accent); color:#fff; font:700 10px/16px Montserrat, Arial, sans-serif; padding:0 6px; border-radius:8px; white-space:nowrap; z-index:2; }
 .tile .z { position:absolute; right:10px; top:12px; height:22px; padding:0 7px; border-radius:11px; background:rgba(13,26,38,.85); color:#fff; font:600 11px/22px Montserrat, Arial, sans-serif; }
-.tile .n { position:absolute; left:12px; top:12px; min-width:26px; height:26px; padding:0 8px; box-sizing:border-box; border-radius:13px; background:rgba(13,26,38,.85); color:#fff; font:700 13px/26px Montserrat, Arial, sans-serif; text-align:center; }
+.tile .n { position:absolute; left:12px; top:12px; min-width:26px; height:26px; padding:0 8px; box-sizing:border-box; border-radius:13px; background:var(--ppill); color:#fff; font:700 13px/26px Montserrat, Arial, sans-serif; text-align:center; }
 .tile .c { position:absolute; left:0; right:0; bottom:0; padding:26px 14px 12px; background:linear-gradient(to top, rgba(6,12,18,.85), rgba(6,12,18,0)); color:#e6edf3; font:500 12px/1.2 Montserrat, Arial, sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tile .rs { position:absolute; width:18px; height:18px; background:rgba(255,255,255,.85); border:2px solid #0d1a26; border-radius:4px; opacity:0; transition:opacity .12s; }
 .tile:hover .rs, .tile.sel .rs { opacity:1; }
@@ -107,6 +108,18 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #mapzoom input { width:150px; margin:0; }
 #mapzoom a { color:var(--accent); text-decoration:none; }
 .maplibregl-ctrl-attrib { font-size:9px !important; }
+@media (max-width: 900px) {
+  #app { grid-template-columns:1fr; grid-template-rows:56vh 1fr; }
+  main { order:0; }
+  aside { order:1; border-right:0; border-top:1px solid var(--line); }
+  #hint { display:none; }
+  #maptools { right:8px; top:8px; gap:6px; padding:4px; }
+  #mapbtn { padding:6px 8px; font-size:11px; }
+  #mapzoom input { width:80px; }
+  #mapzoom a { display:none; }
+  main { padding-top:48px; box-sizing:border-box; }
+  .step { padding:10px 14px; }
+}
 </style>
 </head>
 <body>
@@ -142,11 +155,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <select id="format"><option value="portrait">Hochformat</option><option value="landscape">Querformat</option></select>
       <label class="f">Papiergröße (Export, 300 dpi)</label>
       <select id="paper"><option value="A4">A4 · 210 × 297 mm</option><option value="A3" selected>A3 · 297 × 420 mm</option><option value="A2">A2 · 420 × 594 mm</option></select>
-      <label class="f">Kartenstil</label>
-      <select id="style">
-        <option value="https://tiles.openfreemap.org/styles/dark">Dunkel (OpenFreeMap)</option>
-        <option value="https://tiles.openfreemap.org/styles/positron">Hell (OpenFreeMap)</option>
-        <option value="https://tiles.openfreemap.org/styles/liberty">Liberty (OpenFreeMap)</option>
+      <label class="f">Stil</label>
+      <select id="theme">
+        <option value="nacht">Nacht – dunkle Karte, Koralle</option>
+        <option value="fjord">Fjord – blaue Karte, Bernstein</option>
+        <option value="hell">Hell – helle Karte, Rot</option>
+        <option value="retro">Retro – bunte Karte, Ziegel</option>
       </select>
       <div class="hint">Titel, Untertitel und Kennzahlen direkt im Poster anklicken und tippen.</div>
     </div>
@@ -199,20 +213,36 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   let cropMode = null;
   const say = (m, cls) => { statusEl.textContent = m; statusEl.className = cls || ''; };
 
+  // ------------------------------------------------------------ Stile
+  const THEMES = {
+    nacht: { map: 'https://tiles.openfreemap.org/styles/dark', accent: '#ff5a36', bg: '#0d1a26', vig: '13,26,38', text: '#ffffff', cap: '#e6edf3', sub: '#b7c5d3', muted: '#8fa3b8', band: 'rgba(6,12,18,.8)', line: '#283440', halo: '#0d1a26', pill: 'rgba(13,26,38,.85)', grid: '#283440', axis: '#788c9e', pinBg: '#ffffff', pinFg: '#0d1a26' },
+    fjord: { map: 'https://tiles.openfreemap.org/styles/fiord', accent: '#ffb347', bg: '#1c2a3a', vig: '28,42,58', text: '#ffffff', cap: '#eef3f8', sub: '#c3cfdb', muted: '#8ea0b4', band: 'rgba(12,22,34,.8)', line: '#33475c', halo: '#1c2a3a', pill: 'rgba(28,42,58,.85)', grid: '#33475c', axis: '#8ea0b4', pinBg: '#ffffff', pinFg: '#1c2a3a' },
+    hell:  { map: 'https://tiles.openfreemap.org/styles/positron', accent: '#d9452f', bg: '#f4f3ef', vig: '244,243,239', text: '#1c2430', cap: '#1c2430', sub: '#4a5563', muted: '#6b7785', band: 'rgba(255,255,255,.85)', line: '#d5d9de', halo: '#f4f3ef', pill: 'rgba(28,36,48,.85)', grid: '#d5d9de', axis: '#6b7785', pinBg: '#1c2430', pinFg: '#ffffff' },
+    retro: { map: 'https://tiles.openfreemap.org/styles/bright', accent: '#b8402c', bg: '#f6efe3', vig: '246,239,227', text: '#2b2118', cap: '#2b2118', sub: '#5a4a3a', muted: '#7d6c5c', band: 'rgba(246,239,227,.88)', line: '#d8ccb8', halo: '#f6efe3', pill: 'rgba(43,33,24,.85)', grid: '#d8ccb8', axis: '#7d6c5c', pinBg: '#2b2118', pinFg: '#ffffff' },
+  };
+  let T = THEMES.nacht;
+  function applyTheme(name) {
+    const prev = T; T = THEMES[name] || THEMES.nacht; state.theme = name; $('#theme').value = name;
+    const st = stage.style; st.setProperty('--pa', T.accent); st.setProperty('--pbg', T.bg); st.setProperty('--pvig', T.vig); st.setProperty('--ptext', T.text); st.setProperty('--pcap', T.cap); st.setProperty('--psub', T.sub); st.setProperty('--pmuted', T.muted); st.setProperty('--pband', T.band); st.setProperty('--pline', T.line); st.setProperty('--phalo', T.halo); st.setProperty('--ppill', T.pill);
+    if (map && prev.map !== T.map) { fallback = false; map.setStyle(T.map); map.once('styledata', () => setTimeout(addRouteLayers, 300)); }
+    else if (map && map.getSource && map.getSource('route')) addRouteLayers();
+    render();
+  }
+  $('#theme').addEventListener('change', e => applyTheme(e.target.value));
+
   // ------------------------------------------------------------ Karte
-  let map = null;
+  let map = null, fallback = false;
   function initMap() {
-    map = new maplibregl.Map({ container: 'map', style: $('#style').value, center: [11.5, 51.5], zoom: 6, attributionControl: true, preserveDrawingBuffer: true, interactive: true, pitchWithRotate: false, dragRotate: false, touchZoomRotate: false });
+    map = new maplibregl.Map({ container: 'map', style: T.map, center: [11.5, 51.5], zoom: 6, attributionControl: true, preserveDrawingBuffer: true, interactive: true, pitchWithRotate: false, dragRotate: false, touchZoomRotate: false });
     map.on('load', () => { addRouteLayers(); if (state.stages.length) fitRoute(); });
     map.on('move', () => { renderPins(); renderPlaces(); const z = map.getZoom(); $('#mapzoomsl').value = z; $('#mzval').textContent = z.toFixed(1); });
     $('#mapzoomsl').addEventListener('input', e => map.setZoom(+e.target.value));
     $('#mapfit').addEventListener('click', e => { e.preventDefault(); fitRoute(); });
     map.on('idle', () => { if (fillPlaceNames()) render(); });
     map.on('sourcedata', e => { if (e.isSourceLoaded && fillPlaceNames()) render(); });
-    let fallback = false;
     map.on('error', e => {
       const msg = e?.error?.message || '';
-      if (!fallback && !map.isStyleLoaded() && /fetch|style|network|load/i.test(msg)) { fallback = true; say('Kartenstil nicht erreichbar (offline?) – Route wird ohne Karte gezeigt.', 'err'); map.setStyle({ version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0d1a26' } }] }); }
+      if (!fallback && !map.isStyleLoaded() && /fetch|style|network|load/i.test(msg)) { fallback = true; say('Kartenstil nicht erreichbar (offline?) – Route wird ohne Karte gezeigt.', 'err'); map.setStyle({ version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': T.bg } }] }); }
       else if (/fetch/i.test(msg)) say('Kartenkacheln nicht erreichbar – Internetverbindung?', 'err');
     });
   }
@@ -226,13 +256,13 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     return { type: 'FeatureCollection', features: f };
   }
   function addRouteLayers() {
-    if (map.getSource('route')) { map.getSource('route').setData(routeGeo()); map.getSource('pts').setData(nightsGeo()); return; }
+    if (map.getSource('route')) { map.getSource('route').setData(routeGeo()); map.getSource('pts').setData(nightsGeo()); map.setPaintProperty('route', 'line-color', T.accent); map.setPaintProperty('route-halo', 'line-color', T.halo); map.setPaintProperty('pts-end', 'circle-color', T.bg); map.setPaintProperty('pts-end', 'circle-stroke-color', T.accent); map.setPaintProperty('pts-night', 'circle-color', T.accent); map.setPaintProperty('pts-night', 'circle-stroke-color', T.halo); return; }
     map.addSource('route', { type: 'geojson', data: routeGeo() });
     map.addSource('pts', { type: 'geojson', data: nightsGeo() });
-    map.addLayer({ id: 'route-halo', type: 'line', source: 'route', paint: { 'line-color': '#0d1a26', 'line-width': 9 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
-    map.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': '#ff5a36', 'line-width': 5 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
-    map.addLayer({ id: 'pts-end', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'end'], paint: { 'circle-radius': 7, 'circle-color': '#0d1a26', 'circle-stroke-color': '#ff5a36', 'circle-stroke-width': 3 } });
-    map.addLayer({ id: 'pts-night', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'night'], paint: { 'circle-radius': 8, 'circle-color': '#ff5a36', 'circle-stroke-color': '#0d1a26', 'circle-stroke-width': 2.5 } });
+    map.addLayer({ id: 'route-halo', type: 'line', source: 'route', paint: { 'line-color': T.halo, 'line-width': 9 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+    map.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': T.accent, 'line-width': 5 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+    map.addLayer({ id: 'pts-end', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'end'], paint: { 'circle-radius': 7, 'circle-color': T.bg, 'circle-stroke-color': T.accent, 'circle-stroke-width': 3 } });
+    map.addLayer({ id: 'pts-night', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'night'], paint: { 'circle-radius': 8, 'circle-color': T.accent, 'circle-stroke-color': T.halo, 'circle-stroke-width': 2.5 } });
     map.addLayer({ id: 'pts-night2', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'night'], paint: { 'circle-radius': 2.5, 'circle-color': '#fff' } });
   }
   function fitRoute() {
@@ -240,11 +270,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const b = new maplibregl.LngLatBounds(); pts.forEach(p => b.extend([p[1], p[0]]));
     map.fitBounds(b, { padding: { top: 430, bottom: 160, left: 80, right: 80 }, duration: 0 });
   }
-  $('#style').addEventListener('change', () => { map.setStyle($('#style').value); map.once('styledata', () => setTimeout(addRouteLayers, 300)); });
   $('#mapbtn').addEventListener('click', () => { const on = $('#map').classList.toggle('locked'); $('#mapbtn').classList.toggle('on', !on); stage.classList.toggle('mapmode', !on); });
 
   // ------------------------------------------------------------ Größe / Format
-  function fit() { const m = $('main'), fr = $('#frame'); const s = Math.min((m.clientWidth - 40) / CW, (m.clientHeight - 80) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
+  function fit() { const m = $('main'), fr = $('#frame'); const s = Math.min((m.clientWidth - 40) / CW, (m.clientHeight - (window.innerWidth <= 900 ? 60 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
   function setFormat(f) { state.format = f; CW = f === 'landscape' ? 1587 : 1123; CH = f === 'landscape' ? 1123 : 1587;
     for (const p of state.photos) { p.w = Math.min(p.w, CW - 60); p.h = Math.min(p.h, CH - 113 - 60); p.x = Math.max(0, Math.min(CW - p.w, p.x)); p.y = Math.max(0, Math.min(CH - 113 - p.h, p.y)); } stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; $('#profile').setAttribute('viewBox', `0 0 ${CW} 113`); fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); }
   window.addEventListener('resize', fit);
@@ -479,7 +508,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     pinsEl.innerHTML = ''; if (!map) return;
     const groups = [];
     for (const p of state.photos.filter(p => p.lat != null)) { const g = groups.find(g => hav([g.lat, g.lon], [p.lat, p.lon]) < 3000); if (g) g.nums.push(p.num); else groups.push({ lat: p.lat, lon: p.lon, nums: [p.num] }); }
-    for (const g of groups) { const pt = map.project([g.lon, g.lat]); const d = document.createElement('div'); d.className = 'pin'; d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.textContent = g.nums.sort((a, b) => a - b).join(' · '); pinsEl.appendChild(d); }
+    for (const g of groups) { const pt = map.project([g.lon, g.lat]); const d = document.createElement('div'); d.className = 'pin'; d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg; d.style.color = T.pinFg; d.textContent = g.nums.sort((a, b) => a - b).join(' · '); pinsEl.appendChild(d); }
   }
   function profileData() {
     const xs = [], ys = [], bounds = []; let off = 0;
@@ -492,16 +521,16 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const maxE = Math.max(...ys); const stepG = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000].find(st => (maxE * 1.15) / st <= 4) || 2000; const ymax = Math.ceil((maxE * 1.15) / stepG) * stepG || 50;
     const X = v => x0 + v / total * (x1 - x0), Y = v => yb - v / ymax * (yb - yt);
     let g = '';
-    for (let h = 0; h <= ymax; h += stepG) g += `<line x1="${x0}" y1="${Y(h)}" x2="${x1}" y2="${Y(h)}" stroke="#283440" stroke-width=".5"/>` + (h ? `<text x="${x0 - 6}" y="${Y(h) + 3}" fill="#788c9e" font-size="8" text-anchor="end" font-family="Montserrat">${nf(h)} m</text>` : '');
+    for (let h = 0; h <= ymax; h += stepG) g += `<line x1="${x0}" y1="${Y(h)}" x2="${x1}" y2="${Y(h)}" stroke="${T.grid}" stroke-width=".5"/>` + (h ? `<text x="${x0 - 6}" y="${Y(h) + 3}" fill="${T.axis}" font-size="8" text-anchor="end" font-family="Montserrat">${nf(h)} m</text>` : '');
     const pts = xs.map((x, i) => `${X(x).toFixed(1)},${Y(ys[i]).toFixed(1)}`).join(' ');
     let b = '';
-    bounds.slice(0, -1).forEach((bd, i) => { const x = X(bd.end); const nm = state.places.find(p => p.key === 'night' + i)?.text || ''; b += `<line x1="${x}" y1="${yt - 6}" x2="${x}" y2="${yb}" stroke="#788c9e" stroke-width=".6"/><circle cx="${x}" cy="${yt - 3}" r="4.2" fill="#ff5a36" stroke="#060c12"/><circle cx="${x}" cy="${yt - 3}" r="1.4" fill="#fff"/><text x="${x}" y="${yt - 10}" fill="#dfe7ee" font-size="10" font-weight="600" text-anchor="middle" font-family="Montserrat">${esc(nm)}</text>`; });
+    bounds.slice(0, -1).forEach((bd, i) => { const x = X(bd.end); const nm = state.places.find(p => p.key === 'night' + i)?.text || ''; b += `<line x1="${x}" y1="${yt - 6}" x2="${x}" y2="${yb}" stroke="${T.axis}" stroke-width=".6"/><circle cx="${x}" cy="${yt - 3}" r="4.2" fill="${T.accent}" stroke="${T.halo}"/><circle cx="${x}" cy="${yt - 3}" r="1.4" fill="${T.pinBg}"/><text x="${x}" y="${yt - 10}" fill="${T.cap}" font-size="10" font-weight="600" text-anchor="middle" font-family="Montserrat">${esc(nm)}</text>`; });
     // Entfernungsmarken: Schrittweite so, dass höchstens ~8 Marken entstehen
     const tkm = total / 1000, stepK = [5, 10, 20, 25, 50, 100, 200, 500].find(st => tkm / st <= 8) || 500;
-    for (let k = stepK; k < tkm - stepK * .35; k += stepK) { const x = X(k * 1000); g += `<line x1="${x}" y1="${yb}" x2="${x}" y2="${yb + 4}" stroke="#788c9e" stroke-width=".6"/><line x1="${x}" y1="${yt}" x2="${x}" y2="${yb}" stroke="#283440" stroke-width=".4" stroke-dasharray="2 3"/><text x="${x}" y="${yb + 12}" fill="#788c9e" font-size="8" text-anchor="middle" font-family="Montserrat">${k} km</text>`; }
-    svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="rgba(255,90,54,.37)"/><polyline points="${pts}" fill="none" stroke="#ff5a36" stroke-width="1.6" stroke-linejoin="round"/>` + b +
-      `<text x="${x0}" y="19" fill="#8fa3b8" font-size="9" font-weight="700" letter-spacing="2.4" font-family="Montserrat">HÖHENPROFIL</text><text x="${x1}" y="19" fill="#8fa3b8" font-size="9" text-anchor="end" font-family="Montserrat">Höchster Punkt ${nf(maxE)} m</text>` +
-      `<text x="${x0}" y="${yb + 12}" fill="#788c9e" font-size="9" font-family="Montserrat">${esc(state.places.find(p => p.key === 'start')?.text || 'Start')}</text><text x="${x1}" y="${yb + 12}" fill="#788c9e" font-size="9" text-anchor="end" font-family="Montserrat">${esc(state.places.find(p => p.key === 'end')?.text || 'Ziel')}</text>`;
+    for (let k = stepK; k < tkm - stepK * .35; k += stepK) { const x = X(k * 1000); g += `<line x1="${x}" y1="${yb}" x2="${x}" y2="${yb + 4}" stroke="${T.axis}" stroke-width=".6"/><line x1="${x}" y1="${yt}" x2="${x}" y2="${yb}" stroke="${T.grid}" stroke-width=".4" stroke-dasharray="2 3"/><text x="${x}" y="${yb + 12}" fill="${T.axis}" font-size="8" text-anchor="middle" font-family="Montserrat">${k} km</text>`; }
+    svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="${T.accent}" fill-opacity=".37"/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="1.6" stroke-linejoin="round"/>` + b +
+      `<text x="${x0}" y="19" fill="${T.muted}" font-size="9" font-weight="700" letter-spacing="2.4" font-family="Montserrat">HÖHENPROFIL</text><text x="${x1}" y="19" fill="${T.muted}" font-size="9" text-anchor="end" font-family="Montserrat">Höchster Punkt ${nf(maxE)} m</text>` +
+      `<text x="${x0}" y="${yb + 12}" fill="${T.axis}" font-size="9" font-family="Montserrat">${esc(state.places.find(p => p.key === 'start')?.text || 'Start')}</text><text x="${x1}" y="${yb + 12}" fill="${T.axis}" font-size="9" text-anchor="end" font-family="Montserrat">${esc(state.places.find(p => p.key === 'end')?.text || 'Ziel')}</text>`;
   }
   const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -684,7 +713,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const pp = PAPER[state.paper] || PAPER.A3; S = pp[0] / 1123;
     const W = Math.round(CW * S), H = Math.round(CH * S);
     const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
-    g.fillStyle = '#0d1a26'; g.fillRect(0, 0, W, H);
+    g.fillStyle = T.bg; g.fillRect(0, 0, W, H);
     // Karte in hoher Auflösung rendern
     if (map) {
       const ratio = Math.min(S, 4); const old = map.getPixelRatio ? map.getPixelRatio() : window.devicePixelRatio;
@@ -693,18 +722,18 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       finally { map.setPixelRatio(old); }
     }
     // Vignette
-    const vg = g.createLinearGradient(0, 0, 0, P(420)); vg.addColorStop(0, 'rgba(13,26,38,.88)'); vg.addColorStop(1, 'rgba(13,26,38,0)'); g.fillStyle = vg; g.fillRect(0, 0, W, P(420));
+    const vg = g.createLinearGradient(0, 0, 0, P(420)); vg.addColorStop(0, `rgba(${T.vig},.88)`); vg.addColorStop(1, `rgba(${T.vig},0)`); g.fillStyle = vg; g.fillRect(0, 0, W, P(420));
     // Titelblock
-    const x0 = P(56); g.fillStyle = '#ff5a36'; g.fillRect(x0, P(57), P(28), P(2));
+    const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(57), P(28), P(2));
     g.font = F(700, 12); g.textBaseline = 'top'; spaced(g, state.date || '', x0 + P(40), P(52), P(3.6));
-    g.fillStyle = '#fff'; g.font = F(900, 80); g.textBaseline = 'alphabetic';
+    g.fillStyle = T.text; g.font = F(900, 80); g.textBaseline = 'alphabetic';
     (state.title || '').split('\n').forEach((l, i) => g.fillText(l, x0 - P(4), P(78 + 80 * .92 * .78 + i * 74)));
-    g.fillStyle = '#b7c5d3'; g.font = F(400, 16); (state.subline || '').split('\n').forEach((l, i) => g.fillText(l, x0, P(246 + 14 + i * 22)));
+    g.fillStyle = T.sub; g.font = F(400, 16); (state.subline || '').split('\n').forEach((l, i) => g.fillText(l, x0, P(246 + 14 + i * 22)));
     let x = x0;
     for (const [n, l] of state.stats || []) {
-      g.fillStyle = '#fff'; g.font = F(800, 38); g.fillText(n, x, P(322 + 34)); const wn = g.measureText(n).width;
-      g.fillStyle = '#8fa3b8'; g.font = F(500, 11); g.textBaseline = 'top'; const lx = spaced(g, l, x, P(366), P(2.4)); g.textBaseline = 'alphabetic';
-      x += Math.max(wn, lx - x) + P(28); g.fillStyle = 'rgba(255,255,255,.15)'; g.fillRect(x, P(326), P(1), P(44)); x += P(28);
+      g.fillStyle = T.text; g.font = F(800, 38); g.fillText(n, x, P(322 + 34)); const wn = g.measureText(n).width;
+      g.fillStyle = T.muted; g.font = F(500, 11); g.textBaseline = 'top'; const lx = spaced(g, l, x, P(366), P(2.4)); g.textBaseline = 'alphabetic';
+      x += Math.max(wn, lx - x) + P(28); g.fillStyle = T.line; g.fillRect(x, P(326), P(1), P(44)); x += P(28);
     }
     // Fotos
     for (const p of state.photos) {
@@ -716,15 +745,15 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const cg = g.createLinearGradient(0, by + bh - P(70), 0, by + bh); cg.addColorStop(0, 'rgba(6,12,18,0)'); cg.addColorStop(1, 'rgba(6,12,18,.85)'); g.fillStyle = cg; g.fillRect(bx, by + bh - P(70), bw, P(70));
       g.fillStyle = '#e6edf3'; let fs = 12; g.font = F(500, fs); const cap = p.caption ?? autoCaption(p); while (fs > 8.5 && g.measureText(cap).width > bw - P(28)) { fs -= .5; g.font = F(500, fs); }
       g.fillText(cap, bx + P(14), by + bh - P(14));
-      pill(g, bx + P(25), by + P(25), String(p.num), 'rgba(13,26,38,.85)', '#fff'); g.restore();
+      pill(g, bx + P(25), by + P(25), String(p.num), T.pill, '#fff'); g.restore();
     }
     // Pins
-    if (map) for (const d of pinsEl.children) { const px = P(parseFloat(d.style.left)), py = P(parseFloat(d.style.top)); g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(8); g.shadowOffsetY = P(4); pill(g, px, py, d.textContent, '#fff', '#0d1a26'); g.restore(); }
+    if (map) for (const d of pinsEl.children) { const px = P(parseFloat(d.style.left)), py = P(parseFloat(d.style.top)); g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(8); g.shadowOffsetY = P(4); pill(g, px, py, d.textContent, T.pinBg, T.pinFg); g.restore(); }
     // Ortsnamen
-    if (map) for (const p of state.places) { if (!p.text) continue; const pt = map.project([p.lon, p.lat]); const x = P(pt.x + p.dx), y = P(pt.y + p.dy); g.font = F(p.kind === 'night' ? 700 : 600, 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = '#0d1a26'; g.strokeText(p.text, x, y); g.fillStyle = '#e6edf3'; g.fillText(p.text, x, y); g.textBaseline = 'alphabetic'; }
+    if (map) for (const p of state.places) { if (!p.text) continue; const pt = map.project([p.lon, p.lat]); const x = P(pt.x + p.dx), y = P(pt.y + p.dy); g.font = F(p.kind === 'night' ? 700 : 600, 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = T.halo; g.strokeText(p.text, x, y); g.fillStyle = T.cap; g.fillText(p.text, x, y); g.textBaseline = 'alphabetic'; }
     // Höhenprofil-Band (SVG rastern)
     const band = new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CW} 113" width="${W}" height="${P(113)}"><style>text{font-family:Montserrat,Arial,sans-serif}</style>${$('#profile').innerHTML}</svg>`], { type: 'image/svg+xml' });
-    g.fillStyle = 'rgba(6,12,18,.8)'; g.fillRect(0, H - P(113), W, P(113)); g.fillStyle = '#283440'; g.fillRect(0, H - P(113), W, P(.6));
+    g.fillStyle = T.band; g.fillRect(0, H - P(113), W, P(113)); g.fillStyle = T.line; g.fillRect(0, H - P(113), W, P(.6));
     try { const bi = await loadImg(URL.createObjectURL(band)); g.drawImage(bi, 0, H - P(113), W, P(113)); } catch (e) { console.warn('Profil', e); }
     return c;
   }
@@ -743,7 +772,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   $('#save').addEventListener('click', () => { try { localStorage.setItem(KEY, JSON.stringify(serial())); say('Layout im Browser gespeichert (Fotos nur als Vorschau – Originale beim nächsten Mal wieder hinzufügen).', 'ok'); } catch (e) { say('Speichern fehlgeschlagen: ' + e.message, 'err'); } });
   $('#exjson').addEventListener('click', () => download(new Blob([JSON.stringify(serial(), null, 1)], { type: 'application/json' }), fname() + '.json'));
   function restore(obj) {
-    Object.assign(state, obj); $('#format').value = state.format || 'portrait'; $('#paper').value = state.paper || 'A3'; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); applyTheme(state.theme || 'nacht'); $('#format').value = state.format || 'portrait'; $('#paper').value = state.paper || 'A3'; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
     render();
   }
@@ -753,7 +782,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   dropfit.addEventListener('drop', e => { for (const f of e.dataTransfer.files) if (/\.json$/i.test(f.name)) loadJsonFile(f); });
 
   // ------------------------------------------------------------ Start
-  setFormat('portrait'); initMap();
+  setFormat('portrait'); applyTheme('nacht'); initMap();
   try { const s = localStorage.getItem(KEY); if (s) { restore(JSON.parse(s)); afterTourChange(); say('Gespeichertes Layout geladen.', 'ok'); } } catch (e) {}
   render();
 })();
