@@ -2,7 +2,7 @@
 
 Radtour-Poster (A3, 300 dpi) aus FIT/GPX/TCX-Dateien und Fotos – **komplett im Browser**. Es gibt keinen Server: Tourdaten und Fotos verlassen den Rechner nicht. Einzige Netzwerkzugriffe sind die Kartenkacheln (OpenFreeMap, sieht nur die Region) und die Schrift Montserrat (Google Fonts).
 
-**Live:** `https://<user>.github.io/tourposter/` (GitHub Pages, siehe unten) – oder `index.html` herunterladen und doppelklicken.
+**Live:** `https://fkaule.github.io/tourposter/` (GitHub Pages, siehe unten) – oder `index.html` herunterladen und doppelklicken.
 
 ## Funktionen
 
