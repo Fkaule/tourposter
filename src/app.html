@@ -241,7 +241,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
   // ------------------------------------------------------------ Größe / Format
   function fit() { const m = $('main'), fr = $('#frame'); const s = Math.min((m.clientWidth - 40) / CW, (m.clientHeight - 80) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
-  function setFormat(f) { state.format = f; CW = f === 'landscape' ? 1587 : 1123; CH = f === 'landscape' ? 1123 : 1587; stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; $('#profile').setAttribute('viewBox', `0 0 ${CW} 113`); fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); }
+  function setFormat(f) { state.format = f; CW = f === 'landscape' ? 1587 : 1123; CH = f === 'landscape' ? 1123 : 1587;
+    for (const p of state.photos) { p.w = Math.min(p.w, CW - 60); p.h = Math.min(p.h, CH - 113 - 60); p.x = Math.max(0, Math.min(CW - p.w, p.x)); p.y = Math.max(0, Math.min(CH - 113 - p.h, p.y)); } stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; $('#profile').setAttribute('viewBox', `0 0 ${CW} 113`); fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); }
   window.addEventListener('resize', fit);
   $('#format').addEventListener('change', e => setFormat(e.target.value));
 
@@ -490,6 +491,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const pts = xs.map((x, i) => `${X(x).toFixed(1)},${Y(ys[i]).toFixed(1)}`).join(' ');
     let b = '';
     bounds.slice(0, -1).forEach((bd, i) => { const x = X(bd.end); const nm = state.places.find(p => p.key === 'night' + i)?.text || ''; b += `<line x1="${x}" y1="${yt - 6}" x2="${x}" y2="${yb}" stroke="#788c9e" stroke-width=".6"/><circle cx="${x}" cy="${yt - 3}" r="4.2" fill="#ff5a36" stroke="#060c12"/><circle cx="${x}" cy="${yt - 3}" r="1.4" fill="#fff"/><text x="${x}" y="${yt - 10}" fill="#dfe7ee" font-size="10" font-weight="600" text-anchor="middle" font-family="Montserrat">${esc(nm)}</text>`; });
+    // Entfernungsmarken: Schrittweite so, dass höchstens ~8 Marken entstehen
+    const tkm = total / 1000, stepK = [5, 10, 20, 25, 50, 100, 200, 500].find(st => tkm / st <= 8) || 500;
+    for (let k = stepK; k < tkm - stepK * .35; k += stepK) { const x = X(k * 1000); g += `<line x1="${x}" y1="${yb}" x2="${x}" y2="${yb + 4}" stroke="#788c9e" stroke-width=".6"/><line x1="${x}" y1="${yt}" x2="${x}" y2="${yb}" stroke="#283440" stroke-width=".4" stroke-dasharray="2 3"/><text x="${x}" y="${yb + 12}" fill="#788c9e" font-size="8" text-anchor="middle" font-family="Montserrat">${k} km</text>`; }
     svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="rgba(255,90,54,.37)"/><polyline points="${pts}" fill="none" stroke="#ff5a36" stroke-width="1.6" stroke-linejoin="round"/>` + b +
       `<text x="${x0}" y="19" fill="#8fa3b8" font-size="9" font-weight="700" letter-spacing="2.4" font-family="Montserrat">HÖHENPROFIL</text><text x="${x1}" y="19" fill="#8fa3b8" font-size="9" text-anchor="end" font-family="Montserrat">Höchster Punkt ${nf(maxE)} m</text>` +
       `<text x="${x0}" y="${yb + 12}" fill="#788c9e" font-size="9" font-family="Montserrat">${esc(state.places.find(p => p.key === 'start')?.text || 'Start')}</text><text x="${x1}" y="${yb + 12}" fill="#788c9e" font-size="9" text-anchor="end" font-family="Montserrat">${esc(state.places.find(p => p.key === 'end')?.text || 'Ziel')}</text>`;
