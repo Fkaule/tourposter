@@ -1,0 +1,9 @@
+node_modules/
+vendor.js
+*.fit
+*.gpx
+*.jpg
+*.jpeg
+*.png
+*.pdf
+.DS_Store
