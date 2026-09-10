@@ -42,7 +42,10 @@ aside h1 small { display:block; font-weight:500; color:var(--muted); font-size:1
 #stage.setpos #map { pointer-events:auto; }
 #stage.setpos #map, #stage.setpos #map * { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23000' stroke-width='3.5' opacity='.6'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Cg stroke='%23000' stroke-width='3.5' opacity='.6'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='1.5'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='1.6' fill='%23ff5a36'/%3E%3C/svg%3E") 20 20, crosshair !important; }
 #stage.setpos #tiles, #stage.setpos #pins, #stage.setpos #places { pointer-events:none; }
-.tile .geos { position:absolute; left:46px; top:12px; display:flex; gap:6px; }
+.tile .geos { position:absolute; left:calc(12px + 26px * var(--ts, 1) + 8px); top:12px; display:flex; gap:6px; }
+.tile .n { cursor:pointer; }
+.tile .n.star { background:#f2b632; color:#1c1a12; }
+.tile .fx { position:absolute; right:10px; bottom:calc(12px + 26px * max(1, var(--ts, 1))); height:20px; padding:0 8px; border-radius:10px; background:rgba(13,26,38,.85); color:#ffc857; font:600 10px/20px Montserrat, Arial, sans-serif; cursor:pointer; }
 .tile .geo { height:26px; padding:0 9px; border-radius:13px; background:rgba(13,26,38,.85); color:#fff; font:600 11px/26px Montserrat, Arial, sans-serif; white-space:nowrap; cursor:pointer; }
 .tile .geo.on { background:var(--accent); animation:geoblink 1s infinite; }
 @keyframes geoblink { 50% { opacity:.55; } }
@@ -177,7 +180,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <button data-a="width">Gleiche Breite</button><button data-a="height">Gleiche Höhe</button>
       </div>
       <button class="btn" id="autolay" title="Ordnet alle Fotos neu an: möglichst nah am Aufnahmeort, ohne Route, Titel, Ortsnamen und Höhenprofil zu überdecken">Fotos automatisch um die Route anordnen</button>
-      <label class="chk"><input type="checkbox" id="autoadd" checked> neue Fotos beim Hinzufügen automatisch platzieren</label>
+      <label class="chk"><input type="checkbox" id="autoadd" checked> Automatik: Fotos folgen Route, Format, Profil und neuen Fotos (von Hand bewegte Fotos bleiben fixiert)</label>
       <div class="list" id="photos"></div>
     </div>
 
@@ -284,7 +287,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   let map = null, fallback = false;
   function initMap() {
     map = new maplibregl.Map({ container: 'map', style: T.map, center: [11.5, 51.5], zoom: 6, attributionControl: true, preserveDrawingBuffer: true, interactive: true, pitchWithRotate: false, dragRotate: false, touchZoomRotate: false });
-    map.on('load', () => { addRouteLayers(); if (state.stages.length) fitRoute(); }); map.on('click', mapClickSetPos);
+    map.on('load', () => { addRouteLayers(); if (state.stages.length) fitRoute(); }); map.on('click', mapClickSetPos); map.on('moveend', () => { if (!layouting) scheduleAuto('map'); });
     map.on('move', () => { renderPins(); renderPlaces(); const z = map.getZoom(); $('#mapzoomsl').value = z; $('#mzval').textContent = z.toFixed(1); });
     $('#mapzoomsl').addEventListener('input', e => map.setZoom(+e.target.value));
     $('#mapfit').addEventListener('click', e => { e.preventDefault(); fitRoute(); });
@@ -328,7 +331,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function fit() { const m = $('main'), fr = $('#frame'); const s = Math.min((m.clientWidth - 40) / CW, (m.clientHeight - (window.innerWidth <= 900 ? 60 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
   function setFormat(f) { state.format = f; const pp = PAPER[state.paper] || PAPER.A3, L = Math.round(1123 * pp[1] / pp[0]); CW = f === 'landscape' ? L : 1123; CH = f === 'landscape' ? 1123 : L;
     stage.style.setProperty('--ts', TS().toFixed(3)); stage.style.setProperty('--tt', TT().toFixed(3)); const px = paperPx(state.paper); $('#paperhint').textContent = `${f === 'landscape' ? px[1] + ' × ' + px[0] : px[0] + ' × ' + px[1]} px${isPx(state.paper) ? '' : ' (300 dpi)'} · Seitenverhältnis ${(pp[1] / pp[0]).toFixed(2)} · Texte ×${TS().toFixed(2)} / Titel ×${TT().toFixed(2)}`;
-    clampPhotos(); stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); }
+    clampPhotos(); stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); scheduleAuto('format'); }
   window.addEventListener('resize', fit);
   $('#format').addEventListener('change', e => setFormat(e.target.value));
 
@@ -456,7 +459,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     }
     render();
     // Neue Fotos automatisch um die Route legen (bestehende bleiben, wo sie sind); ohne Ortsangabe erst nach „Ort setzen“ sinnvoll, dann trotzdem frei platziert
-    if (added.length && $('#autoadd').checked && map && state.stages.length) { await new Promise(r => setTimeout(r, 50)); autoLayout(new Set(added)); }
+    if (added.length && autoOn() && map && state.stages.length) { await new Promise(r => setTimeout(r, 50)); autoLayout(null, { quiet: true, allowZoom: true }); }
   }
   function thumb(url) { return new Promise(r => { const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); const s = 360 / Math.max(im.width, im.height); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); r(c.toDataURL('image/jpeg', .72)); }; im.onerror = () => r(''); im.src = url; }); }
   function renumber() { [...state.photos].sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.name.localeCompare(b.name)).forEach((p, i) => p.num = i + 1); }
@@ -603,7 +606,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const clip = document.createElement('div'); clip.className = 'clip'; el.appendChild(clip);
       const img = document.createElement('img'); img.src = p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
-      const n = document.createElement('div'); n.className = 'n'; n.textContent = p.num; clip.appendChild(n);
+      const n = document.createElement('div'); n.className = 'n' + (p.star ? ' star' : ''); n.textContent = p.num + (p.star ? ' ★' : ''); n.title = 'Klick = Highlight an/aus (größer im Automatik-Layout)'; n.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); n.addEventListener('click', e => { e.stopPropagation(); p.star = !p.star; render(); scheduleAuto('star'); }); clip.appendChild(n);
+      if (p.fixed && autoOn()) { const fx = document.createElement('div'); fx.className = 'fx'; fx.title = 'Foto ist fixiert (von Hand gesetzt) – Klick gibt es für die Automatik frei'; fx.textContent = '⌖ fixiert'; fx.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); fx.addEventListener('click', e => { e.stopPropagation(); delete p.fixed; render(); scheduleAuto('unfix'); }); clip.appendChild(fx); }
       if (map && (p.lat == null || setPosFor === p.id)) { const wrap = document.createElement('div'); wrap.className = 'geos'; clip.appendChild(wrap); const gb = document.createElement('div'); gb.className = 'geo' + (setPosFor === p.id ? ' on' : ''); gb.title = 'Aufnahmeort auf der Karte setzen'; gb.textContent = setPosFor === p.id ? '▸ auf die Karte klicken' : '⚑ kein Ort – setzen'; gb.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); gb.addEventListener('click', e => { e.stopPropagation(); startSetPos(p); }); wrap.appendChild(gb);
         if (setPosFor !== p.id) { const gs = document.createElement('div'); gs.className = 'geo srch'; gs.title = 'Ort per Name suchen (in der Fotoliste links)'; gs.textContent = '⌕ suchen'; gs.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); gs.addEventListener('click', e => { e.stopPropagation(); searchFor = p.id; searchHits = null; render(); const r = $('#photos .row.photo .psearch'); if (r) r.scrollIntoView({ block: 'center', behavior: 'smooth' }); }); wrap.appendChild(gs); } }
       const c = document.createElement('div'); c.className = 'c'; c.textContent = p.caption ?? autoCaption(p); clip.appendChild(c);
@@ -615,13 +619,15 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       row.querySelector('input').value = p.caption ?? autoCaption(p);
       row.querySelector('.meta').textContent = `${p.name} · ${p.lat != null ? p.lat.toFixed(3) + ', ' + p.lon.toFixed(3) : 'kein GPS'}${originals.has(p.id) ? '' : ' · Original fehlt (für Export neu hinzufügen)'}`;
       if (map) { const a = document.createElement('a'); a.href = '#'; a.textContent = setPosFor === p.id ? 'auf die Karte klicken …' : (p.lat != null ? ' Ort ändern' : ' Ort setzen'); a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); startSetPos(p); }); row.querySelector('.meta').append(' · ', a);
+        const st = document.createElement('a'); st.href = '#'; st.textContent = p.star ? '★ Highlight aus' : '☆ Highlight'; st.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); p.star = !p.star; render(); scheduleAuto('star'); }); row.querySelector('.meta').append(' · ', st);
+        if (p.fixed) { const fx = document.createElement('a'); fx.href = '#'; fx.textContent = 'fixiert – lösen'; fx.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); delete p.fixed; render(); scheduleAuto('unfix'); }); row.querySelector('.meta').append(' · ', fx); }
         const b2 = document.createElement('a'); b2.href = '#'; b2.textContent = searchFor === p.id ? 'Suche schließen' : 'Ort suchen'; b2.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); searchFor = searchFor === p.id ? null : p.id; searchHits = null; render(); }); row.querySelector('.meta').append(' · ', b2);
         if (searchFor === p.id) { const box = document.createElement('div'); box.className = 'psearch'; box.innerHTML = `<input placeholder="Ort, Gipfel, Sehenswürdigkeit … nahe der Route"><button class="fine" title="Lädt die Detail-Kacheln (Zoom 14, alle POIs) rund um die bisherigen Treffer und den Kartenausschnitt">Genauer</button><div class="hits"></div>`;
           const inp = box.querySelector('input'), hitsEl = box.querySelector('.hits'); inp.value = searchQ || ''; let seq = 0;
           const show = hs => { hitsEl.innerHTML = hs.length ? '' : '<span class="muted">nichts gefunden – gesucht bis 15 km neben der Route; „Genauer“ lädt alle POIs rund um Treffer/Kartenausschnitt, sonst „Ort setzen“</span>';
             for (const h of hs) { const d = document.createElement('a'); d.href = '#'; d.innerHTML = `<b>${esc(h.name)}</b> <span class="muted">${esc(CLS_DE[h.cls] || h.cls)} · ${(h.d / 1000).toFixed(1)} km von der Route</span>`;
               d.addEventListener('mouseenter', () => previewHit(h)); d.addEventListener('mouseleave', () => previewHit(null));
-              d.addEventListener('click', e => { e.preventDefault(); [p.lat, p.lon] = nearestOnRoute(h.lat, h.lon); p.place = h.name; searchFor = null; searchHits = null; previewHit(null); say(`Aufnahmeort von Foto ${p.num}: ${h.name}`, 'ok'); render(); if ($('#autoadd').checked) autoLayout(new Set([p.id])); }); hitsEl.appendChild(d); } };
+              d.addEventListener('click', e => { e.preventDefault(); [p.lat, p.lon] = nearestOnRoute(h.lat, h.lon); p.place = h.name; searchFor = null; searchHits = null; previewHit(null); say(`Aufnahmeort von Foto ${p.num}: ${h.name}`, 'ok'); render(); if (autoOn()) autoLayout(null, { quiet: true }); }); hitsEl.appendChild(d); } };
           const run = async fine => { const q = inp.value; searchQ = q; if (q.trim().length < 2) { hitsEl.innerHTML = ''; return; } const my = ++seq;
             hitsEl.innerHTML = '<span class="muted">suche …</span>';
             const hs = await searchPlace(q, fine, (a, b) => { if (my === seq) hitsEl.innerHTML = `<span class="muted">suche … ${a}/${b} Kacheln${fine ? ' (Zoom 14)' : ''}</span>`; });
@@ -633,7 +639,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           if (searchHits) show(searchHits); row.appendChild(box); setTimeout(() => inp.focus(), 0); } }
       row.querySelector('input').addEventListener('input', e => { p.caption = e.target.value; const c = tilesEl.querySelector(`[data-id="${p.id}"] .c`); if (c) c.textContent = p.caption; });   // sofort übernehmen – render() (z. B. durch nachgeladene Ortsnamen) baut die Zeile sonst mit altem Text neu
       row.querySelector('input').addEventListener('change', () => render());
-      row.querySelector('button').addEventListener('click', () => { state.photos = state.photos.filter(x => x.id !== p.id); render(); });
+      row.querySelector('button').addEventListener('click', () => { state.photos = state.photos.filter(x => x.id !== p.id); render(); scheduleAuto('del'); });
       $('#photos').appendChild(row);
     }
     if (focusId) { const inp = $('#photos').querySelector(`.row.photo[data-id="${focusId}"] > div > input`); if (inp) { inp.focus(); try { inp.setSelectionRange(focusSel, focusSel); } catch (e) {} } }
@@ -648,7 +654,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function startSetPos(p) { if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: Aufnahmeort mit dem Fadenkreuz auf der Karte anklicken – rastet auf die Route ein (Esc = abbrechen).`); render(); }
   function nearestOnRoute(lat, lon) { let best = null, bd = Infinity; for (const st of state.stages) for (let i = 0; i < st.points.length; i += 3) { const q = st.points[i]; const d = hav([lat, lon], [q[0], q[1]]); if (d < bd) { bd = d; best = q; } } return best && bd < 2000 ? [best[0], best[1]] : [lat, lon]; }
   function mapClickSetPos(e) { if (!setPosFor) return; const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
-    [p.lat, p.lon] = nearestOnRoute(e.lngLat.lat, e.lngLat.lng); p.place = ''; p.detailTried = false; fillPlaceNames(); say(`Aufnahmeort von Foto ${p.num} gesetzt.`, 'ok'); render(); if ($('#autoadd').checked) autoLayout(new Set([p.id])); }
+    [p.lat, p.lon] = nearestOnRoute(e.lngLat.lat, e.lngLat.lng); p.place = ''; p.detailTried = false; fillPlaceNames(); say(`Aufnahmeort von Foto ${p.num} gesetzt.`, 'ok'); render(); if (autoOn()) autoLayout(null, { quiet: true }); }
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); say(''); render(); } });
   function renderPins() {
     pinsEl.innerHTML = ''; if (!map) return;
@@ -814,48 +820,68 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     }
     for (const g of (drag.mode === 'move' ? drag.group : [{ t }])) { const el = tilesEl.querySelector(`[data-id="${g.t.id}"]`); Object.assign(el.style, { left: g.t.x + 'px', top: g.t.y + 'px', width: g.t.w + 'px', height: g.t.h + 'px' }); }
   });
-  tilesEl.addEventListener('pointerup', () => { if (drag) { drag = null; showGuides([]); render(); } });
+  tilesEl.addEventListener('pointerup', () => { if (drag) { const d = drag; drag = null; showGuides([]); if ((d.mode === 'move' || d.mode === 'resize') && (d.t.x !== d.x || d.t.y !== d.y || d.t.w !== d.w || d.t.h !== d.h)) { for (const t of state.photos) if (isSel(t.id) || t.id === d.t.id) t.fixed = true; scheduleAuto('drag'); } render(); } });
   tilesEl.addEventListener('wheel', e => { const el = e.target.closest('.tile'); if (!el) return; const t = state.photos.find(x => x.id === el.dataset.id); if (!(isSel(t.id) || cropMode === t.id)) return; e.preventDefault(); zoomTile(t, e.deltaY < 0 ? 1.08 : 1 / 1.08); render(); }, { passive: false });
   // ---- Ausrichten
   const alignEl = document.getElementById('align');
   // ---------------------------------------------------------- Automatische Anordnung: Fotos nah am Aufnahmeort, frei von Route/Titel/Ortsnamen/Profil
-  function autoLayout(only = null) {
+  // Fotos: p.fixed = von Hand gesetzt (Position+Größe bleiben, andere weichen aus), p.star = Highlight (≈ 1,6-fache Fläche, wird zuerst platziert)
+  const autoOn = () => $('#autoadd').checked;
+  let layouting = false, autoTimer = null;
+  function scheduleAuto(why) { if (!autoOn() || layouting) return; clearTimeout(autoTimer); autoTimer = setTimeout(() => autoLayout(null, { quiet: true, why }), 250); }
+  function autoLayout(only = null, opts = {}) {
     if (!map || !state.photos.length) return;
-    const M = 18;                                                     // Mindestabstand zu Route, Texten und Nachbarfotos
-    const rects = [];                                                 // belegte Flächen [x, y, w, h]
-    const add = el => { if (el && el.offsetWidth) rects.push([el.offsetLeft, el.offsetTop, el.offsetWidth, el.offsetHeight]); };
-    add($('#title')); add($('#stats')); placesEl.querySelectorAll('.place').forEach(add);
-    if (only) for (const p of state.photos) if (!only.has(p.id)) rects.push([p.x, p.y, p.w, p.h]);   // bestehende Fotos bleiben stehen
-    rects.push([0, CH - BH() - 8, CW, BH() + 8]);                    // Höhenprofil
-    // Route als dichte Punktfolge in Poster-Koordinaten
-    const rp = []; for (const st of state.stages) for (const q of st.points) { const pt = map.project([q[1], q[0]]); rp.push([pt.x, pt.y]); }
-    const route = []; for (let i = 1; i < rp.length; i++) { const [ax, ay] = rp[i - 1], [bx, by] = rp[i]; const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 6)); for (let k = 0; k < n; k++) route.push([ax + (bx - ax) * k / n, ay + (by - ay) * k / n]); }
-    route.push(rp.at(-1) || [CW / 2, CH / 2]);
-    const hitsRoute = (x, y, w, h) => { const x0 = x - M, y0 = y - M, x1 = x + w + M, y1 = y + h + M; for (const [px, py] of route) if (px >= x0 && px <= x1 && py >= y0 && py <= y1) return true; return false; };
-    const hitsRect = (x, y, w, h) => rects.some(([rx, ry, rw, rh]) => x < rx + rw + M && x + w > rx - M && y < ry + rh + M && y + h > ry - M);
-    const free = (x, y, w, h) => x >= 40 && y >= 40 && x + w <= CW - 40 && y + h <= CH - BH() - 20 && !hitsRect(x, y, w, h) && !hitsRoute(x, y, w, h);
-    // Grundgröße nach Fotoanzahl (Anteil der Posterbreite), Seitenverhältnis des Fotos bleibt
-    const n = state.photos.length, base = CW * (n <= 4 ? .30 : n <= 8 ? .25 : n <= 12 ? .21 : .17);
-    const order = [...state.photos].filter(p => !only || only.has(p.id)).sort((a, b) => a.num - b.num);
-    let placed = 0;
-    for (const p of order) {
-      const ar = p.w / p.h; const anchor = p.lat != null ? map.project([p.lon, p.lat]) : { x: CW / 2, y: CH / 2 };
-      let done = false;
-      for (let sc = 1; sc >= .55 && !done; sc *= .88) {
-        const w = Math.round((ar >= 1 ? base : base * .78) * sc), h = Math.round(w / ar);
-        // Kandidaten auf einem Raster, nach Abstand zum Aufnahmeort sortiert; Ziel: Foto möglichst nah am Pin, aber nicht darüber
-        const cands = [];
-        for (let y = 40; y + h <= CH - BH() - 20; y += 24) for (let x = 40; x + w <= CW - 40; x += 24) { const cx = x + w / 2, cy = y + h / 2; const d = Math.hypot(cx - anchor.x, cy - anchor.y); cands.push([d, x, y]); }
-        cands.sort((a, b) => a[0] - b[0]);
-        for (const [, x, y] of cands) { if (free(x, y, w, h)) { p.x = x; p.y = y; p.w = w; p.h = h; rects.push([x, y, w, h]); done = true; placed++; break; } }
+    layouting = true;
+    try {
+      const M = 18;                                                   // Mindestabstand zu Route, Texten und Nachbarfotos
+      const movable = state.photos.filter(p => (only ? only.has(p.id) : !p.fixed) );
+      const order = movable.sort((a, b) => (b.star ? 1 : 0) - (a.star ? 1 : 0) || a.num - b.num);
+      const n = state.photos.length;
+      const build = () => {                                           // belegte Flächen + Route in Poster-Koordinaten (nach evtl. Zoomänderung neu)
+        const rects = []; const add = el => { if (el && el.offsetWidth) rects.push([el.offsetLeft, el.offsetTop, el.offsetWidth, el.offsetHeight]); };
+        add($('#title')); add($('#stats')); placesEl.querySelectorAll('.place').forEach(add);
+        for (const p of state.photos) if (!movable.includes(p)) rects.push([p.x, p.y, p.w, p.h]);
+        rects.push([0, CH - BH() - 8, CW, BH() + 8]);
+        const rp = []; for (const st of state.stages) for (const q of st.points) { const pt = map.project([q[1], q[0]]); rp.push([pt.x, pt.y]); }
+        const route = []; for (let i = 1; i < rp.length; i++) { const [ax, ay] = rp[i - 1], [bx, by] = rp[i]; const k = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 6)); for (let j = 0; j < k; j++) route.push([ax + (bx - ax) * j / k, ay + (by - ay) * j / k]); }
+        if (rp.length) route.push(rp.at(-1));
+        return { rects, route };
+      };
+      const attempt = (base, dry) => {                                 // versucht alle beweglichen Fotos mit Grundgröße base zu setzen; dry = nur zählen
+        const { rects, route } = build(); const placed = [];
+        const hitsRoute = (x, y, w, h) => { const x0 = x - M, y0 = y - M, x1 = x + w + M, y1 = y + h + M; for (const [px, py] of route) if (px >= x0 && px <= x1 && py >= y0 && py <= y1) return true; return false; };
+        const hitsRect = (x, y, w, h) => rects.some(([rx, ry, rw, rh]) => x < rx + rw + M && x + w > rx - M && y < ry + rh + M && y + h > ry - M);
+        const free = (x, y, w, h) => x >= 40 && y >= 40 && x + w <= CW - 40 && y + h <= CH - BH() - 20 && !hitsRect(x, y, w, h) && !hitsRoute(x, y, w, h);
+        const step = n > 12 ? 16 : 24;
+        for (const p of order) {
+          const ar = p.w / p.h; const anchor = p.lat != null ? map.project([p.lon, p.lat]) : { x: CW / 2, y: CH / 2 };
+          const bw = base * (p.star ? 1.6 : 1) * (ar >= 1 ? 1 : .78); let done = null;
+          for (let sc = 1; sc >= .7 && !done; sc *= .9) {
+            const w = Math.round(bw * sc), h = Math.round(w / ar); const cands = [];
+            for (let y = 40; y + h <= CH - BH() - 20; y += step) for (let x = 40; x + w <= CW - 40; x += step) cands.push([Math.hypot(x + w / 2 - anchor.x, y + h / 2 - anchor.y), x, y]);
+            cands.sort((a, b) => a[0] - b[0]);
+            for (const [, x, y] of cands) if (free(x, y, w, h)) { done = [x, y, w, h]; break; }
+          }
+          if (done) { rects.push(done); placed.push([p, done]); } else if (!dry) break;
+        }
+        if (!dry) for (const [p, [x, y, w, h]] of placed) { p.x = x; p.y = y; p.w = w; p.h = h; }
+        return placed.length;
+      };
+      // Grundgröße: mit der Fotoanzahl kleiner; passt nicht alles, stufenweise verkleinern, zuletzt Karte herauszoomen (Route kleiner)
+      let base = CW * (n <= 4 ? .30 : n <= 8 ? .25 : n <= 12 ? .21 : .17); const want = order.length; let got = 0, zoomed = 0;
+      outer: for (let z = 0; z < 3; z++) {
+        for (let sc = 1; sc >= .5; sc -= .1) { got = attempt(base * sc, true); if (got === want) { attempt(base * sc, false); break outer; } }
+        if (only || !opts.allowZoom) break;
+        map.zoomTo(map.getZoom() - 0.35, { duration: 0 }); zoomed++; renderPins(); renderPlaces();
       }
-      if (!done) { p.w = Math.round(base * .6); p.h = Math.round(p.w / ar); }   // kein freier Platz: Größe verkleinern, Position lassen
-    }
-    if (!only) selected = new Set(); render();
-    if (only) { if (placed < order.length) say(`${order.length - placed} neue(s) Foto(s) fanden keinen freien Platz – bitte von Hand schieben.`, 'warn'); return; }
-    say(placed === n ? `${n} Fotos um die Route angeordnet – Feinschliff per Ziehen.` : `${placed} von ${n} Fotos frei platziert, ${n - placed} passten nicht ohne Überdeckung (Karte weiter herauszoomen oder Fotos verkleinern).`, placed === n ? 'ok' : 'warn');
+      if (got < want) { for (let sc = 1; sc >= .5; sc -= .1) if (attempt(base * sc, true) === got) { attempt(base * sc, false); break; } }   // so viele wie möglich
+      if (!only && !opts.quiet) selected = new Set(); render();
+      if (opts.quiet) { if (got < want) say(`${want - got} Foto(s) fanden keinen freien Platz – Karte herauszoomen, Profil kleiner ziehen oder Fotos fixieren/verkleinern.`, 'warn'); return; }
+      say(got === want ? `${want} Fotos um die Route angeordnet${zoomed ? `, Karte ${zoomed}× herausgezoomt` : ''}${state.photos.length - want ? ` (${state.photos.length - want} fixierte unverändert)` : ''} – Feinschliff per Ziehen; von Hand bewegte Fotos gelten als fixiert.` : `${got} von ${want} Fotos frei platziert – die übrigen passten nicht ohne Überdeckung.`, got === want ? 'ok' : 'warn');
+    } finally { layouting = false; }
   }
-  $('#autolay').addEventListener('click', autoLayout);
+  $('#autolay').addEventListener('click', () => autoLayout(null, { allowZoom: true }));
+  $('#autoadd').addEventListener('change', () => { if (autoOn()) autoLayout(null, { allowZoom: true }); });
   const zoomSl = $('#zoomsl');
   zoomSl.addEventListener('input', () => { for (const t of state.photos) if (isSel(t.id)) { t.zoom = +zoomSl.value / 100; if (t.zoom <= 1) delete t.zoom; const img = tilesEl.querySelector(`[data-id="${t.id}"] img`); if (img) applyCrop(img, t); } $('#zval').textContent = zoomSl.value + ' %'; });
   zoomSl.addEventListener('change', () => render());
@@ -882,7 +908,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   { const grip = $('#bandgrip'); let gd = null;
     grip.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); gd = { y: e.clientY, h: BH(), s: +stage.dataset.scale || 1 }; grip.classList.add('on'); grip.setPointerCapture(e.pointerId); });
     grip.addEventListener('pointermove', e => { if (!gd) return; state.bandH = Math.round(Math.max(90, Math.min(Math.round(CH * .45), gd.h - (e.clientY - gd.y) / gd.s))); renderProfile(); });
-    const end = () => { if (!gd) return; gd = null; grip.classList.remove('on'); clampPhotos(); render(); };
+    const end = () => { if (!gd) return; gd = null; grip.classList.remove('on'); clampPhotos(); render(); scheduleAuto('band'); };
     grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
     grip.addEventListener('dblclick', () => { state.bandH = 113; clampPhotos(); render(); }); }
   stage.addEventListener('pointerdown', e => { if (e.target.id === 'overlay' || e.target.id === 'vig' || e.target.closest('#map')) { selected = new Set(); selPlace = null; cropMode = null; render(); } });
