@@ -28,6 +28,9 @@ aside h1 small { display:block; font-weight:500; color:var(--muted); font-size:1
 .row img { width:44px; height:44px; object-fit:cover; border-radius:5px; background:#000; }
 .row input { width:100%; box-sizing:border-box; background:transparent; border:0; border-bottom:1px solid #2c4258; color:var(--text); font:12px Montserrat, Arial, sans-serif; padding:2px 0; }
 .row .meta { font-size:10px; color:var(--muted); }
+.row .meta a { color:var(--accent); font-weight:600; }
+#stage.setpos #map { cursor:crosshair; pointer-events:auto; }
+#stage.setpos #overlay { pointer-events:none; }
 .row button { background:none; border:0; color:var(--muted); cursor:pointer; font-size:16px; }
 .row button:hover { color:var(--accent); }
 .btn { width:100%; box-sizing:border-box; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:9px 12px; font:600 13px Montserrat, Arial, sans-serif; cursor:pointer; text-align:left; margin-top:6px; display:flex; justify-content:space-between; }
@@ -52,12 +55,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #title { position:absolute; left:56px; top:52px; }
 #title .date { color:var(--pa); font-weight:700; font-size:calc(12px * var(--ts, 1)); letter-spacing:.32em; display:flex; align-items:center; gap:12px; }
 #title .date::before { content:""; width:28px; height:2px; background:var(--pa); display:inline-block; }
-#title .h { font-weight:900; font-size:80px; line-height:.92; letter-spacing:-.02em; color:var(--ptext); margin-top:14px; white-space:pre-line; }
+#title .h { font-weight:900; font-size:calc(80px * var(--tt, 1)); line-height:.92; letter-spacing:-.02em; color:var(--ptext); margin-top:14px; white-space:pre-line; }
 #title .sub { color:var(--psub); font-size:calc(16px * var(--ts, 1)); line-height:1.4; max-width:420px; margin-top:14px; white-space:pre-line; }
 #stats { position:absolute; left:56px; top:322px; display:flex; gap:28px; }
 #stats div { display:flex; flex-direction:column; gap:4px; padding-right:28px; border-right:1px solid var(--pline); }
 #stats div:last-child { border:0; }
-#stats b { font-weight:800; font-size:38px; line-height:1; color:var(--ptext); }
+#stats b { font-weight:800; font-size:calc(38px * var(--tt, 1)); line-height:1; color:var(--ptext); }
 #stats span { font-size:calc(11px * var(--ts, 1)); letter-spacing:.22em; color:var(--pmuted); }
 [contenteditable] { outline:none; border-radius:4px; cursor:text; }
 [contenteditable]:hover { box-shadow:0 0 0 1.5px rgba(255,90,54,.6); }
@@ -86,6 +89,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .tile:hover .rs, .tile.sel .rs { opacity:1; }
 .tile .rs.nw { left:-6px; top:-6px; cursor:nwse-resize; } .tile .rs.ne { right:-6px; top:-6px; cursor:nesw-resize; }
 .tile .rs.sw { left:-6px; bottom:-6px; cursor:nesw-resize; } .tile .rs.se { right:-6px; bottom:-6px; cursor:nwse-resize; }
+/* Kantengriffe: nur Breite bzw. nur Höhe ändern */
+.tile .rs.n, .tile .rs.s { left:50%; margin-left:-14px; width:28px; height:8px; border-radius:4px; }
+.tile .rs.e, .tile .rs.w { top:50%; margin-top:-14px; width:8px; height:28px; border-radius:4px; }
+.tile .rs.n { top:-5px; cursor:ns-resize; } .tile .rs.s { bottom:-5px; cursor:ns-resize; } .tile .rs.e { right:-5px; cursor:ew-resize; } .tile .rs.w { left:-5px; cursor:ew-resize; }
 .tile { overflow:visible; }
 .tile .clip { position:absolute; inset:0; border-radius:10px; overflow:hidden; }
 .tile.same { box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 2px var(--accent); }
@@ -196,7 +203,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       </div>
     </div></div>
     <div id="maptools"><button id="mapbtn">Karte verschieben / zoomen</button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div></div>
-    <div id="hint">Fotos: ziehen = verschieben (rastet an Kanten/gleichen Abständen ein) · Ecken = Größe (Shift = Seitenverhältnis) · Shift-Klick = mehrere wählen → Ausrichten · Doppelklick = Bildausschnitt (ziehen + Mausrad, oder Alt-Ziehen) · Entf = entfernen · Höhenprofil: Oberkante ziehen = Höhe (Doppelklick = zurücksetzen) · Karte: Button rechts oben, dann Maus/Rad · Ortsnamen (Start/Ziel/Übernachtung): ziehen = verschieben, Doppelklick = Text ändern</div>
+    <div id="hint">Fotos: ziehen = verschieben (rastet an Kanten/gleichen Abständen ein) · Ecken = Größe (Shift = Seitenverhältnis), Kantengriffe = nur Breite/Höhe · Shift-Klick = mehrere wählen → Ausrichten · Doppelklick = Bildausschnitt (ziehen + Mausrad, oder Alt-Ziehen) · Entf = entfernen · Höhenprofil: Oberkante ziehen = Höhe (Doppelklick = zurücksetzen) · Karte: Button rechts oben, dann Maus/Rad · Ortsnamen (Start/Ziel/Übernachtung): ziehen = verschieben, Doppelklick = Text ändern</div>
   </main>
 </div>
 
@@ -216,6 +223,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const paperPx = k => { const p = PAPER[k] || PAPER.A3; return [Math.round(p[0] / 25.4 * 300), Math.round(p[1] / 25.4 * 300)]; };
   // Kleintexte (Bildunterschriften, Ortsnamen, Profilachsen …) gedämpft gegen die Papiergröße skalieren: A3 = 1, A4 ≈ 1,11, A2 ≈ 0,90, 70×100 ≈ 0,77
   const TS = () => Math.pow((PAPER[state.paper] || PAPER.A3)[0] / 297, -0.3);
+  // Titel und Kennzahlen: nur leicht gedämpft (A4 ≈ 1,05, A2 ≈ 0,95, 70×100 ≈ 0,88)
+  const TT = () => Math.pow((PAPER[state.paper] || PAPER.A3)[0] / 297, -0.15);
   { const sel = $('#paper'); let grp = '';
     for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${grp === 'DIN' ? 'DIN' : 'Posterdruck (cm)'}"></optgroup>`); }
       sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${grp === 'DIN' ? k + ' · ' : ''}${p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm'}</option>`); } }
@@ -248,7 +257,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   let map = null, fallback = false;
   function initMap() {
     map = new maplibregl.Map({ container: 'map', style: T.map, center: [11.5, 51.5], zoom: 6, attributionControl: true, preserveDrawingBuffer: true, interactive: true, pitchWithRotate: false, dragRotate: false, touchZoomRotate: false });
-    map.on('load', () => { addRouteLayers(); if (state.stages.length) fitRoute(); });
+    map.on('load', () => { addRouteLayers(); if (state.stages.length) fitRoute(); }); map.on('click', mapClickSetPos);
     map.on('move', () => { renderPins(); renderPlaces(); const z = map.getZoom(); $('#mapzoomsl').value = z; $('#mzval').textContent = z.toFixed(1); });
     $('#mapzoomsl').addEventListener('input', e => map.setZoom(+e.target.value));
     $('#mapfit').addEventListener('click', e => { e.preventDefault(); fitRoute(); });
@@ -291,7 +300,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function clampPhotos() { for (const p of state.photos) { p.w = Math.min(p.w, CW - 60); p.h = Math.min(p.h, CH - BH() - 60); p.x = Math.max(0, Math.min(CW - p.w, p.x)); p.y = Math.max(0, Math.min(CH - BH() - p.h, p.y)); } }
   function fit() { const m = $('main'), fr = $('#frame'); const s = Math.min((m.clientWidth - 40) / CW, (m.clientHeight - (window.innerWidth <= 900 ? 60 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
   function setFormat(f) { state.format = f; const pp = PAPER[state.paper] || PAPER.A3, L = Math.round(1123 * pp[1] / pp[0]); CW = f === 'landscape' ? L : 1123; CH = f === 'landscape' ? 1123 : L;
-    stage.style.setProperty('--ts', TS().toFixed(3)); const px = paperPx(state.paper); $('#paperhint').textContent = `${f === 'landscape' ? px[1] + ' × ' + px[0] : px[0] + ' × ' + px[1]} px · Seitenverhältnis ${(pp[1] / pp[0]).toFixed(2)} · Kleintexte ×${TS().toFixed(2)}`;
+    stage.style.setProperty('--ts', TS().toFixed(3)); stage.style.setProperty('--tt', TT().toFixed(3)); const px = paperPx(state.paper); $('#paperhint').textContent = `${f === 'landscape' ? px[1] + ' × ' + px[0] : px[0] + ' × ' + px[1]} px · Seitenverhältnis ${(pp[1] / pp[0]).toFixed(2)} · Texte ×${TS().toFixed(2)} / Titel ×${TT().toFixed(2)}`;
     clampPhotos(); stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); }
   window.addEventListener('resize', fit);
   $('#format').addEventListener('change', e => setFormat(e.target.value));
@@ -508,19 +517,27 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
       const n = document.createElement('div'); n.className = 'n'; n.textContent = p.num; clip.appendChild(n);
       const c = document.createElement('div'); c.className = 'c'; c.textContent = p.caption ?? autoCaption(p); clip.appendChild(c);
-      for (const k of ['nw', 'ne', 'sw', 'se']) { const rs = document.createElement('div'); rs.className = 'rs ' + k; rs.dataset.k = k; el.appendChild(rs); }
+      for (const k of ['nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w']) { const rs = document.createElement('div'); rs.className = 'rs ' + k; rs.dataset.k = k; el.appendChild(rs); }
       tilesEl.appendChild(el);
       const row = document.createElement('div'); row.className = 'row photo' + (isSel(p.id) ? ' sel' : '');
       row.addEventListener('click', e => { if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') { if (e.shiftKey) { isSel(p.id) ? selected.delete(p.id) : selected.add(p.id); } else selected = new Set([p.id]); render(); } });
       row.innerHTML = `<div class="n">${p.num}</div><img src="${p.thumb}"><div><input aria-label="Bildunterschrift"><div class="meta"></div></div><button title="Entfernen">×</button>`;
       row.querySelector('input').value = p.caption ?? autoCaption(p);
       row.querySelector('.meta').textContent = `${p.name} · ${p.lat != null ? p.lat.toFixed(3) + ', ' + p.lon.toFixed(3) : 'kein GPS'}${originals.has(p.id) ? '' : ' · Original fehlt (für Export neu hinzufügen)'}`;
+      if (map) { const a = document.createElement('a'); a.href = '#'; a.textContent = setPosFor === p.id ? 'auf die Karte klicken …' : (p.lat != null ? ' Ort ändern' : ' Ort setzen'); a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); startSetPos(p); }); row.querySelector('.meta').append(' · ', a); }
       row.querySelector('input').addEventListener('change', e => { p.caption = e.target.value; render(); });
       row.querySelector('button').addEventListener('click', () => { state.photos = state.photos.filter(x => x.id !== p.id); render(); });
       $('#photos').appendChild(row);
     }
     updateAlignButtons(); renderPins(); renderPlaces(); renderProfile();
   }
+  // Foto ohne GPS (oder falscher Ort): Position per Klick auf die Karte setzen; rastet auf den nächsten Routenpunkt ein, wenn der näher als 2 km liegt
+  let setPosFor = null;
+  function startSetPos(p) { if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: auf die Karte klicken, um den Aufnahmeort zu setzen (Esc = abbrechen).`); render(); }
+  function nearestOnRoute(lat, lon) { let best = null, bd = Infinity; for (const st of state.stages) for (let i = 0; i < st.points.length; i += 3) { const q = st.points[i]; const d = hav([lat, lon], [q[0], q[1]]); if (d < bd) { bd = d; best = q; } } return best && bd < 2000 ? [best[0], best[1]] : [lat, lon]; }
+  function mapClickSetPos(e) { if (!setPosFor) return; const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
+    [p.lat, p.lon] = nearestOnRoute(e.lngLat.lat, e.lngLat.lng); p.place = ''; p.detailTried = false; fillPlaceNames(); say(`Aufnahmeort von Foto ${p.num} gesetzt.`, 'ok'); render(); }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); say(''); render(); } });
   function renderPins() {
     pinsEl.innerHTML = ''; if (!map) return;
     const groups = [];
@@ -732,7 +749,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
   // ------------------------------------------------------------ Export (300 dpi)
   async function fontsReady() { try { await document.fonts.load('900 80px Montserrat'); await document.fonts.load('400 16px Montserrat'); } catch (e) {} }
-  function F(w, px, small = true) { return `${w} ${Math.round(px * S * (small ? TS() : 1))}px Montserrat, Arial, sans-serif`; }
+  function F(w, px, small = true) { return `${w} ${Math.round(px * S * (small ? TS() : TT()))}px Montserrat, Arial, sans-serif`; }
   const P = v => v * S;
   async function renderPrint() {
     await fontsReady();
@@ -753,8 +770,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(57), P(28), P(2));
     g.font = F(700, 12); g.textBaseline = 'top'; spaced(g, state.date || '', x0 + P(40), P(52), P(3.6));
     g.fillStyle = T.text; g.font = F(900, 80, false); g.textBaseline = 'alphabetic';
-    (state.title || '').split('\n').forEach((l, i) => g.fillText(l, x0 - P(4), P(78 + 80 * .92 * .78 + i * 74)));
-    g.fillStyle = T.sub; g.font = F(400, 16); (state.subline || '').split('\n').forEach((l, i) => g.fillText(l, x0, P(246 + 14 + i * 22)));
+    const tsz = 80 * TT(), tl = (state.title || '').split('\n'); tl.forEach((l, i) => g.fillText(l, x0 - P(4), P(78 + tsz * .92 * .78 + i * tsz * .925)));
+    const subY = 81 + tl.length * tsz * .92 + 14 + 17 * TS();   // wie im Bildschirm-Layout: Untertitel folgt dem Titel (Zeilenzahl, Größe)
+    g.fillStyle = T.sub; g.font = F(400, 16); (state.subline || '').split('\n').forEach((l, i) => g.fillText(l, x0, P(subY + i * 22 * TS())));
     let x = x0;
     for (const [n, l] of state.stats || []) {
       g.fillStyle = T.text; g.font = F(800, 38, false); g.fillText(n, x, P(322 + 34)); const wn = g.measureText(n).width;
