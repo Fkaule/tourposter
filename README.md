@@ -24,6 +24,8 @@ Radtour-Poster (A4 bis 70 × 100 cm, 300 dpi) aus FIT/GPX/TCX-Dateien und Fotos 
 
 `src/app.html` ist die App (HTML/CSS/JS), `src/entry.js` listet die gebündelten Bibliotheken (fit-file-parser, exifr, maplibre-gl, jspdf, @mapbox/vector-tile, pbf). `tools-mkfit.mjs` erzeugt eine Test-FIT-Datei.
 
+Bei jeder Änderung an der Bedienung auch das Hilfe-Overlay in `src/app.html` (`<div id="help">`, Karten mit Piktogrammen) und die Kurzzeile `#hint` anpassen.
+
 ## GitHub Pages
 
 Repo-Einstellungen → Pages → Source „Deploy from a branch“, Branch `main`, Ordner `/ (root)`. Danach ist `index.html` unter `https://<user>.github.io/<repo>/` erreichbar. `.nojekyll` sorgt dafür, dass Pages die Dateien unverändert ausliefert. Die Bibliotheken liegen als eigene Dateien (`vendor.js`, `heif.js`) neben der kleinen `index.html` – eine einzelne 5-MB-HTML-Datei hatte das Pages-Deployment zum Hängen gebracht.
