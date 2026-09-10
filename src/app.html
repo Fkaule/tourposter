@@ -113,7 +113,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #map.locked { pointer-events:none; }
 #stage.mapmode #overlay { pointer-events:none; }
 #overlay { position:absolute; inset:0; }
-#vig { position:absolute; left:0; top:0; width:100%; height:420px; background:linear-gradient(rgba(var(--pvig),.88), rgba(var(--pvig),0)); pointer-events:none; }
+#vig { position:absolute; left:0; top:0; width:100%; height:480px; background:linear-gradient(rgba(var(--pvig),var(--pvigA,.9)) 0%, rgba(var(--pvig),calc(var(--pvigA,.9) * .85)) 45%, rgba(var(--pvig),0) 100%); pointer-events:none; }
+#bandfade { position:absolute; left:0; bottom:var(--bandH,113px); width:100%; height:46px; background:linear-gradient(rgba(var(--pvig),0), rgba(var(--pvig),calc(var(--pvigA,.9) * .75))); pointer-events:none; }
 #title { position:absolute; left:56px; top:52px; }
 #title .date { color:var(--pa); font-weight:700; font-size:calc(12px * var(--ts, 1)); letter-spacing:.32em; display:flex; align-items:center; gap:12px; }
 #title .date::before { content:""; width:28px; height:2px; background:var(--pa); display:inline-block; }
@@ -141,7 +142,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .tile { position:absolute; border-radius:10px; overflow:hidden; box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); cursor:grab; touch-action:none; }
 .tile:active { cursor:grabbing; }
 .tile.sel { box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 2px var(--accent); }
-.tile img { position:absolute; left:0; top:0; width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; }
+.tile img { position:absolute; left:0; top:0; width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)); }
+.tile .clip::after { content:''; position:absolute; inset:0; background:var(--gtint,transparent); mix-blend-mode:soft-light; opacity:var(--gta,0); pointer-events:none; }
 .tile.crop .clip { outline:2px dashed var(--accent); outline-offset:-2px; cursor:move; }
 .tile.crop::before { content:"Ausschnitt: ziehen = verschieben · Rad = zoomen · Doppelklick = fertig"; position:absolute; left:50%; top:-22px; transform:translateX(-50%); background:var(--accent); color:#fff; font:700 10px/16px Montserrat, Arial, sans-serif; padding:0 6px; border-radius:8px; white-space:nowrap; z-index:2; }
 .tile .z { position:absolute; right:10px; top:12px; height:22px; padding:0 7px; border-radius:11px; background:rgba(13,26,38,.85); color:#fff; font:600 11px/22px Montserrat, Arial, sans-serif; }
@@ -256,6 +258,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <option value="hell">Hell – helle Karte, Rot</option>
         <option value="retro">Retro – bunte Karte, Ziegel</option>
       </select>
+      <label class="f">Farbabstimmung der Fotos <span id="gradeval">60 %</span></label>
+      <input type="range" id="grade" min="0" max="100" step="5" value="60" style="width:100%" title="Fotos an die Farbstimmung des Posters angleichen: Sättigung dämpfen, Tönung in der Themenfarbe">
       <div class="hint">Titel, Untertitel und Kennzahlen direkt im Poster antippen und schreiben. Höhenprofil: Oberkante ziehen.</div>
     </div>
 
@@ -281,7 +285,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <div id="places"></div>
         <div id="pins"></div>
         <div id="tiles"></div>
-        <div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 113" preserveAspectRatio="none"></svg></div>
+        <div id="bandfade"></div><div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 113" preserveAspectRatio="none"></svg></div>
       </div>
     </div></div>
     <div id="maptools"><button id="mapbtn"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
@@ -317,7 +321,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${{ DIN: 'DIN', Poster: 'Posterdruck (cm)', Screen: 'Bildschirm / Handy (px)' }[grp]}"></optgroup>`); }
       sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${p[3]?.label || (grp === 'DIN' ? k + ' · ' : '') + (p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm')}</option>`); } }
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
-  const state = { format: 'portrait', paper: 'A3', bandH: 113, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const state = { format: 'portrait', paper: 'A3', bandH: 113, grade: 60, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; setFormat(state.format); });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
@@ -326,15 +330,18 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
   // ------------------------------------------------------------ Stile
   const THEMES = {
-    nacht: { map: 'https://tiles.openfreemap.org/styles/dark', accent: '#ff5a36', bg: '#0d1a26', vig: '13,26,38', text: '#ffffff', cap: '#e6edf3', sub: '#b7c5d3', muted: '#8fa3b8', band: 'rgba(6,12,18,.8)', line: '#283440', halo: '#0d1a26', pill: 'rgba(13,26,38,.85)', grid: '#283440', axis: '#788c9e', pinBg: '#ffffff', pinFg: '#0d1a26' },
-    fjord: { map: 'https://tiles.openfreemap.org/styles/fiord', accent: '#ffb347', bg: '#1c2a3a', vig: '28,42,58', text: '#ffffff', cap: '#eef3f8', sub: '#c3cfdb', muted: '#8ea0b4', band: 'rgba(12,22,34,.8)', line: '#33475c', halo: '#1c2a3a', pill: 'rgba(28,42,58,.85)', grid: '#33475c', axis: '#8ea0b4', pinBg: '#ffffff', pinFg: '#1c2a3a' },
-    hell:  { map: 'https://tiles.openfreemap.org/styles/positron', accent: '#d9452f', bg: '#f4f3ef', vig: '244,243,239', text: '#1c2430', cap: '#1c2430', sub: '#4a5563', muted: '#6b7785', band: 'rgba(255,255,255,.85)', line: '#d5d9de', halo: '#f4f3ef', pill: 'rgba(28,36,48,.85)', grid: '#d5d9de', axis: '#6b7785', pinBg: '#1c2430', pinFg: '#ffffff' },
-    retro: { map: 'https://tiles.openfreemap.org/styles/bright', accent: '#b8402c', bg: '#f6efe3', vig: '246,239,227', text: '#2b2118', cap: '#2b2118', sub: '#5a4a3a', muted: '#7d6c5c', band: 'rgba(246,239,227,.88)', line: '#d8ccb8', halo: '#f6efe3', pill: 'rgba(43,33,24,.85)', grid: '#d8ccb8', axis: '#7d6c5c', pinBg: '#2b2118', pinFg: '#ffffff' },
+    nacht: { map: 'https://tiles.openfreemap.org/styles/dark', accent: '#ff5a36', bg: '#0d1a26', vig: '13,26,38', text: '#ffffff', cap: '#e6edf3', sub: '#b7c5d3', muted: '#8fa3b8', band: 'rgba(6,12,18,.86)', line: '#283440', halo: '#0d1a26', pill: 'rgba(13,26,38,.85)', grid: '#283440', axis: '#788c9e', pinBg: '#ffffff', pinFg: '#0d1a26', vigA: .9, tint: '#1e3a55', tintA: .35, sat: .8 },
+    fjord: { map: 'https://tiles.openfreemap.org/styles/fiord', accent: '#ffb347', bg: '#1c2a3a', vig: '28,42,58', text: '#ffffff', cap: '#eef3f8', sub: '#c3cfdb', muted: '#8ea0b4', band: 'rgba(12,22,34,.88)', line: '#33475c', halo: '#1c2a3a', pill: 'rgba(28,42,58,.85)', grid: '#33475c', axis: '#8ea0b4', pinBg: '#ffffff', pinFg: '#1c2a3a', vigA: .92, tint: '#274b6e', tintA: .38, sat: .75 },
+    hell:  { map: 'https://tiles.openfreemap.org/styles/positron', accent: '#d9452f', bg: '#f4f3ef', vig: '244,243,239', text: '#1c2430', cap: '#1c2430', sub: '#4a5563', muted: '#6b7785', band: 'rgba(255,255,255,.94)', line: '#d5d9de', halo: '#f4f3ef', pill: 'rgba(28,36,48,.85)', grid: '#d5d9de', axis: '#6b7785', pinBg: '#1c2430', pinFg: '#ffffff', vigA: .97, tint: '#e9dfd0', tintA: .3, sat: .8 },
+    retro: { map: 'https://tiles.openfreemap.org/styles/bright', accent: '#b8402c', bg: '#f6efe3', vig: '246,239,227', text: '#2b2118', cap: '#2b2118', sub: '#5a4a3a', muted: '#7d6c5c', band: 'rgba(246,239,227,.95)', line: '#d8ccb8', halo: '#f6efe3', pill: 'rgba(43,33,24,.85)', grid: '#d8ccb8', axis: '#7d6c5c', pinBg: '#2b2118', pinFg: '#ffffff', vigA: .97, tint: '#c9924e', tintA: .4, sat: .7 },
   };
   let T = THEMES.nacht;
+  // Farbabstimmung: Sättigung dämpfen + Tönung in Themenfarbe (soft-light) + etwas Kontrast, Stärke 0–100 %
+  function gradeVals() { const g = (state.grade ?? 60) / 100; return { sat: 1 - (1 - (T.sat ?? .8)) * g, tint: T.tint || '#000', ta: (T.tintA ?? .3) * g, con: 1 + .06 * g }; }
+  function applyGrade() { const v = gradeVals(); const st = stage.style; st.setProperty('--gsat', v.sat); st.setProperty('--gtint', v.tint); st.setProperty('--gta', v.ta); st.setProperty('--gcon', v.con); $('#gradeval').textContent = (state.grade ?? 60) + ' %'; }
   function applyTheme(name) {
     const prev = T; T = THEMES[name] || THEMES.nacht; state.theme = name; $('#theme').value = name;
-    const st = stage.style; st.setProperty('--pa', T.accent); st.setProperty('--pbg', T.bg); st.setProperty('--pvig', T.vig); st.setProperty('--ptext', T.text); st.setProperty('--pcap', T.cap); st.setProperty('--psub', T.sub); st.setProperty('--pmuted', T.muted); st.setProperty('--pband', T.band); st.setProperty('--pline', T.line); st.setProperty('--phalo', T.halo); st.setProperty('--ppill', T.pill);
+    const st = stage.style; st.setProperty('--pa', T.accent); st.setProperty('--pvigA', T.vigA ?? .9); applyGrade(); st.setProperty('--pbg', T.bg); st.setProperty('--pvig', T.vig); st.setProperty('--ptext', T.text); st.setProperty('--pcap', T.cap); st.setProperty('--psub', T.sub); st.setProperty('--pmuted', T.muted); st.setProperty('--pband', T.band); st.setProperty('--pline', T.line); st.setProperty('--phalo', T.halo); st.setProperty('--ppill', T.pill);
     if (map && prev.map !== T.map) { fallback = false; map.setStyle(T.map); map.once('styledata', () => setTimeout(addRouteLayers, 300)); }
     else if (map && map.getSource && map.getSource('route')) addRouteLayers();
     render();
@@ -366,7 +373,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (state.stages.length) { const a = state.stages[0].points[0], b = state.stages.at(-1).points.at(-1); for (const p of [a, b]) f.push({ type: 'Feature', properties: { kind: 'end' }, geometry: { type: 'Point', coordinates: [p[1], p[0]] } }); }
     return { type: 'FeatureCollection', features: f };
   }
+  function calmMap() { try { for (const l of map.getStyle().layers || []) if (/poi|housenum|transit|aeroway_label|airport/i.test(l.id) && l.type === 'symbol') map.setLayoutProperty(l.id, 'visibility', 'none'); } catch (e) {} }
   function addRouteLayers() {
+    calmMap();
     if (map.getSource('route')) { map.getSource('route').setData(routeGeo()); map.getSource('pts').setData(nightsGeo()); map.setPaintProperty('route', 'line-color', T.accent); map.setPaintProperty('route-halo', 'line-color', T.halo); map.setPaintProperty('pts-end', 'circle-color', T.bg); map.setPaintProperty('pts-end', 'circle-stroke-color', T.accent); map.setPaintProperty('pts-night', 'circle-color', T.accent); map.setPaintProperty('pts-night', 'circle-stroke-color', T.halo); return; }
     map.addSource('route', { type: 'geojson', data: routeGeo() });
     map.addSource('pts', { type: 'geojson', data: nightsGeo() });
@@ -392,6 +401,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     clampPhotos(); stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); scheduleAuto('format'); }
   window.addEventListener('resize', fit);
   $('#format').addEventListener('change', e => setFormat(e.target.value));
+  $('#grade').addEventListener('input', e => { state.grade = +e.target.value; applyGrade(); });
   $('#formatseg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('#format').value = b.dataset.v; setFormat(b.dataset.v); });
   function syncSeg() { $('#formatseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === state.format)); }
   // Mobile Tabs
@@ -734,7 +744,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     return { xs, ys: smooth(ys, 2), bounds, total: off };
   }
   function renderProfile() {
-    const svg = $('#profile'); const H = BH(); const ts = TS(), fz = v => (v * ts).toFixed(1); $('#band').style.height = H + 'px'; svg.setAttribute('viewBox', `0 0 ${CW} ${H}`); if (!state.stages.length) { svg.innerHTML = ''; return; }
+    const svg = $('#profile'); const H = BH(); const ts = TS(), fz = v => (v * ts).toFixed(1); $('#band').style.height = H + 'px'; stage.style.setProperty('--bandH', H + 'px'); svg.setAttribute('viewBox', `0 0 ${CW} ${H}`); if (!state.stages.length) { svg.innerHTML = ''; return; }
     const { xs, ys, bounds, total } = profileData(); const x0 = 84, x1 = CW - 56, yt = 44, yb = H - 24;
     // Rasterlinien: ca. alle 16 px eine, mindestens 3, höchstens 14 – Schrittweite passt sich der Höhe an
     const nLines = Math.max(3, Math.min(14, Math.floor((yb - yt) / 16)));
@@ -1030,7 +1040,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       finally { map.setPixelRatio(old); }
     }
     // Vignette
-    const vg = g.createLinearGradient(0, 0, 0, P(420)); vg.addColorStop(0, `rgba(${T.vig},.88)`); vg.addColorStop(1, `rgba(${T.vig},0)`); g.fillStyle = vg; g.fillRect(0, 0, W, P(420));
+    const vA = T.vigA ?? .9; const vg = g.createLinearGradient(0, 0, 0, P(480)); vg.addColorStop(0, `rgba(${T.vig},${vA})`); vg.addColorStop(.45, `rgba(${T.vig},${vA * .85})`); vg.addColorStop(1, `rgba(${T.vig},0)`); g.fillStyle = vg; g.fillRect(0, 0, W, P(480));
+    { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
     // Titelblock
     const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(57), P(28), P(2));
     g.font = F(700, 12); g.textBaseline = 'top'; spaced(g, state.date || '', x0 + P(40), P(52), P(3.6));
@@ -1051,6 +1062,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = P(30); g.shadowOffsetY = P(14); rr(g, bx, by, bw, bh, P(10)); g.fillStyle = '#000'; g.fill(); g.restore();
       g.save(); rr(g, bx, by, bw, bh, P(10)); g.clip();
       const s = Math.max(bw / im.width, bh / im.height) * Math.max(1, p.zoom ?? 1); const iw = im.width * s, ih = im.height * s; g.drawImage(im, bx - (iw - bw) * (p.ax ?? 50) / 100, by - (ih - bh) * (p.ay ?? 50) / 100, iw, ih);
+      { const v = gradeVals(); if (v.sat < .999) { g.globalCompositeOperation = 'saturation'; g.globalAlpha = 1 - v.sat; g.fillStyle = '#808080'; g.fillRect(bx, by, bw, bh); }
+        if (v.ta > 0) { g.globalCompositeOperation = 'soft-light'; g.globalAlpha = v.ta; g.fillStyle = v.tint; g.fillRect(bx, by, bw, bh); }
+        if (v.con > 1.001) { g.globalCompositeOperation = 'overlay'; g.globalAlpha = (v.con - 1) * 2.5; g.drawImage(im, bx - (iw - bw) * (p.ax ?? 50) / 100, by - (ih - bh) * (p.ay ?? 50) / 100, iw, ih); }   // Bild über sich selbst (overlay) = etwas mehr Kontrast
+        g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
       const gh = 70 * Math.max(1, TS()); const cg = g.createLinearGradient(0, by + bh - P(gh), 0, by + bh); cg.addColorStop(0, 'rgba(6,12,18,0)'); cg.addColorStop(1, 'rgba(6,12,18,.85)'); g.fillStyle = cg; g.fillRect(bx, by + bh - P(gh), bw, P(gh));
       g.fillStyle = '#e6edf3'; let fs = 12; g.font = F(500, fs); const cap = p.caption ?? autoCaption(p); while (fs > 8.5 && g.measureText(cap).width > bw - P(28)) { fs -= .5; g.font = F(500, fs); }
       g.fillText(cap, bx + P(14), by + bh - P(14));
@@ -1095,7 +1110,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     say(n < 0 ? 'Layout gespeichert, Fotos konnten nicht im Browser abgelegt werden (Speicher gesperrt?) – Originale beim nächsten Mal wieder hinzufügen.' : `Layout und ${n} Foto(s) in Originalgröße im Browser gespeichert${miss ? ` – ${miss} Foto(s) fehlen als Original (nur Vorschau).` : '.'}`, miss || n < 0 ? 'warn' : 'ok'); } catch (e) { say('Speichern fehlgeschlagen: ' + e.message, 'err'); } });
   $('#exjson').addEventListener('click', () => download(new Blob([JSON.stringify(serial(), null, 1)], { type: 'application/json' }), fname() + '.json'));
   function restore(obj) {
-    Object.assign(state, obj); state.bandH = obj.bandH || 113; applyTheme(state.theme || 'nacht'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); state.bandH = obj.bandH || 113; state.grade = obj.grade ?? 60; $('#grade').value = state.grade; applyTheme(state.theme || 'nacht'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
     render();
   }
