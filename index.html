@@ -120,7 +120,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #stage.mapmode #overlay { pointer-events:none; }
 #overlay { position:absolute; inset:0; }
 #vig { position:absolute; left:0; top:0; width:100%; height:480px; background:linear-gradient(rgba(var(--pvig),var(--pvigA,.9)) 0%, rgba(var(--pvig),calc(var(--pvigA,.9) * .85)) 45%, rgba(var(--pvig),0) 100%); pointer-events:none; }
-#bandfade { position:absolute; left:0; bottom:var(--bandH,113px); width:100%; height:46px; background:linear-gradient(rgba(var(--pvig),0), rgba(var(--pvig),calc(var(--pvigA,.9) * .75))); pointer-events:none; }
+#bandfade { position:absolute; left:0; bottom:var(--bandH,100px); width:100%; height:46px; background:linear-gradient(rgba(var(--pvig),0), rgba(var(--pvig),calc(var(--pvigA,.9) * .75))); pointer-events:none; }
 #title { position:absolute; left:56px; top:52px; }
 #title .date { color:var(--pa); font-weight:700; font-size:calc(12px * var(--ts, 1)); letter-spacing:.32em; display:flex; align-items:center; gap:12px; }
 #title .date::before { content:""; width:28px; height:2px; background:var(--pa); display:inline-block; }
@@ -134,7 +134,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 [contenteditable] { outline:none; border-radius:4px; cursor:text; }
 [contenteditable]:hover { box-shadow:0 0 0 1.5px rgba(255,90,54,.6); }
 [contenteditable]:focus { box-shadow:0 0 0 2px var(--accent); }
-#band { position:absolute; left:0; bottom:0; width:100%; height:113px; background:var(--pband); border-top:1px solid var(--pline); pointer-events:none; }
+#band { position:absolute; left:0; bottom:0; width:100%; height:100px; background:var(--pband); border-top:1px solid var(--pline); pointer-events:none; }
 #bandgrip { position:absolute; left:0; right:0; top:-6px; height:12px; cursor:ns-resize; pointer-events:auto; touch-action:none; }
 #bandgrip::after { content:''; position:absolute; left:50%; top:4px; width:44px; height:4px; margin-left:-22px; border-radius:2px; background:var(--pmuted); opacity:0; transition:opacity .15s; }
 #bandgrip:hover::after, #bandgrip.on::after { opacity:.8; }
@@ -317,7 +317,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <div id="places"></div>
         <div id="pins"></div>
         <div id="tiles"></div>
-        <div id="bandfade"></div><div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 113" preserveAspectRatio="none"></svg></div>
+        <div id="bandfade"></div><div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg></div>
       </div>
     </div></div>
     <div id="maptools"><button id="mapbtn"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
@@ -370,7 +370,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${{ DIN: 'DIN', Poster: 'Posterdruck (cm)', Screen: 'Bildschirm / Handy (px)' }[grp]}"></optgroup>`); }
       sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${p[3]?.label || (grp === 'DIN' ? k + ' · ' : '') + (p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm')}</option>`); } }
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
-  const state = { format: 'portrait', paper: 'A3', bandH: 113, grade: 60, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const state = { format: 'portrait', paper: 'A3', bandH: 100, grade: 60, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; setFormat(state.format); });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
@@ -442,7 +442,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   $('#mapbtn').addEventListener('click', () => { const on = $('#map').classList.toggle('locked'); $('#mapbtn').classList.toggle('on', !on); stage.classList.toggle('mapmode', !on); });
 
   // ------------------------------------------------------------ Größe / Format
-  const BH = () => state.bandH || 113;
+  const BH = () => state.bandH || 100;
   function clampPhotos() { for (const p of state.photos) { p.w = Math.min(p.w, CW - 60); p.h = Math.min(p.h, CH - BH() - 60); p.x = Math.max(0, Math.min(CW - p.w, p.x)); p.y = Math.max(0, Math.min(CH - BH() - p.h, p.y)); } }
   function fit() { const m = $('main'), fr = $('#frame'); const s = Math.min((m.clientWidth - 40) / CW, (m.clientHeight - (window.innerWidth <= 900 ? 60 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
   function setFormat(f) { state.format = f; syncSeg(); const pp = PAPER[state.paper] || PAPER.A3, L = Math.round(1123 * pp[1] / pp[0]); CW = f === 'landscape' ? L : 1123; CH = f === 'landscape' ? 1123 : L;
@@ -732,7 +732,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const img = document.createElement('img'); img.src = p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
       const hud = document.createElement('div'); hud.className = 'hud'; clip.appendChild(hud);
-      const n = document.createElement('div'); n.className = 'num' + (p.star ? ' star' : ''); n.textContent = p.num + (p.star ? ' ★' : ''); n.title = p.star ? 'Highlight – Klick entfernt es' : 'Klick = Highlight (größer im Auto-Layout)'; n.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); n.addEventListener('click', e => { e.stopPropagation(); p.star = !p.star; render(); scheduleAuto('star'); }); hud.appendChild(n);
+      const n = document.createElement('div'); n.className = 'num' + (p.star ? ' star' : ''); n.textContent = p.num + (p.star ? ' ★' : ''); n.title = p.star ? 'Highlight – Klick entfernt es' : 'Klick = Highlight (größer im Auto-Layout)'; n.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); n.addEventListener('click', e => { e.stopPropagation(); p.star = !p.star; if (p.fixed) sizeForStar(p); render(); scheduleAuto('star'); }); hud.appendChild(n);
 
       { const wrap = document.createElement('div'); wrap.className = 'geos'; hud.appendChild(wrap);
         const ico = (cls, svg, title, fn) => { const d = document.createElement('div'); d.className = 'ico ' + cls; d.innerHTML = svg; d.title = title; d.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); d.addEventListener('click', e => { e.stopPropagation(); fn(); }); wrap.appendChild(d); return d; };
@@ -797,7 +797,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   function renderProfile() {
     const svg = $('#profile'); const H = BH(); const ts = TS(), fz = v => (v * ts).toFixed(1); $('#band').style.height = H + 'px'; stage.style.setProperty('--bandH', H + 'px'); svg.setAttribute('viewBox', `0 0 ${CW} ${H}`); if (!state.stages.length) { svg.innerHTML = ''; return; }
-    const { xs, ys, bounds, total } = profileData(); const x0 = 84, x1 = CW - 56, yt = 44, yb = H - 24;
+    const { xs, ys, bounds, total } = profileData(); const x0 = 84, x1 = CW - 56, yt = 40, yb = H - 22;
     // Rasterlinien: ca. alle 16 px eine, mindestens 3, höchstens 14 – Schrittweite passt sich der Höhe an
     const nLines = Math.max(3, Math.min(14, Math.floor((yb - yt) / 16)));
     const maxE = Math.max(...ys); const stepG = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000].find(st => (maxE * 1.15) / st <= nLines) || 2000; const ymax = Math.ceil((maxE * 1.15) / stepG) * stepG || 50;
@@ -948,7 +948,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     }
     for (const g of (drag.mode === 'move' ? drag.group : [{ t }])) { const el = tilesEl.querySelector(`[data-id="${g.t.id}"]`); Object.assign(el.style, { left: g.t.x + 'px', top: g.t.y + 'px', width: g.t.w + 'px', height: g.t.h + 'px' }); }
   });
-  tilesEl.addEventListener('pointerup', () => { if (drag) { const d = drag; drag = null; showGuides([]); if ((d.mode === 'move' || d.mode === 'resize') && (d.t.x !== d.x || d.t.y !== d.y || d.t.w !== d.w || d.t.h !== d.h)) { for (const t of state.photos) if (isSel(t.id) || t.id === d.t.id) t.fixed = true; scheduleAuto('drag'); } render(); } });
+  tilesEl.addEventListener('pointerup', () => { if (drag) { const d = drag; drag = null; showGuides([]); if ((d.mode === 'move' || d.mode === 'resize') && Math.max(Math.abs(d.t.x - d.x), Math.abs(d.t.y - d.y), Math.abs(d.t.w - d.w), Math.abs(d.t.h - d.h)) >= 4) { for (const t of state.photos) if (isSel(t.id) || t.id === d.t.id) t.fixed = true; scheduleAuto('drag'); } render(); } });
   tilesEl.addEventListener('wheel', e => { const el = e.target.closest('.tile'); if (!el) return; const t = state.photos.find(x => x.id === el.dataset.id); if (!(isSel(t.id) || cropMode === t.id)) return; e.preventDefault(); zoomTile(t, e.deltaY < 0 ? 1.08 : 1 / 1.08); render(); }, { passive: false });
   // ---- Ausrichten
   const ICONS = {
@@ -960,6 +960,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // ---------------------------------------------------------- Automatische Anordnung: Fotos nah am Aufnahmeort, frei von Route/Titel/Ortsnamen/Profil
   // Fotos: p.fixed = von Hand gesetzt (Position+Größe bleiben, andere weichen aus), p.star = Highlight (≈ 1,6-fache Fläche, wird zuerst platziert)
   const autoOn = () => $('#autoadd').checked;
+  const baseSize = () => { const n = state.photos.length; return CW * (n <= 4 ? .30 : n <= 8 ? .25 : n <= 12 ? .21 : .17); };
+  // Fixiertes Foto bekommt beim Highlight-Wechsel die passende Größe (Position bleibt, wird in den Rahmen geklemmt)
+  function sizeForStar(p) { const ar = p.w / p.h; const w = Math.round(baseSize() * (p.star ? 1.6 : 1) * (ar >= 1 ? 1 : .78)); p.w = Math.min(w, CW - 80); p.h = Math.round(p.w / ar); clampPhotos(); }
   let layouting = false, autoTimer = null;
   function scheduleAuto(why) { if (!autoOn() || layouting) return; clearTimeout(autoTimer); autoTimer = setTimeout(() => autoLayout(null, { quiet: true, why }), 250); }
   function autoLayout(only = null, opts = {}) {
@@ -1016,7 +1019,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         return placed.length;
       };
       // Grundgröße: mit der Fotoanzahl kleiner; passt nicht alles, stufenweise verkleinern, zuletzt Karte herauszoomen (Route kleiner)
-      let base = CW * (n <= 4 ? .30 : n <= 8 ? .25 : n <= 12 ? .21 : .17); const want = order.length; let got = 0, zoomed = 0;
+      let base = baseSize(); const want = order.length; let got = 0, zoomed = 0;
       outer: for (let z = 0; z < 3; z++) {
         for (let sc = 1; sc >= .5; sc -= .1) { got = attempt(base * sc, true); if (got === want) { attempt(base * sc, false); break outer; } }
         if (only || !opts.allowZoom) break;
@@ -1061,7 +1064,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     grip.addEventListener('pointermove', e => { if (!gd) return; state.bandH = Math.round(Math.max(90, Math.min(Math.round(CH * .45), gd.h - (e.clientY - gd.y) / gd.s))); renderProfile(); });
     const end = () => { if (!gd) return; gd = null; grip.classList.remove('on'); clampPhotos(); render(); scheduleAuto('band'); };
     grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
-    grip.addEventListener('dblclick', () => { state.bandH = 113; clampPhotos(); render(); }); }
+    grip.addEventListener('dblclick', () => { state.bandH = 100; clampPhotos(); render(); }); }
   stage.addEventListener('pointerdown', e => { if (e.target.id === 'overlay' || e.target.id === 'vig' || e.target.closest('#map')) { selected = new Set(); selPlace = null; cropMode = null; render(); } });
   $('#reset').addEventListener('click', () => { if (!confirm('Alles zurücksetzen? Tour, Fotos und Texte werden aus dieser Seite und dem Browser-Speicher entfernt.')) return; try { localStorage.removeItem(KEY); } catch (e) {} location.reload(); });
   function wireDrop(el, fn) {
@@ -1162,7 +1165,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     say(n < 0 ? 'Layout gespeichert, Fotos konnten nicht im Browser abgelegt werden (Speicher gesperrt?) – Originale beim nächsten Mal wieder hinzufügen.' : `Layout und ${n} Foto(s) in Originalgröße im Browser gespeichert${miss ? ` – ${miss} Foto(s) fehlen als Original (nur Vorschau).` : '.'}`, miss || n < 0 ? 'warn' : 'ok'); } catch (e) { say('Speichern fehlgeschlagen: ' + e.message, 'err'); } });
   $('#exjson').addEventListener('click', () => download(new Blob([JSON.stringify(serial(), null, 1)], { type: 'application/json' }), fname() + '.json'));
   function restore(obj) {
-    Object.assign(state, obj); state.bandH = obj.bandH || 113; state.grade = obj.grade ?? 60; $('#grade').value = state.grade; applyTheme(state.theme || 'nacht'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); state.bandH = obj.bandH || 100; state.grade = obj.grade ?? 60; $('#grade').value = state.grade; applyTheme(state.theme || 'nacht'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
     render();
   }
