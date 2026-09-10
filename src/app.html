@@ -119,9 +119,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #map.locked { pointer-events:none; }
 #stage.mapmode #overlay { pointer-events:none; }
 #overlay { position:absolute; inset:0; }
-#vig { position:absolute; left:0; top:0; width:100%; height:var(--vigH,480px); background:linear-gradient(rgba(var(--pvig),var(--pvigA,1)) 0%, rgba(var(--pvig),var(--pvigA,1)) var(--vigSolid,60%), rgba(var(--pvig),0) 100%); pointer-events:none; }
+#vig { position:absolute; left:0; top:0; width:100%; height:var(--vigH,480px); background:linear-gradient(rgba(var(--pvig),var(--pvigA,.9)) 0%, rgba(var(--pvig),calc(var(--pvigA,.9) * .8)) 45%, rgba(var(--pvig),0) 100%); pointer-events:none; }
 #bandfade { position:absolute; left:0; bottom:var(--bandH,100px); width:100%; height:46px; background:linear-gradient(rgba(var(--pvig),0), rgba(var(--pvig),calc(var(--pvigA,.9) * .75))); pointer-events:none; }
-#title { position:absolute; left:56px; top:52px; }
+#title { position:absolute; left:56px; top:52px; --halo: 0 0 6px var(--pbg), 0 0 6px var(--pbg), 0 0 3px var(--pbg), 0 0 12px var(--pbg); }
+#title .date, #title .h, #title .sub, #stats b, #stats span { text-shadow:var(--halo, none); }
+#stats { --halo: 0 0 6px var(--pbg), 0 0 6px var(--pbg), 0 0 3px var(--pbg), 0 0 12px var(--pbg); }
 #title .date { color:var(--pa); font-weight:700; font-size:calc(12px * var(--ts, 1)); letter-spacing:.32em; display:flex; align-items:center; gap:12px; }
 #title .date::before { content:""; width:28px; height:2px; background:var(--pa); display:inline-block; }
 #title .h { font-weight:900; font-size:calc(80px * var(--tt, 1)); line-height:.92; letter-spacing:-.02em; color:var(--ptext); margin-top:14px; white-space:pre-line; }
@@ -392,10 +394,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
   // ------------------------------------------------------------ Stile
   const THEMES = {
-    nacht: { map: 'https://tiles.openfreemap.org/styles/dark', accent: '#ff5a36', bg: '#0d1a26', vig: '13,26,38', text: '#ffffff', cap: '#e6edf3', sub: '#b7c5d3', muted: '#8fa3b8', band: 'rgba(6,12,18,.86)', line: '#283440', halo: '#0d1a26', pill: 'rgba(13,26,38,.85)', grid: '#283440', axis: '#788c9e', pinBg: '#ffffff', pinFg: '#0d1a26', vigA: .96, tint: '#1e3a55', tintA: .35, sat: .8 },
-    fjord: { map: 'https://tiles.openfreemap.org/styles/fiord', accent: '#ffb347', bg: '#1c2a3a', vig: '28,42,58', text: '#ffffff', cap: '#eef3f8', sub: '#c3cfdb', muted: '#8ea0b4', band: 'rgba(12,22,34,.88)', line: '#33475c', halo: '#1c2a3a', pill: 'rgba(28,42,58,.85)', grid: '#33475c', axis: '#8ea0b4', pinBg: '#ffffff', pinFg: '#1c2a3a', vigA: .96, tint: '#274b6e', tintA: .38, sat: .75 },
-    hell:  { map: 'https://tiles.openfreemap.org/styles/positron', accent: '#d9452f', bg: '#f4f3ef', vig: '244,243,239', text: '#1c2430', cap: '#1c2430', sub: '#4a5563', muted: '#6b7785', band: 'rgba(255,255,255,.94)', line: '#d5d9de', halo: '#f4f3ef', pill: 'rgba(28,36,48,.85)', grid: '#d5d9de', axis: '#6b7785', pinBg: '#1c2430', pinFg: '#ffffff', vigA: 1, tint: '#e9dfd0', tintA: .3, sat: .8 },
-    retro: { map: 'https://tiles.openfreemap.org/styles/bright', accent: '#b8402c', bg: '#f6efe3', vig: '246,239,227', text: '#2b2118', cap: '#2b2118', sub: '#5a4a3a', muted: '#7d6c5c', band: 'rgba(246,239,227,.95)', line: '#d8ccb8', halo: '#f6efe3', pill: 'rgba(43,33,24,.85)', grid: '#d8ccb8', axis: '#7d6c5c', pinBg: '#2b2118', pinFg: '#ffffff', vigA: 1, tint: '#c9924e', tintA: .4, sat: .7 },
+    nacht: { map: 'https://tiles.openfreemap.org/styles/dark', accent: '#ff5a36', bg: '#0d1a26', vig: '13,26,38', text: '#ffffff', cap: '#e6edf3', sub: '#b7c5d3', muted: '#8fa3b8', band: 'rgba(6,12,18,.86)', line: '#283440', halo: '#0d1a26', pill: 'rgba(13,26,38,.85)', grid: '#283440', axis: '#788c9e', pinBg: '#ffffff', pinFg: '#0d1a26', vigA: .9, tint: '#1e3a55', tintA: .35, sat: .8 },
+    fjord: { map: 'https://tiles.openfreemap.org/styles/fiord', accent: '#ffb347', bg: '#1c2a3a', vig: '28,42,58', text: '#ffffff', cap: '#eef3f8', sub: '#c3cfdb', muted: '#8ea0b4', band: 'rgba(12,22,34,.88)', line: '#33475c', halo: '#1c2a3a', pill: 'rgba(28,42,58,.85)', grid: '#33475c', axis: '#8ea0b4', pinBg: '#ffffff', pinFg: '#1c2a3a', vigA: .92, tint: '#274b6e', tintA: .38, sat: .75 },
+    hell:  { map: 'https://tiles.openfreemap.org/styles/positron', accent: '#d9452f', bg: '#f4f3ef', vig: '244,243,239', text: '#1c2430', cap: '#1c2430', sub: '#4a5563', muted: '#6b7785', band: 'rgba(255,255,255,.94)', line: '#d5d9de', halo: '#f4f3ef', pill: 'rgba(28,36,48,.85)', grid: '#d5d9de', axis: '#6b7785', pinBg: '#1c2430', pinFg: '#ffffff', vigA: .95, tint: '#e9dfd0', tintA: .3, sat: .8 },
+    retro: { map: 'https://tiles.openfreemap.org/styles/bright', accent: '#b8402c', bg: '#f6efe3', vig: '246,239,227', text: '#2b2118', cap: '#2b2118', sub: '#5a4a3a', muted: '#7d6c5c', band: 'rgba(246,239,227,.95)', line: '#d8ccb8', halo: '#f6efe3', pill: 'rgba(43,33,24,.85)', grid: '#d8ccb8', axis: '#7d6c5c', pinBg: '#2b2118', pinFg: '#ffffff', vigA: .95, tint: '#c9924e', tintA: .4, sat: .7 },
   };
   let T = THEMES.nacht;
   // Farbabstimmung: Sättigung dämpfen + Tönung in Themenfarbe (soft-light) + etwas Kontrast, Stärke 0–100 %
@@ -403,7 +405,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function applyGrade() { const v = gradeVals(); const st = stage.style; st.setProperty('--gsat', v.sat); st.setProperty('--gtint', v.tint); st.setProperty('--gta', v.ta); st.setProperty('--gcon', v.con); $('#gradeval').textContent = (state.grade ?? 60) + ' %'; }
   function applyTheme(name) {
     const prev = T; T = THEMES[name] || THEMES.nacht; state.theme = name; $('#theme').value = name;
-    const st = stage.style; st.setProperty('--pa', T.accent); st.setProperty('--pvigA', T.vigA ?? 1); applyGrade(); st.setProperty('--pbg', T.bg); st.setProperty('--pvig', T.vig); st.setProperty('--ptext', T.text); st.setProperty('--pcap', T.cap); st.setProperty('--psub', T.sub); st.setProperty('--pmuted', T.muted); st.setProperty('--pband', T.band); st.setProperty('--pline', T.line); st.setProperty('--phalo', T.halo); st.setProperty('--ppill', T.pill);
+    const st = stage.style; st.setProperty('--pa', T.accent); st.setProperty('--pvigA', T.vigA ?? .9); applyGrade(); st.setProperty('--pbg', T.bg); st.setProperty('--pvig', T.vig); st.setProperty('--ptext', T.text); st.setProperty('--pcap', T.cap); st.setProperty('--psub', T.sub); st.setProperty('--pmuted', T.muted); st.setProperty('--pband', T.band); st.setProperty('--pline', T.line); st.setProperty('--phalo', T.halo); st.setProperty('--ppill', T.pill);
     if (map && prev.map !== T.map) { fallback = false; map.setStyle(T.map); map.once('styledata', () => setTimeout(addRouteLayers, 300)); }
     else if (map && map.getSource && map.getSource('route')) addRouteLayers();
     render();
@@ -795,7 +797,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     $('#title .date').textContent = state.date || ''; $('#title .h').textContent = state.title || ''; $('#title .sub').textContent = state.subline || '';
     stage.style.setProperty('--statsTop', ($('#title').offsetTop + $('#title').offsetHeight + 24) + 'px');
     // Vignette reicht immer bis unter die Kennzahlen (Titelblock bleibt auf jeder Karte lesbar)
-    { const solid = $('#title').offsetTop + $('#title').offsetHeight + 24 + ($('#stats').offsetHeight || 60) + 24, vigH = solid + 160; stage.style.setProperty('--vigH', vigH + 'px'); stage.style.setProperty('--vigSolid', (solid / vigH * 100).toFixed(1) + '%'); }
+    stage.style.setProperty('--vigH', Math.max(480, $('#title').offsetTop + $('#title').offsetHeight + 24 + ($('#stats').offsetHeight || 60) + 110) + 'px');
     $('#stats').innerHTML = (state.stats || []).map(([n, l]) => `<div><b contenteditable="true" spellcheck="false">${n}</b><span contenteditable="true" spellcheck="false">${l}</span></div>`).join('');
     $('#stages').innerHTML = state.stages.map((s, i) => `<div class="row"><div class="n">${i + 1}</div><div><input value="${(s.name || '').replace(/"/g, '&quot;')}" data-i="${i}" aria-label="Etappenname"><div class="meta">${(s.distance / 1000).toFixed(0)} km · ${nf(s.gain)} Hm${s.hasEle ? '' : ' · keine Höhendaten'}</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
     $('#stages').querySelectorAll('input').forEach(inp => inp.addEventListener('change', e => { state.stages[+e.target.dataset.i].name = e.target.value; renderProfile(); }));
@@ -1175,20 +1177,25 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       finally { map.setPixelRatio(old); }
     }
     // Vignette
-    const vA = T.vigA ?? 1; const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480, vs = parseFloat(stage.style.getPropertyValue('--vigSolid')) / 100 || .6; const vg = g.createLinearGradient(0, 0, 0, P(vigH)); vg.addColorStop(0, `rgba(${T.vig},${vA})`); vg.addColorStop(vs, `rgba(${T.vig},${vA})`); vg.addColorStop(1, `rgba(${T.vig},0)`); g.fillStyle = vg; g.fillRect(0, 0, W, P(vigH));
+    const vA = T.vigA ?? .9; const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const vg = g.createLinearGradient(0, 0, 0, P(vigH)); vg.addColorStop(0, `rgba(${T.vig},${vA})`); vg.addColorStop(.45, `rgba(${T.vig},${vA * .8})`); vg.addColorStop(1, `rgba(${T.vig},0)`); g.fillStyle = vg; g.fillRect(0, 0, W, P(vigH));
     if (BH()) { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
     // Titelblock
     const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(57), P(28), P(2));
-    g.font = F(700, 12); g.textBaseline = 'top'; spaced(g, state.date || '', x0 + P(40), P(52), P(3.6));
+    // Halo in Posterfarbe hinter allen Titeltexten (weicher Schatten + dünne Kontur) – lesbar auch über Kartenbeschriftung
+    const haloOn = () => { g.shadowColor = T.bg; g.shadowBlur = P(10); g.lineJoin = 'round'; g.strokeStyle = T.bg; g.lineWidth = P(4); };
+    const haloOff = () => { g.shadowBlur = 0; g.shadowColor = 'transparent'; };
+    const textH = (t, x, y) => { haloOn(); g.strokeText(t, x, y); g.strokeText(t, x, y); haloOff(); g.fillText(t, x, y); };
+    const spacedH = (t, x, y, gap) => { haloOn(); let xx = x; for (const ch of t) { g.strokeText(ch, xx, y); xx += g.measureText(ch).width + gap; } haloOff(); return spaced(g, t, x, y, gap); };
+    g.font = F(700, 12); g.textBaseline = 'top'; spacedH(state.date || '', x0 + P(40), P(52), P(3.6));
     g.fillStyle = T.text; g.font = F(900, 80, false); g.textBaseline = 'alphabetic';
-    const tsz = 80 * TT(), tl = (state.title || '').split('\n'); tl.forEach((l, i) => g.fillText(l, x0 - P(4), P(78 + tsz * .92 * .78 + i * tsz * .925)));
+    const tsz = 80 * TT(), tl = (state.title || '').split('\n'); tl.forEach((l, i) => textH(l, x0 - P(4), P(78 + tsz * .92 * .78 + i * tsz * .925)));
     const subY = 81 + tl.length * tsz * .92 + 14 + 17 * TS();   // wie im Bildschirm-Layout: Untertitel folgt dem Titel (Zeilenzahl, Größe)
-    g.fillStyle = T.sub; g.font = F(400, 16); (state.subline || '').split('\n').forEach((l, i) => g.fillText(l, x0, P(subY + i * 22 * TS())));
+    g.fillStyle = T.sub; g.font = F(400, 16); (state.subline || '').split('\n').forEach((l, i) => textH(l, x0, P(subY + i * 22 * TS())));
     let x = x0; const nSub = (state.subline || '').split('\n').filter(Boolean).length || 1;
     const statsTop = subY - 17 * TS() + nSub * 22 * TS() + 24;   // wie am Bildschirm: 24 px unter dem Untertitel
     for (const [n, l] of state.stats || []) {
-      g.fillStyle = T.text; g.font = F(800, 38, false); g.fillText(n, x, P(statsTop + 34 * TT())); const wn = g.measureText(n).width;
-      g.fillStyle = T.muted; g.font = F(500, 11); g.textBaseline = 'top'; const lx = spaced(g, l, x, P(statsTop + 44 * TT()), P(2.4)); g.textBaseline = 'alphabetic';
+      g.fillStyle = T.text; g.font = F(800, 38, false); textH(n, x, P(statsTop + 34 * TT())); const wn = g.measureText(n).width;
+      g.fillStyle = T.muted; g.font = F(500, 11); g.textBaseline = 'top'; const lx = spacedH(l, x, P(statsTop + 44 * TT()), P(2.4)); g.textBaseline = 'alphabetic';
       x += Math.max(wn, lx - x) + P(28); g.fillStyle = T.line; g.fillRect(x, P(statsTop + 4), P(1), P(44 * TT())); x += P(28);
     }
     // Fotos
