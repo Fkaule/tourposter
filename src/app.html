@@ -302,6 +302,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div>
       </div>
       <label class="switch" style="margin-top:8px"><input type="checkbox" id="showband" checked><span class="kn"></span><span>Höhenprofil<small>Höhe automatisch nach Bergigkeit, per Ziehen der Oberkante änderbar</small></span></label>
+      <label class="switch" style="margin-top:6px"><input type="checkbox" id="showpeaks" checked><span class="kn"></span><span>Gipfel &amp; Pässe im Profil<small>Namen und Höhen aus den Kartendaten, wenn die Route darüber führt</small></span></label>
       <label class="f">Farbabstimmung der Fotos <span id="gradeval">60 %</span></label>
       <input type="range" id="grade" min="0" max="100" step="5" value="60" style="width:100%" title="Fotos an die Farbstimmung des Posters angleichen: Sättigung dämpfen, Tönung in der Themenfarbe">
       <div class="hint">Titel, Untertitel und Kennzahlen direkt im Poster antippen und schreiben. Höhenprofil: Oberkante ziehen.</div>
@@ -477,6 +478,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     stage.classList.toggle('mat', f.mat > 0); stage.classList.toggle('marks', f.mat > 0 && !!f.marks); stage.classList.toggle('fray', f.fray > 0); render(); }
   $('#matsl').addEventListener('input', e => { FR().mat = +e.target.value; applyFrame(); });
   $('#matsl').addEventListener('change', () => scheduleAuto('mat'));
+  $('#showpeaks').addEventListener('change', e => { state.showPeaks = e.target.checked; if (state.showPeaks && !state.peaks?.length) findPeaks(); else render(); });
   $('#showband').addEventListener('change', e => { state.showBand = e.target.checked; clampPhotos(); render(); scheduleAuto('band'); });
   // 8. Gesamtgröße der Fotos: Automatik → Grundgröße skaliert; sonst alle Fotos um ihre Mitte skalieren
   let lastScale = 1;
@@ -510,7 +512,29 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     state.stages.sort((a, b) => (a.start || 0) - (b.start || 0));
     afterTourChange(); if (window.innerWidth <= 900 && state.stages.length) showTab('fotos');
   }
+  // Gipfel und Pässe an der Route (Kartenkacheln, Layer mountain_peak): Name + Höhe fürs Höhenprofil
+  let peakSeq = 0;
+  async function findPeaks() {
+    const my = ++peakSeq; state.peaks = []; if (!map || !state.stages.length || state.showPeaks === false) { render(); return; }
+    try {
+      const tpl = await tileTemplate(); if (!tpl || typeof VectorTile === 'undefined') return;
+      // Routenpunkte mit Streckenkilometer (feiner als routePts: alle 150 m)
+      const rp = []; let off = 0; for (const st of state.stages) { let last = -1e9; for (const p of st.points) { if (p[3] - last < 150) continue; last = p[3]; rp.push([p[0], p[1], off + p[3], p[2] ?? 0]); } off += st.points.at(-1)[3]; }
+      const total = off; const list = routeTiles(12).slice(0, 400); const found = new Map();
+      for (let i = 0; i < list.length; i += 8) { await Promise.all(list.slice(i, i + 8).map(async ([x, y]) => {
+        const vt = await tileFetch(12, x, y); const layer = vt && vt.layers.mountain_peak; if (!layer) return;
+        for (let k = 0; k < layer.length; k++) { const f = layer.feature(k).toGeoJSON(x, y, 12); const pr = f.properties; const name = pr.name || pr['name:de']; const ele = +pr.ele; if (!name || !(ele > 0)) continue;
+          const c = f.geometry.coordinates; let bd = Infinity, bi = -1; for (let j = 0; j < rp.length; j++) { const d = hav([c[1], c[0]], [rp[j][0], rp[j][1]]); if (d < bd) { bd = d; bi = j; } }
+          if (bd > 350) continue;   // nur Gipfel/Pässe, über die die Route (fast) führt
+          const id = name + '|' + Math.round(ele); if (!found.has(id) || found.get(id).d > bd) found.set(id, { name, ele, cls: pr.class, d: bd, dist: rp[bi][2], routeEle: rp[bi][3] }); } })); }
+      if (my !== peakSeq) return;
+      // Auswahl: höchste zuerst, Mindestabstand entlang der Strecke 5 % (sonst überlappen die Texte), höchstens 6; Pässe nur, wenn sie deutlich über der Umgebung liegen
+      const sel = []; for (const pk of [...found.values()].sort((a, b) => b.ele - a.ele)) { if (sel.length >= 6) break; if (sel.some(q => Math.abs(q.dist - pk.dist) < total * .05)) continue; sel.push(pk); }
+      state.peaks = sel.sort((a, b) => a.dist - b.dist); render();
+    } catch (e) { console.warn('Gipfel', e); }
+  }
   function afterTourChange() {
+    findPeaks();
     buildPlaces(); autoTexts(); if (map && map.loaded()) { addRouteLayers(); fitRoute(); } render();
     const km = state.stages.reduce((s, x) => s + x.distance, 0) / 1000;
     $('#mapinfo').textContent = state.stages.length ? `${state.stages.length} Etappe(n) · ${km.toFixed(0)} km · ${nf(state.stages.reduce((s, x) => s + x.gain, 0))} Hm` : '';
@@ -833,7 +857,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   function renderProfile() {
     const svg = $('#profile'); const H = BH(); const ts = TS(), fz = v => (v * ts).toFixed(1); $('#band').style.height = H + 'px'; $('#band').hidden = $('#bandfade').hidden = !H; stage.style.setProperty('--bandH', H + 'px'); if (!H) { svg.innerHTML = ''; return; } svg.setAttribute('viewBox', `0 0 ${CW} ${H}`); if (!state.stages.length) { svg.innerHTML = ''; return; }
-    const { xs, ys, bounds, total } = profileData(); const x0 = 84, x1 = CW - 56, yt = 40, yb = H - 22;
+    const { xs, ys, bounds, total } = profileData(); const x0 = 84, x1 = CW - 56, yt = (state.showPeaks !== false && state.peaks?.length) ? 52 : 40, yb = H - 22;
     // Rasterlinien: ca. alle 16 px eine, mindestens 3, höchstens 14 – Schrittweite passt sich der Höhe an
     const nLines = Math.max(3, Math.min(14, Math.floor((yb - yt) / 16)));
     const maxE = Math.max(...ys); const stepG = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000].find(st => (maxE * 1.15) / st <= nLines) || 2000; const ymax = Math.ceil((maxE * 1.15) / stepG) * stepG || 50;
@@ -846,7 +870,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     // Entfernungsmarken: Schrittweite so, dass höchstens ~8 Marken entstehen
     const tkm = total / 1000, stepK = [5, 10, 20, 25, 50, 100, 200, 500].find(st => tkm / st <= 8) || 500;
     for (let k = stepK; k < tkm - stepK * .35; k += stepK) { const x = X(k * 1000); g += `<line x1="${x}" y1="${yb}" x2="${x}" y2="${yb + 4}" stroke="${T.axis}" stroke-width=".6"/><line x1="${x}" y1="${yt}" x2="${x}" y2="${yb}" stroke="${T.grid}" stroke-width=".4" stroke-dasharray="2 3"/><text x="${x}" y="${yb + 12}" fill="${T.axis}" font-size="${fz(8)}" text-anchor="middle" font-family="Montserrat">${k} km</text>`; }
-    svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="${T.accent}" fill-opacity=".37"/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="1.6" stroke-linejoin="round"/>` + b +
+    // Gipfel/Pässe: kleines Dreieck auf der Kurve, Name + Höhe darüber (bei Platzmangel nach links/rechts ausweichen)
+    let pk = ''; if (state.showPeaks !== false && state.peaks?.length) { const lab = []; for (const q of state.peaks) { const x = X(q.dist), y = Y(Math.min(q.routeEle, ymax)); const txt = `${q.name} ${nf(Math.round(q.ele))} m`; const tw = txt.length * fz(8) * .55; let tx = x, anchor = 'middle'; if (tx - tw / 2 < x0 + 4) { tx = x + 5; anchor = 'start'; } else if (tx + tw / 2 > x1 - 4) { tx = x - 5; anchor = 'end'; }
+        let ty = y - 9; while (lab.some(l => Math.abs(l.x - tx) < tw && Math.abs(l.y - ty) < 10)) ty -= 10; ty = Math.max(yt - 2, ty); lab.push({ x: tx, y: ty });
+        pk += `<path d="M${x - 3.6},${y + 1} L${x},${y - 5} L${x + 3.6},${y + 1} Z" fill="${T.cap}" stroke="${T.halo}" stroke-width=".8"/><text x="${tx}" y="${ty}" fill="${T.cap}" font-size="${fz(8)}" font-weight="600" text-anchor="${anchor}" font-family="Montserrat" stroke="${T.halo}" stroke-width="2.5" paint-order="stroke" stroke-linejoin="round">${esc(txt)}</text>`; } }
+    svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="${T.accent}" fill-opacity=".37"/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="1.6" stroke-linejoin="round"/>` + b + pk +
       `<text x="${x0}" y="19" fill="${T.muted}" font-size="${fz(9)}" font-weight="700" letter-spacing="2.4" font-family="Montserrat">HÖHENPROFIL</text><text x="${x1}" y="19" fill="${T.muted}" font-size="${fz(9)}" text-anchor="end" font-family="Montserrat">Höchster Punkt ${nf(maxE)} m</text>` +
       `<text x="${x0}" y="${yb + 12}" fill="${T.axis}" font-size="${fz(9)}" font-family="Montserrat">${esc(state.places.find(p => p.key === 'start')?.text || 'Start')}</text><text x="${x1}" y="${yb + 12}" fill="${T.axis}" font-size="${fz(9)}" text-anchor="end" font-family="Montserrat">${esc(state.places.find(p => p.key === 'end')?.text || 'Ziel')}</text>`;
   }
@@ -1211,7 +1239,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     say(n < 0 ? 'Layout gespeichert, Fotos konnten nicht im Browser abgelegt werden (Speicher gesperrt?) – Originale beim nächsten Mal wieder hinzufügen.' : `Layout und ${n} Foto(s) in Originalgröße im Browser gespeichert${miss ? ` – ${miss} Foto(s) fehlen als Original (nur Vorschau).` : '.'}`, miss || n < 0 ? 'warn' : 'ok'); } catch (e) { say('Speichern fehlgeschlagen: ' + e.message, 'err'); } });
   $('#exjson').addEventListener('click', () => download(new Blob([JSON.stringify(serial(), null, 1)], { type: 'application/json' }), fname() + '.json'));
   function restore(obj) {
-    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
     applyFrame(); render();
   }
