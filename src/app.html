@@ -126,7 +126,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #title .date::before { content:""; width:28px; height:2px; background:var(--pa); display:inline-block; }
 #title .h { font-weight:900; font-size:calc(80px * var(--tt, 1)); line-height:.92; letter-spacing:-.02em; color:var(--ptext); margin-top:14px; white-space:pre-line; }
 #title .sub { color:var(--psub); font-size:calc(16px * var(--ts, 1)); line-height:1.4; max-width:420px; margin-top:14px; white-space:pre-line; }
-#stats { position:absolute; left:56px; top:322px; display:flex; gap:28px; }
+#stats { position:absolute; left:56px; top:var(--statsTop,322px); display:flex; gap:28px; }
 #stats div { display:flex; flex-direction:column; gap:4px; padding-right:28px; border-right:1px solid var(--pline); }
 #stats div:last-child { border:0; }
 #stats b { font-weight:800; font-size:calc(38px * var(--tt, 1)); line-height:1; color:var(--ptext); }
@@ -145,7 +145,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .place:hover, .place.sel { outline:1.5px dashed var(--accent); }
 .place[contenteditable="true"] { outline:2px solid var(--accent); cursor:text; }
 .pin { position:absolute; transform:translate(-50%,-50%); min-width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); padding:0 calc(8px * var(--ts, 1)); box-sizing:border-box; border-radius:calc(13px * var(--ts, 1)); background:#fff; color:#0d1a26; box-shadow:0 4px 12px rgba(0,0,0,.5); font:700 13px/26px Montserrat, Arial, sans-serif; font-size:calc(13px * var(--ts, 1)); line-height:calc(26px * var(--ts, 1)); text-align:center; white-space:nowrap; pointer-events:none; }
-.tile { position:absolute; border-radius:var(--fr,10px); overflow:hidden; box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); cursor:grab; touch-action:none; }
+.tile { position:absolute; border-radius:var(--fr,2px); overflow:hidden; box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); cursor:grab; touch-action:none; }
 #stage.mat .tile { box-shadow:0 0 0 var(--mat) var(--pbg), 0 0 0 var(--mat1) var(--pline), 0 24px 48px rgba(0,0,0,.45); }
 #stage.fray:not(.mat) .tile { box-shadow:none; filter:drop-shadow(0 18px 24px rgba(0,0,0,.5)); }
 #stage.marks .tile::before, #stage.marks .tile::after { content:''; position:absolute; width:12px; height:12px; border:1.5px solid var(--pa); pointer-events:none; z-index:2; }
@@ -170,7 +170,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .tile .rs.e, .tile .rs.w { top:50%; margin-top:-14px; width:8px; height:28px; border-radius:4px; }
 .tile .rs.n { top:-5px; cursor:ns-resize; } .tile .rs.s { bottom:-5px; cursor:ns-resize; } .tile .rs.e { right:-5px; cursor:ew-resize; } .tile .rs.w { left:-5px; cursor:ew-resize; }
 .tile { overflow:visible; }
-.tile .clip { position:absolute; inset:0; border-radius:var(--fr,10px); overflow:hidden; }
+.tile .clip { position:absolute; inset:0; border-radius:var(--fr,2px); overflow:hidden; }
 .tile.same { box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 2px var(--accent) !important; }
 .tile.same::after { content:"gleiche Größe"; position:absolute; left:50%; top:-22px; transform:translateX(-50%); background:var(--accent); color:#fff; font:700 10px/16px Montserrat, Arial, sans-serif; padding:0 6px; border-radius:8px; white-space:nowrap; }
 .gap { position:absolute; background:rgba(255,90,54,.22); border-left:1px solid var(--accent); border-right:1px solid var(--accent); pointer-events:none; display:grid; place-items:center; color:#fff; font:700 11px Montserrat, Arial, sans-serif; }
@@ -295,13 +295,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <option value="hell">Hell – helle Karte, Rot</option>
         <option value="retro">Retro – bunte Karte, Ziegel</option>
       </select>
-      <label class="f">Rahmen der Fotos</label>
-      <div class="seg" id="cornerseg"><button data-v="round" class="on">Runde Ecken</button><button data-v="sharp">Kantig</button></div>
       <div class="grid2" style="margin-top:8px">
-        <div><label class="f" style="margin-top:0">Passepartout <span id="matval">aus</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="0" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um das Foto (Postkarten-Look)"></div>
-        <div><label class="f" style="margin-top:0">Ausgefranster Rand <span id="frayval">aus</span></label><input type="range" id="fraysl" min="0" max="10" step="1" value="0" style="width:100%" title="Fotokante leicht unregelmäßig wie gerissenes Papier"></div>
+        <div><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div>
+        <div><label class="f" style="margin-top:0">Fotogröße <span id="pscaleval">100 %</span></label><input type="range" id="pscale" min="50" max="160" step="5" value="100" style="width:100%" title="Alle Fotos gemeinsam größer/kleiner"></div>
       </div>
-      <label class="switch" style="margin-top:8px"><input type="checkbox" id="marks"><span class="kn"></span><span>Eckmarken<small>kleine Winkel in Akzentfarbe an zwei Ecken (nur mit Passepartout)</small></span></label>
+      <label class="switch" style="margin-top:8px"><input type="checkbox" id="showband" checked><span class="kn"></span><span>Höhenprofil<small>Höhe automatisch nach Bergigkeit, per Ziehen der Oberkante änderbar</small></span></label>
       <label class="f">Farbabstimmung der Fotos <span id="gradeval">60 %</span></label>
       <input type="range" id="grade" min="0" max="100" step="5" value="60" style="width:100%" title="Fotos an die Farbstimmung des Posters angleichen: Sättigung dämpfen, Tönung in der Themenfarbe">
       <div class="hint">Titel, Untertitel und Kennzahlen direkt im Poster antippen und schreiben. Höhenprofil: Oberkante ziehen.</div>
@@ -345,7 +343,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           <div class="hc"><svg viewBox="0 0 80 56"><circle cx="18" cy="16" r="9" class="ico lock"/><rect x="14" y="15.5" width="8" height="6" rx="1" fill="#1c1a12"/><path d="M15.5 15.5v-2a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="#1c1a12" stroke-width="1.4"/><circle cx="40" cy="16" r="9" class="ico star"/><path d="M40 10l1.8 3.8 4.2.5-3.1 2.9.8 4.1-3.7-2-3.7 2 .8-4.1-3.1-2.9 4.2-.5z" fill="#1c1a12"/><circle cx="62" cy="16" r="9" class="ico gps"/><path d="M62 10a4 4 0 0 0-4 4c0 3 4 7 4 7s4-4 4-7a4 4 0 0 0-4-4z" fill="#fff"/><text x="40" y="46" class="t">Schloss · Stern · Ort</text></svg><b>Nummer &amp; Icons</b>Klick auf die Nummer = Highlight ★ (größer im Auto-Layout). Beim Überfahren: Schloss = fixiert (Automatik lässt es in Ruhe), Pin/Lupe = Aufnahmeort setzen oder suchen.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 40c10-20 20 10 30-6s20-14 34 2" class="route"/><rect x="26" y="6" width="28" height="12" rx="6" class="btn"/><text x="40" y="15" class="tb">Karte</text></svg><b>Karte</b>Button „Karte“ oben rechts, dann verschieben/zoomen (Maus, Finger oder Slider). „Auf Route einpassen“ setzt zurück.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 30c14-10 30-12 64-8" class="route"/><text x="30" y="20" class="tl">Ortsname</text><circle cx="52" cy="26" r="2.5" fill="#fff"/><path d="M52 26L46 21" class="dash2"/></svg><b>Ortsnamen</b>Start, Ziel, Übernachtungen: ziehen = verschieben, Doppelklick = Text ändern, Entf = ausblenden.</div>
-          <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Oberkante ziehen = Höhe; die Skala passt sich an. Doppelklick = Standardhöhe.</div>
+          <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Höhe richtet sich nach der Bergigkeit der Tour; Oberkante ziehen = Höhe, Doppelklick = zurück auf Automatik. Abschalten im Poster-Block.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><text x="10" y="24" class="th">Titel</text><rect x="8" y="8" width="44" height="22" class="dash"/><text x="10" y="42" class="t2">Untertitel · 209 km</text></svg><b>Texte</b>Titel, Untertitel und Kennzahlen direkt im Poster anklicken und tippen (Enter = neue Zeile).</div>
         </div>
         <div class="hfoot">Alles bleibt auf deinem Rechner. „Speichern“ sichert Layout und Fotos im Browser.</div>
@@ -382,7 +380,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${{ DIN: 'DIN', Poster: 'Posterdruck (cm)', Screen: 'Bildschirm / Handy (px)' }[grp]}"></optgroup>`); }
       sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${p[3]?.label || (grp === 'DIN' ? k + ' · ' : '') + (p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm')}</option>`); } }
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
-  const state = { format: 'portrait', paper: 'A3', bandH: 100, grade: 60, frame: { corners: 'round', mat: 0, marks: false, fray: 0 }, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const state = { format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 60, photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; setFormat(state.format); });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
@@ -449,12 +447,17 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function fitRoute() {
     const pts = state.stages.flatMap(s => s.points); if (!pts.length) return;
     const b = new maplibregl.LngLatBounds(); pts.forEach(p => b.extend([p[1], p[0]]));
-    map.fitBounds(b, { padding: { top: 430, bottom: 160, left: 80, right: 80 }, duration: 0 });
+    map.fitBounds(b, { padding: { top: 360, bottom: 40 + BH(), left: 80, right: 80 }, duration: 0 });
   }
   $('#mapbtn').addEventListener('click', () => { const on = $('#map').classList.toggle('locked'); $('#mapbtn').classList.toggle('on', !on); stage.classList.toggle('mapmode', !on); });
 
   // ------------------------------------------------------------ Größe / Format
-  const BH = () => state.bandH || 100;
+  // Profilhöhe: automatisch nach Bergigkeit (Hm/km und höchster Punkt) – flach ≈ 110–135, Brocken ≈ 180, Alpen ≈ 230; per Ziehen überschreibbar
+  function autoBandH() { if (!state.stages.length) return 120; const km = state.stages.reduce((a, s) => a + s.distance, 0) / 1000 || 1, hm = state.stages.reduce((a, s) => a + (s.gain || 0), 0);
+    let maxE = 0; for (const st of state.stages) for (const p of st.points) if (p[2] > maxE) maxE = p[2];
+    const k = Math.max(Math.min((hm / km) / 30, 1), Math.min(maxE / 2000, 1));          // 0 = flach … 1 = alpin
+    return Math.round(110 + 120 * k); }
+  const BH = () => state.showBand === false ? 0 : (state.bandH || autoBandH());
   function clampPhotos() { for (const p of state.photos) { p.w = Math.min(p.w, CW - 60); p.h = Math.min(p.h, CH - BH() - 60); p.x = Math.max(0, Math.min(CW - p.w, p.x)); p.y = Math.max(0, Math.min(CH - BH() - p.h, p.y)); } }
   function fit() { const m = $('main'), fr = $('#frame'); const s = Math.min((m.clientWidth - 40) / CW, (m.clientHeight - (window.innerWidth <= 900 ? 60 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
   function setFormat(f) { state.format = f; syncSeg(); const pp = PAPER[state.paper] || PAPER.A3, L = Math.round(1123 * pp[1] / pp[0]); CW = f === 'landscape' ? L : 1123; CH = f === 'landscape' ? 1123 : L;
@@ -466,15 +469,19 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#help').hidden) $('#help').hidden = true; if (e.key === '?' && !e.target.isContentEditable && e.target.tagName !== 'INPUT') $('#help').hidden = !$('#help').hidden; });
   $('#grade').addEventListener('input', e => { state.grade = +e.target.value; applyGrade(); });
   // Rahmen-Optionen
-  const FR = () => state.frame || (state.frame = { corners: 'round', mat: 0, marks: false, fray: 0 });
-  function applyFrame() { const f = FR(); $('#cornerseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === f.corners)); $('#matsl').value = f.mat; $('#fraysl').value = f.fray; $('#marks').checked = !!f.marks;
-    $('#matval').textContent = f.mat ? f.mat + ' px' : 'aus'; $('#frayval').textContent = f.fray ? '±' + f.fray + ' px' : 'aus';
+  const FR = () => state.frame || (state.frame = { corners: 'sharp', mat: 9, marks: false, fray: 0 });
+  function applyFrame() { const f = FR(); f.corners = 'sharp'; f.fray = 0; f.marks = false; $('#matsl').value = f.mat; $('#matval').textContent = f.mat ? f.mat : 'aus';
     const st = stage.style; st.setProperty('--fr', (f.corners === 'sharp' ? 2 : 10) + 'px'); st.setProperty('--mat', f.mat + 'px'); st.setProperty('--mat1', (f.mat + 1) + 'px'); st.setProperty('--mk', (f.mat + 7) + 'px');
     stage.classList.toggle('mat', f.mat > 0); stage.classList.toggle('marks', f.mat > 0 && !!f.marks); stage.classList.toggle('fray', f.fray > 0); render(); }
-  $('#cornerseg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; FR().corners = b.dataset.v; applyFrame(); });
   $('#matsl').addEventListener('input', e => { FR().mat = +e.target.value; applyFrame(); });
-  $('#fraysl').addEventListener('input', e => { FR().fray = +e.target.value; applyFrame(); });
-  $('#marks').addEventListener('change', e => { FR().marks = e.target.checked; applyFrame(); });
+  $('#matsl').addEventListener('change', () => scheduleAuto('mat'));
+  $('#showband').addEventListener('change', e => { state.showBand = e.target.checked; clampPhotos(); render(); scheduleAuto('band'); });
+  // 8. Gesamtgröße der Fotos: Automatik → Grundgröße skaliert; sonst alle Fotos um ihre Mitte skalieren
+  let lastScale = 1;
+  $('#pscale').addEventListener('input', e => { const v = +e.target.value / 100; $('#pscaleval').textContent = e.target.value + ' %'; state.photoScale = v;
+    if (!autoOn()) { const k = v / lastScale; for (const p of state.photos) { const cx = p.x + p.w / 2, cy = p.y + p.h / 2; p.w = Math.round(p.w * k); p.h = Math.round(p.h * k); p.x = Math.round(cx - p.w / 2); p.y = Math.round(cy - p.h / 2); } clampPhotos(); render(); }
+    lastScale = v; });
+  $('#pscale').addEventListener('change', () => scheduleAuto('scale'));
   // Maske für den ausgefransten Rand (SVG mit Rauschen), Größe in px, Ausschlag a
   function frayMask(w, h, a, r, seed) { const inset = a + 1; return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><filter id="f" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="${(0.9 / Math.max(6, a)).toFixed(3)}" numOctaves="3" seed="${seed}"/><feDisplacementMap in="SourceGraphic" scale="${a * 2}" xChannelSelector="R" yChannelSelector="G"/></filter><rect x="${inset}" y="${inset}" width="${w - 2 * inset}" height="${h - 2 * inset}" rx="${Math.max(0, r - inset)}" fill="#fff" filter="url(#f)"/></svg>`; }
   const seedOf = id => [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 1000, 7);
@@ -745,6 +752,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     // Fokus im Bildunterschrift-Feld über den Neuaufbau retten
     const act = document.activeElement, focusRow = act && act.tagName === 'INPUT' && act.closest('.row.photo'); const focusId = focusRow ? focusRow.dataset.id : null, focusSel = focusRow ? act.selectionStart : 0;
     $('#title .date').textContent = state.date || ''; $('#title .h').textContent = state.title || ''; $('#title .sub').textContent = state.subline || '';
+    stage.style.setProperty('--statsTop', ($('#title').offsetTop + $('#title').offsetHeight + 24) + 'px');
     $('#stats').innerHTML = (state.stats || []).map(([n, l]) => `<div><b contenteditable="true" spellcheck="false">${n}</b><span contenteditable="true" spellcheck="false">${l}</span></div>`).join('');
     $('#stages').innerHTML = state.stages.map((s, i) => `<div class="row"><div class="n">${i + 1}</div><div><input value="${(s.name || '').replace(/"/g, '&quot;')}" data-i="${i}" aria-label="Etappenname"><div class="meta">${(s.distance / 1000).toFixed(0)} km · ${nf(s.gain)} Hm${s.hasEle ? '' : ' · keine Höhendaten'}</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
     $('#stages').querySelectorAll('input').forEach(inp => inp.addEventListener('change', e => { state.stages[+e.target.dataset.i].name = e.target.value; renderProfile(); }));
@@ -822,7 +830,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     return { xs, ys: smooth(ys, 2), bounds, total: off };
   }
   function renderProfile() {
-    const svg = $('#profile'); const H = BH(); const ts = TS(), fz = v => (v * ts).toFixed(1); $('#band').style.height = H + 'px'; stage.style.setProperty('--bandH', H + 'px'); svg.setAttribute('viewBox', `0 0 ${CW} ${H}`); if (!state.stages.length) { svg.innerHTML = ''; return; }
+    const svg = $('#profile'); const H = BH(); const ts = TS(), fz = v => (v * ts).toFixed(1); $('#band').style.height = H + 'px'; $('#band').hidden = $('#bandfade').hidden = !H; stage.style.setProperty('--bandH', H + 'px'); if (!H) { svg.innerHTML = ''; return; } svg.setAttribute('viewBox', `0 0 ${CW} ${H}`); if (!state.stages.length) { svg.innerHTML = ''; return; }
     const { xs, ys, bounds, total } = profileData(); const x0 = 84, x1 = CW - 56, yt = 40, yb = H - 22;
     // Rasterlinien: ca. alle 16 px eine, mindestens 3, höchstens 14 – Schrittweite passt sich der Höhe an
     const nLines = Math.max(3, Math.min(14, Math.floor((yb - yt) / 16)));
@@ -986,7 +994,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // ---------------------------------------------------------- Automatische Anordnung: Fotos nah am Aufnahmeort, frei von Route/Titel/Ortsnamen/Profil
   // Fotos: p.fixed = von Hand gesetzt (Position+Größe bleiben, andere weichen aus), p.star = Highlight (≈ 1,6-fache Fläche, wird zuerst platziert)
   const autoOn = () => $('#autoadd').checked;
-  const baseSize = () => { const n = state.photos.length; return CW * (n <= 4 ? .30 : n <= 8 ? .25 : n <= 12 ? .21 : .17); };
+  const baseSize = () => { const n = state.photos.length; return CW * (n <= 4 ? .30 : n <= 8 ? .25 : n <= 12 ? .21 : .17) * (state.photoScale || 1); };
   // Fixiertes Foto bekommt beim Highlight-Wechsel die passende Größe (Position bleibt, wird in den Rahmen geklemmt)
   function sizeForStar(p) { const ar = p.w / p.h; const w = Math.round(baseSize() * (p.star ? 1.6 : 1) * (ar >= 1 ? 1 : .78)); p.w = Math.min(w, CW - 80); p.h = Math.round(p.w / ar); clampPhotos(); }
   let layouting = false, autoTimer = null;
@@ -1090,7 +1098,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     grip.addEventListener('pointermove', e => { if (!gd) return; state.bandH = Math.round(Math.max(90, Math.min(Math.round(CH * .45), gd.h - (e.clientY - gd.y) / gd.s))); renderProfile(); });
     const end = () => { if (!gd) return; gd = null; grip.classList.remove('on'); clampPhotos(); render(); scheduleAuto('band'); };
     grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
-    grip.addEventListener('dblclick', () => { state.bandH = 100; clampPhotos(); render(); }); }
+    grip.addEventListener('dblclick', () => { state.bandH = null; clampPhotos(); render(); scheduleAuto('band'); }); }
   stage.addEventListener('pointerdown', e => { if (e.target.id === 'overlay' || e.target.id === 'vig' || e.target.closest('#map')) { selected = new Set(); selPlace = null; cropMode = null; render(); } });
   $('#reset').addEventListener('click', () => { if (!confirm('Alles zurücksetzen? Tour, Fotos und Texte werden aus dieser Seite und dem Browser-Speicher entfernt.')) return; try { localStorage.removeItem(KEY); } catch (e) {} location.reload(); });
   function wireDrop(el, fn) {
@@ -1122,7 +1130,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     }
     // Vignette
     const vA = T.vigA ?? .9; const vg = g.createLinearGradient(0, 0, 0, P(480)); vg.addColorStop(0, `rgba(${T.vig},${vA})`); vg.addColorStop(.45, `rgba(${T.vig},${vA * .85})`); vg.addColorStop(1, `rgba(${T.vig},0)`); g.fillStyle = vg; g.fillRect(0, 0, W, P(480));
-    { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
+    if (BH()) { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
     // Titelblock
     const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(57), P(28), P(2));
     g.font = F(700, 12); g.textBaseline = 'top'; spaced(g, state.date || '', x0 + P(40), P(52), P(3.6));
@@ -1130,11 +1138,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const tsz = 80 * TT(), tl = (state.title || '').split('\n'); tl.forEach((l, i) => g.fillText(l, x0 - P(4), P(78 + tsz * .92 * .78 + i * tsz * .925)));
     const subY = 81 + tl.length * tsz * .92 + 14 + 17 * TS();   // wie im Bildschirm-Layout: Untertitel folgt dem Titel (Zeilenzahl, Größe)
     g.fillStyle = T.sub; g.font = F(400, 16); (state.subline || '').split('\n').forEach((l, i) => g.fillText(l, x0, P(subY + i * 22 * TS())));
-    let x = x0;
+    let x = x0; const nSub = (state.subline || '').split('\n').filter(Boolean).length || 1;
+    const statsTop = subY - 17 * TS() + nSub * 22 * TS() + 24;   // wie am Bildschirm: 24 px unter dem Untertitel
     for (const [n, l] of state.stats || []) {
-      g.fillStyle = T.text; g.font = F(800, 38, false); g.fillText(n, x, P(322 + 34)); const wn = g.measureText(n).width;
-      g.fillStyle = T.muted; g.font = F(500, 11); g.textBaseline = 'top'; const lx = spaced(g, l, x, P(366), P(2.4)); g.textBaseline = 'alphabetic';
-      x += Math.max(wn, lx - x) + P(28); g.fillStyle = T.line; g.fillRect(x, P(326), P(1), P(44)); x += P(28);
+      g.fillStyle = T.text; g.font = F(800, 38, false); g.fillText(n, x, P(statsTop + 34 * TT())); const wn = g.measureText(n).width;
+      g.fillStyle = T.muted; g.font = F(500, 11); g.textBaseline = 'top'; const lx = spaced(g, l, x, P(statsTop + 44 * TT()), P(2.4)); g.textBaseline = 'alphabetic';
+      x += Math.max(wn, lx - x) + P(28); g.fillStyle = T.line; g.fillRect(x, P(statsTop + 4), P(1), P(44 * TT())); x += P(28);
     }
     // Fotos
     for (const p of state.photos) {
@@ -1165,9 +1174,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     // Ortsnamen
     if (map) for (const p of state.places) { if (!p.text) continue; const pt = map.project([p.lon, p.lat]); const x = P(pt.x + p.dx), y = P(pt.y + p.dy); g.font = F(p.kind === 'night' ? 700 : 600, 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = T.halo; g.strokeText(p.text, x, y); g.fillStyle = T.cap; g.fillText(p.text, x, y); g.textBaseline = 'alphabetic'; }
     // Höhenprofil-Band (SVG rastern)
+    if (BH()) {
     const band = new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CW} ${BH()}" width="${W}" height="${P(BH())}"><style>text{font-family:Montserrat,Arial,sans-serif}</style>${$('#profile').innerHTML}</svg>`], { type: 'image/svg+xml' });
     g.fillStyle = T.band; g.fillRect(0, H - P(BH()), W, P(BH())); g.fillStyle = T.line; g.fillRect(0, H - P(BH()), W, P(.6));
     try { const bi = await loadImg(URL.createObjectURL(band)); g.drawImage(bi, 0, H - P(BH()), W, P(BH())); } catch (e) { console.warn('Profil', e); }
+    }
     return c;
   }
   function spaced(g, txt, x, y, gap) { for (const ch of txt) { g.fillText(ch, x, y); x += g.measureText(ch).width + gap; } return x; }
@@ -1199,7 +1210,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     say(n < 0 ? 'Layout gespeichert, Fotos konnten nicht im Browser abgelegt werden (Speicher gesperrt?) – Originale beim nächsten Mal wieder hinzufügen.' : `Layout und ${n} Foto(s) in Originalgröße im Browser gespeichert${miss ? ` – ${miss} Foto(s) fehlen als Original (nur Vorschau).` : '.'}`, miss || n < 0 ? 'warn' : 'ok'); } catch (e) { say('Speichern fehlgeschlagen: ' + e.message, 'err'); } });
   $('#exjson').addEventListener('click', () => download(new Blob([JSON.stringify(serial(), null, 1)], { type: 'application/json' }), fname() + '.json'));
   function restore(obj) {
-    Object.assign(state, obj); state.bandH = obj.bandH || 100; state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'round', mat: 0, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'nacht'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
     applyFrame(); render();
   }
@@ -1209,7 +1220,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   dropfit.addEventListener('drop', e => { for (const f of e.dataTransfer.files) if (/\.json$/i.test(f.name)) loadJsonFile(f); });
 
   // ------------------------------------------------------------ Start
-  setFormat('portrait'); applyTheme('nacht'); initMap(); applyFrame();
+  setFormat('portrait'); applyTheme('retro'); initMap(); applyFrame();
   try { const s = localStorage.getItem(KEY); if (s) { restore(JSON.parse(s)); afterTourChange(); loadOriginals().then(n => { const miss = missingOriginals().length; say(`Gespeichertes Layout geladen${n ? `, ${n} Foto(s) in Originalgröße` : ''}${miss ? ` – ${miss} Foto(s) nur als Vorschau: Originale bitte erneut hinzufügen (Zuordnung per Dateiname)` : ''}.`, miss ? 'warn' : 'ok'); render(); }); } } catch (e) {}
   render();
 })();
