@@ -573,6 +573,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // ------------------------------------------------------------ Rendern
   function render() {
     renumber();
+    // Fokus im Bildunterschrift-Feld über den Neuaufbau retten
+    const act = document.activeElement, focusRow = act && act.tagName === 'INPUT' && act.closest('.row.photo'); const focusId = focusRow ? focusRow.dataset.id : null, focusSel = focusRow ? act.selectionStart : 0;
     $('#title .date').textContent = state.date || ''; $('#title .h').textContent = state.title || ''; $('#title .sub').textContent = state.subline || '';
     $('#stats').innerHTML = (state.stats || []).map(([n, l]) => `<div><b contenteditable="true" spellcheck="false">${n}</b><span contenteditable="true" spellcheck="false">${l}</span></div>`).join('');
     $('#stages').innerHTML = state.stages.map((s, i) => `<div class="row"><div class="n">${i + 1}</div><div><input value="${(s.name || '').replace(/"/g, '&quot;')}" data-i="${i}" aria-label="Etappenname"><div class="meta">${(s.distance / 1000).toFixed(0)} km · ${nf(s.gain)} Hm${s.hasEle ? '' : ' · keine Höhendaten'}</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
@@ -591,7 +593,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const c = document.createElement('div'); c.className = 'c'; c.textContent = p.caption ?? autoCaption(p); clip.appendChild(c);
       for (const k of ['nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w']) { const rs = document.createElement('div'); rs.className = 'rs ' + k; rs.dataset.k = k; el.appendChild(rs); }
       tilesEl.appendChild(el);
-      const row = document.createElement('div'); row.className = 'row photo' + (isSel(p.id) ? ' sel' : '');
+      const row = document.createElement('div'); row.className = 'row photo' + (isSel(p.id) ? ' sel' : ''); row.dataset.id = p.id;
       row.addEventListener('click', e => { if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') { if (e.shiftKey) { isSel(p.id) ? selected.delete(p.id) : selected.add(p.id); } else selected = new Set([p.id]); render(); } });
       row.innerHTML = `<div class="n">${p.num}</div><img src="${p.thumb}"><div><input aria-label="Bildunterschrift"><div class="meta"></div></div><button title="Entfernen">×</button>`;
       row.querySelector('input').value = p.caption ?? autoCaption(p);
@@ -613,10 +615,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           box.querySelector('.fine').addEventListener('click', e => { e.stopPropagation(); run(true); });
           inp.addEventListener('click', e => e.stopPropagation()); inp.addEventListener('pointerdown', e => e.stopPropagation());
           if (searchHits) show(searchHits); row.appendChild(box); setTimeout(() => inp.focus(), 0); } }
-      row.querySelector('input').addEventListener('change', e => { p.caption = e.target.value; render(); });
+      row.querySelector('input').addEventListener('input', e => { p.caption = e.target.value; const c = tilesEl.querySelector(`[data-id="${p.id}"] .c`); if (c) c.textContent = p.caption; });   // sofort übernehmen – render() (z. B. durch nachgeladene Ortsnamen) baut die Zeile sonst mit altem Text neu
+      row.querySelector('input').addEventListener('change', () => render());
       row.querySelector('button').addEventListener('click', () => { state.photos = state.photos.filter(x => x.id !== p.id); render(); });
       $('#photos').appendChild(row);
     }
+    if (focusId) { const inp = $('#photos').querySelector(`.row.photo[data-id="${focusId}"] > div > input`); if (inp) { inp.focus(); try { inp.setSelectionRange(focusSel, focusSel); } catch (e) {} } }
     updateAlignButtons(); renderPins(); renderPlaces(); renderProfile();
   }
   // Foto ohne GPS (oder falscher Ort): Position per Klick auf die Karte setzen; rastet auf den nächsten Routenpunkt ein, wenn der näher als 2 km liegt
