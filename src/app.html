@@ -49,15 +49,20 @@ aside h1 small { display:block; font-weight:500; color:var(--muted); font-size:1
 #stage.setpos #map, #stage.setpos #map * { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23000' stroke-width='3.5' opacity='.6'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Cg stroke='%23000' stroke-width='3.5' opacity='.6'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='1.5'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='1.6' fill='%23ff5a36'/%3E%3C/svg%3E") 20 20, crosshair !important; }
 #stage.setpos #tiles, #stage.setpos #pins, #stage.setpos #places { pointer-events:none; }
 .tile .geos { position:absolute; left:calc(12px + 26px * var(--ts, 1) + 6px); top:calc(12px + 13px * var(--ts, 1) - 11px); display:flex; gap:4px; }
+/* Icons nur beim Überfahren; markiertes Foto zeigt sie dezent; fehlender Ort bleibt immer sichtbar (bis gesetzt) */
+.tile .ico { opacity:0; transform:scale(.85); transition:opacity .15s, transform .15s; }
+.tile:hover .ico, .tile .ico.gps, .tile .ico.on.gps { opacity:.95; transform:none; }
+.tile.sel .ico { opacity:.55; transform:none; }
+.tile.sel:hover .ico { opacity:.95; }
 .tile .n.star { background:#f2b632; color:#1c1a12; }
-.tile .ico { width:22px; height:22px; border-radius:11px; background:rgba(13,26,38,.82); color:#e6edf3; display:grid; place-items:center; cursor:pointer; opacity:.85; }
-.tile .ico:hover { opacity:1; background:rgba(13,26,38,.95); }
+.tile .ico { width:22px; height:22px; border-radius:11px; background:rgba(13,26,38,.82); color:#e6edf3; display:grid; place-items:center; cursor:pointer; }
+.tile .ico:hover { opacity:1 !important; background:rgba(13,26,38,.95); }
 .tile .ico.star { color:#8fa3b8; }
 .tile .ico.lock { color:#8fa3b8; }
 .tile .ico.lock .shackle { transform:translate(3px,-2px) rotate(20deg); transform-origin:16px 7px; }
-.tile .ico.lock.on { color:#1c1a12; background:#ffc857; opacity:1; }
+.tile .ico.lock.on { color:#1c1a12; background:#ffc857; }
 .tile .ico.lock.on .shackle { transform:none; }
-.tile .ico.star.on { color:#1c1a12; background:#f2b632; opacity:1; }
+.tile .ico.star.on { color:#1c1a12; background:#f2b632; }
 .tile .ico.gps { color:#ff8a70; }
 .tile .ico.gps.on { background:var(--accent); color:#fff; animation:geoblink 1s infinite; }
 .tile .ico.gps.on .slash { display:none; }
