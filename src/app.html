@@ -413,7 +413,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const canShow = url => new Promise(r => { const im = new Image(); im.onload = () => r(true); im.onerror = () => r(false); im.src = url; });
   let heifMod = null;
   async function loadHeif() { if (heifMod) return heifMod; const src = $('#heifsrc'); if (!src) throw new Error('HEIC-Decoder fehlt');
-    await new Promise((res, rej) => { const sc = document.createElement('script'); sc.onload = res; sc.onerror = () => rej(new Error('HEIC-Decoder konnte nicht geladen werden')); sc.src = 'data:text/javascript;base64,' + src.textContent.trim(); document.head.appendChild(sc); });
+    await new Promise((res, rej) => { const sc = document.createElement('script'); sc.onload = res; sc.onerror = () => rej(new Error('HEIC-Decoder konnte nicht geladen werden')); sc.src = src.dataset.src || 'data:text/javascript;base64,' + src.textContent.trim(); document.head.appendChild(sc); });   // gehostet: eigene Datei heif.js; Einzeldatei: eingebettet
     const m = window.libheif; heifMod = await (typeof m === 'function' ? m() : m); return heifMod; }
   async function decodable(f) {
     const isHeif = /^image\/hei[cf]/i.test(f.type) || /\.(heic|heif)$/i.test(f.name); if (!isHeif) return f;

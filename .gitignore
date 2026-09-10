@@ -1,5 +1,4 @@
 node_modules/
-vendor.js
 *.fit
 *.gpx
 *.jpg
@@ -7,3 +6,4 @@ vendor.js
 *.png
 *.pdf
 .DS_Store
+Tourposter.html
