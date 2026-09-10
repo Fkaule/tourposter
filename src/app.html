@@ -138,6 +138,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #mapbtn { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:7px 12px; font:600 12px Montserrat, Arial, sans-serif; cursor:pointer; }
 #mapbtn.on { background:var(--accent); border-color:var(--accent); color:#fff; }
 #mapzoom { display:flex; align-items:center; gap:8px; white-space:nowrap; }
+#autobtn { background:var(--panel); color:var(--muted); border:1px solid var(--line); border-radius:6px; padding:7px 10px; font:600 11px Montserrat, Arial, sans-serif; letter-spacing:.08em; cursor:pointer; white-space:nowrap; }
+#autobtn b { font-weight:800; }
+#autobtn.on { color:var(--text); border-color:var(--accent); }
+#autobtn.on b { color:var(--accent); }
 #mapzoom input { width:150px; margin:0; }
 #mapzoom a { color:var(--accent); text-decoration:none; }
 .maplibregl-ctrl-attrib { font-size:9px !important; }
@@ -226,7 +230,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 113" preserveAspectRatio="none"></svg></div>
       </div>
     </div></div>
-    <div id="maptools"><button id="mapbtn">Karte verschieben / zoomen</button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div></div>
+    <div id="maptools"><button id="mapbtn">Karte verschieben / zoomen</button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
     <div id="hint">Fotos: ziehen = verschieben (rastet an Kanten/gleichen Abständen ein) · Ecken = Größe (Shift = Seitenverhältnis), Kantengriffe = nur Breite/Höhe · Shift-Klick = mehrere wählen → Ausrichten · Doppelklick = Bildausschnitt (ziehen + Mausrad, oder Alt-Ziehen) · Entf = entfernen · Höhenprofil: Oberkante ziehen = Höhe (Doppelklick = zurücksetzen) · Karte: Button rechts oben, dann Maus/Rad · Ortsnamen (Start/Ziel/Übernachtung): ziehen = verschieben, Doppelklick = Text ändern</div>
   </main>
 </div>
@@ -896,7 +900,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     } finally { layouting = false; }
   }
   $('#autolay').addEventListener('click', () => autoLayout(null, { allowZoom: true }));
-  $('#autoadd').addEventListener('change', () => { if (autoOn()) autoLayout(null, { allowZoom: true }); });
+  function syncAuto() { const on = autoOn(); $('#autobtn').classList.toggle('on', on); $('#autobtn').innerHTML = 'AUTO-LAYOUT <b>' + (on ? 'AN' : 'AUS') + '</b>'; }
+  $('#autoadd').addEventListener('change', () => { syncAuto(); if (autoOn()) autoLayout(null, { allowZoom: true }); else say('Automatik aus – Fotos bleiben, wo sie sind. Button links ordnet auf Wunsch neu.', 'ok'); });
+  $('#autobtn').addEventListener('click', () => { $('#autoadd').checked = !autoOn(); $('#autoadd').dispatchEvent(new Event('change')); });
+  syncAuto();
   const zoomSl = $('#zoomsl');
   zoomSl.addEventListener('input', () => { for (const t of state.photos) if (isSel(t.id)) { t.zoom = +zoomSl.value / 100; if (t.zoom <= 1) delete t.zoom; const img = tilesEl.querySelector(`[data-id="${t.id}"] img`); if (img) applyCrop(img, t); } $('#zval').textContent = zoomSl.value + ' %'; });
   zoomSl.addEventListener('change', () => render());
