@@ -147,7 +147,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
     <div class="step">
       <h2>2 · FOTOS</h2>
-      <label class="drop" id="dropimg">Fotos hierher ziehen oder klicken<br><span style="font-size:11px">Ort und Datum aus den EXIF-Daten</span><input type="file" accept="image/*" multiple></label>
+      <label class="drop" id="dropimg">Fotos hierher ziehen oder klicken<br><span style="font-size:11px">Ort und Datum aus den EXIF-Daten</span><input type="file" accept="image/*,.heic,.heif" multiple></label>
       <label class="f">Bildausschnitt-Zoom (markiertes Foto) <span id="zval">–</span></label>
       <input type="range" id="zoomsl" min="100" max="400" step="2" value="100" disabled style="width:100%">
       <div id="align">
@@ -209,6 +209,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
 <script>window.__errs = []; window.addEventListener('error', e => { window.__errs.push((e.message || 'Fehler') + (e.lineno ? ' (Zeile ' + e.lineno + ')' : '')); });</script>
 <script>/*VENDOR_JS*/</script>
+<script id="heifsrc" type="text/plain">/*HEIF_B64*/</script>
 <script>if (typeof FitParser === 'undefined' || typeof maplibregl === 'undefined') { window.__errs.unshift('Bibliotheks-Skript wurde nicht ausgeführt (' + (window.__vendorFail ? 'Ladefehler' : 'kein Ladefehler gemeldet') + ', ' + location.protocol + ')'); document.addEventListener('DOMContentLoaded', () => { const s = document.getElementById('status'); s.className = 'err'; s.textContent = 'Bibliotheken konnten nicht starten: ' + (window.__errs[0] || 'unbekannt') + ' – Browser: ' + navigator.userAgent; }); }</script>
 <script>
 (() => {
@@ -391,15 +392,33 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   wireDrop($('#dropimg'), addPhotos);
   const SLOTS_P = [[44, 470, 232, 310], [30, 800, 214, 286], [40, 1150, 232, 310], [898, 222, 190, 253], [860, 560, 228, 304], [790, 700, 298, 224], [620, 1150, 226, 310], [862, 1150, 226, 310], [860, 40, 228, 171]];
   const SLOTS_L = [[40, 440, 300, 225], [40, 700, 300, 225], [380, 760, 300, 225], [1240, 40, 300, 225], [1240, 300, 300, 225], [1240, 560, 300, 225], [700, 760, 300, 225], [1020, 760, 300, 225], [920, 40, 280, 210]];
+  // HEIC/HEIF (iPhone): Chrome/Firefox können es nicht anzeigen -> mit libheif (WebAssembly, im Browser) nach JPEG wandeln. Safari kann es nativ.
+  const canShow = url => new Promise(r => { const im = new Image(); im.onload = () => r(true); im.onerror = () => r(false); im.src = url; });
+  let heifMod = null;
+  async function loadHeif() { if (heifMod) return heifMod; const src = $('#heifsrc'); if (!src) throw new Error('HEIC-Decoder fehlt');
+    await new Promise((res, rej) => { const sc = document.createElement('script'); sc.onload = res; sc.onerror = () => rej(new Error('HEIC-Decoder konnte nicht geladen werden')); sc.src = 'data:text/javascript;base64,' + src.textContent.trim(); document.head.appendChild(sc); });
+    const m = window.libheif; heifMod = await (typeof m === 'function' ? m() : m); return heifMod; }
+  async function decodable(f) {
+    const isHeif = /^image\/hei[cf]/i.test(f.type) || /\.(heic|heif)$/i.test(f.name); if (!isHeif) return f;
+    const u = URL.createObjectURL(f); const ok = await canShow(u); URL.revokeObjectURL(u); if (ok) return f;
+    say(`${f.name}: HEIC wird umgewandelt …`);
+    const lh = await loadHeif(); const dec = new lh.HeifDecoder(); const imgs = dec.decode(new Uint8Array(await f.arrayBuffer())); if (!imgs.length) throw new Error('HEIC nicht lesbar');
+    const im = imgs[0], w = im.get_width(), h = im.get_height();
+    const data = await new Promise((res, rej) => im.display({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }, d => d ? res(d) : rej(new Error('HEIC-Dekodierung fehlgeschlagen'))));
+    imgs.forEach(i => i.free && i.free());
+    const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').putImageData(new ImageData(data.data, w, h), 0, 0);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .93)); if (!blob) throw new Error('JPEG-Umwandlung fehlgeschlagen');
+    say(''); return new File([blob], f.name, { type: 'image/jpeg', lastModified: f.lastModified }); }
   async function addPhotos(files) {
-    for (const f of files) {
+    for (let f of files) {
       if (/\.json$/i.test(f.name)) { await loadJsonFile(f); continue; }
       if (!f.type.startsWith('image/') && !/\.(heic|heif)$/i.test(f.name)) continue;
       const known = state.photos.find(p => p.name === f.name && !originals.has(p.id));
-      if (known) { originals.set(known.id, f); known.url = URL.createObjectURL(f); known.thumb = await thumb(known.url); continue; }   // Original zu geladenem Layout nachreichen
+      if (known) { try { f = await decodable(f); } catch (e) { say(`${f.name}: ${e.message}`, 'err'); continue; } originals.set(known.id, f); known.url = URL.createObjectURL(f); known.thumb = await thumb(known.url); continue; }   // Original zu geladenem Layout nachreichen
       const id = Math.random().toString(36).slice(2, 9); let lat = null, lon = null, date = null;
       try { const g = await exifr.gps(f); if (g && g.latitude != null) { lat = g.latitude; lon = g.longitude; } } catch (e) {}
       try { const ex = await exifr.parse(f, { pick: ['DateTimeOriginal', 'CreateDate'] }); const d = ex?.DateTimeOriginal || ex?.CreateDate; if (d) date = new Date(d).toISOString(); } catch (e) {}
+      try { f = await decodable(f); } catch (e) { say(`${f.name}: ${e.message}`, 'err'); continue; }
       const url = URL.createObjectURL(f); originals.set(id, f);
       const dims = await new Promise(r => { const im = new Image(); im.onload = () => r([im.naturalWidth, im.naturalHeight]); im.onerror = () => r([3, 4]); im.src = url; });
       const land = dims[0] > dims[1]; const slots = state.format === 'landscape' ? SLOTS_L : SLOTS_P;
