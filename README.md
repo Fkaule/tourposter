@@ -1,6 +1,6 @@
 # Tourposter
 
-Radtour-Poster (A3, 300 dpi) aus FIT/GPX/TCX-Dateien und Fotos – **komplett im Browser**. Es gibt keinen Server: Tourdaten und Fotos verlassen den Rechner nicht. Einzige Netzwerkzugriffe sind die Kartenkacheln (OpenFreeMap, sieht nur die Region) und die Schrift Montserrat (Google Fonts).
+Radtour-Poster (A4 bis 70 × 100 cm, 300 dpi) aus FIT/GPX/TCX-Dateien und Fotos – **komplett im Browser**. Es gibt keinen Server: Tourdaten und Fotos verlassen den Rechner nicht. Einzige Netzwerkzugriffe sind die Kartenkacheln (OpenFreeMap, sieht nur die Region) und die Schrift Montserrat (Google Fonts).
 
 **Live:** `https://<user>.github.io/tourposter/` (GitHub Pages, siehe unten) – oder `index.html` herunterladen und doppelklicken.
 
@@ -12,9 +12,9 @@ Radtour-Poster (A3, 300 dpi) aus FIT/GPX/TCX-Dateien und Fotos – **komplett im
 - Läuft auch auf dem Smartphone (Poster oben, Bedienung darunter; Touch zum Verschieben/Skalieren).
 - Ortsnamen für Start, Ziel und Übernachtungen automatisch aus den Kartendaten (Detail-Kachel Zoom 12; Städte bevorzugt); ziehen = verschieben, Doppelklick = Text ändern.
 - Fotos hineinziehen: Ort (genauer Ort aus den Kartendaten) und Datum aus EXIF, Nummern-Pins auf der Route. Ziehen mit Einrasten an Kanten/gleichen Abständen, vier Ecken zum Skalieren (Shift = Seitenverhältnis), Mehrfachauswahl + Ausrichten, Bildausschnitt mit Zoom/Verschieben (Doppelklick, Mausrad, Slider).
-- Titel, Untertitel, Kennzahlen direkt im Poster tippen. Hoch- und Querformat, Papiergröße A4 / A3 / A2 (300 dpi).
+- Titel, Untertitel, Kennzahlen direkt im Poster tippen. Hoch- und Querformat; Papiergröße DIN A4–A1 und die üblichen Posterdruck-Formate 20 × 30 bis 70 × 100 cm (300 dpi). Das Seitenverhältnis des Posters folgt dem Papier; Kleintexte (Bildunterschriften, Ortsnamen, Profilachsen) werden gedämpft mitskaliert (Faktor (kurze Seite / 297 mm)^−0,3, also A4 ≈ ×1,11, A2 ≈ ×0,90, 70 × 100 ≈ ×0,77), Titel und Kennzahlen skalieren rein proportional.
 - Höhenprofil mit Etappengrenzen und km-Marken; Höhe per Ziehen der Oberkante, Skala passt sich an.
-- Export PNG und PDF (A3, 300 dpi). Layout im Browser speichern oder als JSON sichern/laden (Fotos danach wieder hinzufügen, Zuordnung per Dateiname).
+- Export PNG und PDF in der gewählten Papiergröße (300 dpi; 70 × 100 cm ergibt ~100 Megapixel, das dauert einen Moment). Layout im Browser speichern oder als JSON sichern/laden (Fotos danach wieder hinzufügen, Zuordnung per Dateiname).
 
 ## Entwicklung
 
