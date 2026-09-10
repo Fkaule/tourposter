@@ -31,11 +31,14 @@ aside h1 small { display:block; font-weight:500; color:var(--muted); font-size:1
 .row .meta a { color:var(--accent); font-weight:600; }
 .row .psearch { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
 .row .psearch input { flex:1; min-width:120px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 8px; font:inherit; font-size:12px; }
+.row .psearch button.fine { background:var(--panel2); color:var(--text); border:1px solid var(--line); }
 .row .psearch button { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:5px 10px; font:600 12px Montserrat, Arial, sans-serif; cursor:pointer; }
 .row .psearch .hits { flex-basis:100%; display:flex; flex-direction:column; gap:3px; font-size:11px; }
 .row .psearch .hits a { color:var(--text); text-decoration:none; padding:3px 6px; border-radius:4px; background:var(--bg); }
 .row .psearch .hits a:hover { background:var(--accent); color:#fff; }
 .row .psearch .muted { color:var(--muted); }
+.row .psearch .hits a b { font-weight:700; }
+.hitmark { width:18px; height:18px; border-radius:50%; border:3px solid var(--accent); background:rgba(255,90,54,.35); box-shadow:0 0 0 3px rgba(0,0,0,.4); }
 #stage.setpos #map { pointer-events:auto; }
 #stage.setpos #map, #stage.setpos #map * { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23000' stroke-width='3.5' opacity='.6'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Cg stroke='%23000' stroke-width='3.5' opacity='.6'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='1.5'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='1.6' fill='%23ff5a36'/%3E%3C/svg%3E") 20 20, crosshair !important; }
 #stage.setpos #tiles, #stage.setpos #pins, #stage.setpos #places { pointer-events:none; }
@@ -493,24 +496,41 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     }
     return best;
   }
-  // Ortssuche nach Name – ohne Server: durchsucht die Kartenkacheln (Zoom 11) entlang der Route nach Ortsnamen
+  // Ortssuche nach Name – ohne Server: durchsucht die Kartenkacheln (Zoom 12) entlang der Route nach Orten, Sehenswürdigkeiten (poi), Gipfeln, Gewässern, Parks
   function tileFetch(Z, x, y) { const key = `${Z}/${x}/${y}`; if (!tileCache.has(key)) tileCache.set(key, fetch(tileTpl.replace('{z}', Z).replace('{x}', x).replace('{y}', y)).then(r => r.ok ? r.arrayBuffer() : null).then(b => b ? new VectorTile(new Pbf(b)) : null).catch(() => null)); return tileCache.get(key); }
-  async function searchPlace(q) {
-    q = q.trim().toLowerCase(); if (!q || !state.stages.length) return []; const tpl = await tileTemplate(); if (!tpl || typeof VectorTile === 'undefined') return [];
-    const Z = 11, n = 2 ** Z, tiles = new Map(); const pts = [];
-    for (const st of state.stages) { let last = -1e9; for (const p of st.points) { if (p[3] - last < 1500) continue; last = p[3]; pts.push(p);
-      const xt = Math.floor((p[1] + 180) / 360 * n), yt = Math.floor((1 - Math.log(Math.tan(p[0] * d2r) + 1 / Math.cos(p[0] * d2r)) / Math.PI) / 2 * n);
-      for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) tiles.set(`${xt + dx}/${yt + dy}`, [xt + dx, yt + dy]); } }
-    const list = [...tiles.values()].slice(0, 160); const hits = new Map();
-    const norm = t => (t || '').toLowerCase().replace(/ß/g, 'ss').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue'); const qn = norm(q);
-    for (let i = 0; i < list.length; i += 8) await Promise.all(list.slice(i, i + 8).map(async ([x, y]) => {
-      const vt = await tileFetch(Z, x, y); const layer = vt && vt.layers.place; if (!layer) return;
-      for (let k = 0; k < layer.length; k++) { const f = layer.feature(k).toGeoJSON(x, y, Z); const pr = f.properties; const names = [pr.name, pr['name:de'], pr['name:latin'], pr['name:en']].filter(Boolean);
-        const exact = names.some(nm => norm(nm) === qn), part = exact || names.some(nm => norm(nm).includes(qn)); if (!part) continue;
-        const c = f.geometry.coordinates; let d = Infinity; for (const p of pts) { const dd = hav([c[1], c[0]], [p[0], p[1]]); if (dd < d) d = dd; }
-        const id = (pr.name || names[0]) + '|' + c[0].toFixed(3) + '|' + c[1].toFixed(3); if (!hits.has(id) || hits.get(id).d > d) hits.set(id, { name: pr.name || names[0], cls: pr.class, lat: c[1], lon: c[0], d, exact }); } }));
-    return [...hits.values()].sort((a, b) => (b.exact - a.exact) || a.d - b.d).slice(0, 8);
+  // Kachelmengen: entlang der Route (Zoom 12, 1 Kachel je km + Nachbarn) bzw. rund um Punkte (Zoom 14, Radius in m)
+  const tileXY = (lat, lon, Z) => { const n = 2 ** Z; return [Math.floor((lon + 180) / 360 * n), Math.floor((1 - Math.log(Math.tan(lat * d2r) + 1 / Math.cos(lat * d2r)) / Math.PI) / 2 * n)]; };
+  function routePts(step = 1000) { const pts = []; for (const st of state.stages) { let last = -1e9; for (const p of st.points) { if (p[3] - last < step) continue; last = p[3]; pts.push(p); } } return pts; }
+  function routeTiles(Z) { const tiles = new Map(); for (const p of routePts(1000)) { const [xt, yt] = tileXY(p[0], p[1], Z); for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) tiles.set(`${xt + dx}/${yt + dy}`, [xt + dx, yt + dy]); } return [...tiles.values()]; }
+  function areaTiles(Z, centers, radius) { const tiles = new Map(); for (const [lat, lon] of centers) { const dl = radius / 111320, dn = radius / (111320 * Math.cos(lat * d2r)); const [x0, y0] = tileXY(lat + dl, lon - dn, Z), [x1, y1] = tileXY(lat - dl, lon + dn, Z); for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) tiles.set(`${x}/${y}`, [x, y]); } return [...tiles.values()]; }
+  const LAYERS = ['place', 'poi', 'mountain_peak', 'water_name', 'park', 'transportation_name', 'aerodrome_label'];
+  const norm = t => (t || '').toLowerCase().replace(/ß/g, 'ss').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue');
+  // Sucht in den angegebenen Kacheln alle Namen, die q enthalten; d = Abstand zur Route
+  async function searchTiles(q, Z, list, hits, onProgress) {
+    const qn = norm(q.trim()); if (!qn) return; const pts = routePts(1000); let done = 0;
+    for (let i = 0; i < list.length; i += 8) { await Promise.all(list.slice(i, i + 8).map(async ([x, y]) => {
+      const vt = await tileFetch(Z, x, y); if (!vt) return;
+      for (const ln of LAYERS) { const layer = vt.layers[ln]; if (!layer) continue;
+        for (let k = 0; k < layer.length; k++) { const f = layer.feature(k).toGeoJSON(x, y, Z); const pr = f.properties; const names = [pr.name, pr['name:de'], pr['name:latin'], pr['name:en']].filter(Boolean); if (!names.length) continue;
+          const exact = names.some(nm => norm(nm) === qn), part = exact || names.some(nm => norm(nm).includes(qn)); if (!part) continue;
+          const c = centroid(f.geometry); if (!c) continue; let d = Infinity; for (const p of pts) { const dd = hav([c[1], c[0]], [p[0], p[1]]); if (dd < d) d = dd; }
+          if (d > 15000) continue;   // nur Treffer in Routennähe
+          const nm = pr.name || names[0], id = nm + '|' + c[0].toFixed(3) + '|' + c[1].toFixed(3);
+          if (!hits.has(id) || hits.get(id).d > d) hits.set(id, { name: nm, cls: ln === 'place' ? pr.class : (pr.subclass || pr.class || ln), layer: ln, lat: c[1], lon: c[0], d, exact, z: Z }); } } }));
+      done += Math.min(8, list.length - i); onProgress && onProgress(done, list.length); }
   }
+  const sortHits = hits => { const cnt = {}; return [...hits.values()].sort((a, b) => (b.exact - a.exact) || a.d - b.d).filter(h => (cnt[h.name] = (cnt[h.name] || 0) + 1) <= 3).slice(0, 30); };   // höchstens 3 gleichnamige
+  // Stufe 1: Zoom 12 entlang der ganzen Route (Orte, Gipfel, größere POIs). Stufe 2 („genauer“): Zoom 14 (alle POIs) rund um die bisherigen Treffer und um den sichtbaren Kartenausschnitt.
+  async function searchPlace(q, fine, onProgress) {
+    const hits = new Map(); if (!q.trim() || !state.stages.length) return []; const tpl = await tileTemplate(); if (!tpl || typeof VectorTile === 'undefined') return [];
+    await searchTiles(q, 12, routeTiles(12).slice(0, 400), hits, onProgress);
+    if (fine) { const centers = sortHits(hits).slice(0, 6).map(h => [h.lat, h.lon]);
+      if (map && map.getZoom() >= 10.5) { const c = map.getCenter(); centers.push([c.lat, c.lng]); }
+      const pts = routePts(1000); const list = areaTiles(14, centers, 3000).filter(([x, y]) => { const n = 2 ** 14; const lon = (x + .5) / n * 360 - 180, lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + .5) / n))) / d2r; return pts.some(p => hav([lat, lon], [p[0], p[1]]) < 16000); }).slice(0, 220);
+      await searchTiles(q, 14, list, hits, onProgress); }
+    return sortHits(hits);
+  }
+  function centroid(g) { if (!g) return null; if (g.type === 'Point') return g.coordinates; const pts = []; const walk = a => Array.isArray(a[0]) ? a.forEach(walk) : pts.push(a); walk(g.coordinates); if (!pts.length) return null; return [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length]; }
   const pendingDetail = new Set();
   function queueDetail(obj, key, done, mode = 'near') {
     if (pendingDetail.has(key) || !map) return; pendingDetail.add(key);
@@ -578,12 +598,21 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       row.querySelector('.meta').textContent = `${p.name} · ${p.lat != null ? p.lat.toFixed(3) + ', ' + p.lon.toFixed(3) : 'kein GPS'}${originals.has(p.id) ? '' : ' · Original fehlt (für Export neu hinzufügen)'}`;
       if (map) { const a = document.createElement('a'); a.href = '#'; a.textContent = setPosFor === p.id ? 'auf die Karte klicken …' : (p.lat != null ? ' Ort ändern' : ' Ort setzen'); a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); startSetPos(p); }); row.querySelector('.meta').append(' · ', a);
         const b2 = document.createElement('a'); b2.href = '#'; b2.textContent = searchFor === p.id ? 'Suche schließen' : 'Ort suchen'; b2.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); searchFor = searchFor === p.id ? null : p.id; searchHits = null; render(); }); row.querySelector('.meta').append(' · ', b2);
-        if (searchFor === p.id) { const box = document.createElement('div'); box.className = 'psearch'; box.innerHTML = `<input placeholder="Ortsname (liegt an der Route)"><button>Suchen</button><div class="hits"></div>`;
-          const inp = box.querySelector('input'), hitsEl = box.querySelector('.hits'); const run = async () => { hitsEl.innerHTML = '<span class="muted">suche in den Kartenkacheln …</span>'; const hs = await searchPlace(inp.value); searchHits = hs;
-            hitsEl.innerHTML = hs.length ? '' : '<span class="muted">nichts gefunden – nur Orte nahe der Route; sonst „Ort setzen“</span>';
-            for (const h of hs) { const d = document.createElement('a'); d.href = '#'; d.textContent = `${h.name} (${CLS_DE[h.cls] || h.cls}, ${(h.d / 1000).toFixed(1)} km von der Route)`; d.addEventListener('click', e => { e.preventDefault(); [p.lat, p.lon] = nearestOnRoute(h.lat, h.lon); p.place = h.name; searchFor = null; searchHits = null; say(`Aufnahmeort von Foto ${p.num}: ${h.name}`, 'ok'); render(); }); hitsEl.appendChild(d); } };
-          box.querySelector('button').addEventListener('click', e => { e.stopPropagation(); run(); }); inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run(); } }); inp.addEventListener('click', e => e.stopPropagation()); inp.addEventListener('pointerdown', e => e.stopPropagation());
-          row.appendChild(box); setTimeout(() => inp.focus(), 0); } }
+        if (searchFor === p.id) { const box = document.createElement('div'); box.className = 'psearch'; box.innerHTML = `<input placeholder="Ort, Gipfel, Sehenswürdigkeit … nahe der Route"><button class="fine" title="Lädt die Detail-Kacheln (Zoom 14, alle POIs) rund um die bisherigen Treffer und den Kartenausschnitt">Genauer</button><div class="hits"></div>`;
+          const inp = box.querySelector('input'), hitsEl = box.querySelector('.hits'); inp.value = searchQ || ''; let seq = 0;
+          const show = hs => { hitsEl.innerHTML = hs.length ? '' : '<span class="muted">nichts gefunden – gesucht bis 15 km neben der Route; „Genauer“ lädt alle POIs rund um Treffer/Kartenausschnitt, sonst „Ort setzen“</span>';
+            for (const h of hs) { const d = document.createElement('a'); d.href = '#'; d.innerHTML = `<b>${esc(h.name)}</b> <span class="muted">${esc(CLS_DE[h.cls] || h.cls)} · ${(h.d / 1000).toFixed(1)} km von der Route</span>`;
+              d.addEventListener('mouseenter', () => previewHit(h)); d.addEventListener('mouseleave', () => previewHit(null));
+              d.addEventListener('click', e => { e.preventDefault(); [p.lat, p.lon] = nearestOnRoute(h.lat, h.lon); p.place = h.name; searchFor = null; searchHits = null; previewHit(null); say(`Aufnahmeort von Foto ${p.num}: ${h.name}`, 'ok'); render(); }); hitsEl.appendChild(d); } };
+          const run = async fine => { const q = inp.value; searchQ = q; if (q.trim().length < 2) { hitsEl.innerHTML = ''; return; } const my = ++seq;
+            hitsEl.innerHTML = '<span class="muted">suche …</span>';
+            const hs = await searchPlace(q, fine, (a, b) => { if (my === seq) hitsEl.innerHTML = `<span class="muted">suche … ${a}/${b} Kacheln${fine ? ' (Zoom 14)' : ''}</span>`; });
+            if (my !== seq) return; searchHits = hs; show(hs); };
+          let tmr; inp.addEventListener('input', () => { clearTimeout(tmr); tmr = setTimeout(() => run(false), 350); });
+          inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run(false); } if (e.key === 'Escape') { searchFor = null; render(); } });
+          box.querySelector('.fine').addEventListener('click', e => { e.stopPropagation(); run(true); });
+          inp.addEventListener('click', e => e.stopPropagation()); inp.addEventListener('pointerdown', e => e.stopPropagation());
+          if (searchHits) show(searchHits); row.appendChild(box); setTimeout(() => inp.focus(), 0); } }
       row.querySelector('input').addEventListener('change', e => { p.caption = e.target.value; render(); });
       row.querySelector('button').addEventListener('click', () => { state.photos = state.photos.filter(x => x.id !== p.id); render(); });
       $('#photos').appendChild(row);
@@ -591,8 +620,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     updateAlignButtons(); renderPins(); renderPlaces(); renderProfile();
   }
   // Foto ohne GPS (oder falscher Ort): Position per Klick auf die Karte setzen; rastet auf den nächsten Routenpunkt ein, wenn der näher als 2 km liegt
-  let setPosFor = null, searchFor = null, searchHits = null;
-  const CLS_DE = { city: 'Stadt', town: 'Stadt', village: 'Dorf', hamlet: 'Weiler', suburb: 'Ortsteil', neighbourhood: 'Viertel', island: 'Insel', locality: 'Ort' };
+  let setPosFor = null, searchFor = null, searchHits = null, searchQ = '';
+  // Vorschau eines Suchtreffers als Marker auf der Karte
+  let hitMarker = null;
+  function previewHit(h) { if (hitMarker) { hitMarker.remove(); hitMarker = null; } if (!h || !map) return; const el = document.createElement('div'); el.className = 'hitmark'; el.title = h.name; hitMarker = new maplibregl.Marker({ element: el }).setLngLat([h.lon, h.lat]).addTo(map); }
+  const CLS_DE = { city: 'Stadt', town: 'Stadt', village: 'Dorf', hamlet: 'Weiler', suburb: 'Ortsteil', neighbourhood: 'Viertel', island: 'Insel', locality: 'Ort', peak: 'Gipfel', volcano: 'Berg', mountain_peak: 'Gipfel', water_name: 'Gewässer', lake: 'See', river: 'Fluss', park: 'Park', nature_reserve: 'Schutzgebiet', national_park: 'Nationalpark', museum: 'Museum', attraction: 'Sehenswürdigkeit', viewpoint: 'Aussichtspunkt', castle: 'Burg/Schloss', monument: 'Denkmal', memorial: 'Denkmal', ruins: 'Ruine', lighthouse: 'Leuchtturm', station: 'Bahnhof', railway: 'Bahn', hotel: 'Hotel', hostel: 'Hostel', guest_house: 'Pension', camp_site: 'Campingplatz', restaurant: 'Restaurant', cafe: 'Café', bakery: 'Bäckerei', alpine_hut: 'Hütte', shelter: 'Schutzhütte', bus_stop: 'Haltestelle', ferry_terminal: 'Fähre', tower: 'Turm', church: 'Kirche', place_of_worship: 'Kirche', bicycle: 'Fahrrad', information: 'Info', dam: 'Staumauer', bridge: 'Brücke', transportation_name: 'Straße/Weg' };
   function startSetPos(p) { if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: Aufnahmeort mit dem Fadenkreuz auf der Karte anklicken – rastet auf die Route ein (Esc = abbrechen).`); render(); }
   function nearestOnRoute(lat, lon) { let best = null, bd = Infinity; for (const st of state.stages) for (let i = 0; i < st.points.length; i += 3) { const q = st.points[i]; const d = hav([lat, lon], [q[0], q[1]]); if (d < bd) { bd = d; best = q; } } return best && bd < 2000 ? [best[0], best[1]] : [lat, lon]; }
   function mapClickSetPos(e) { if (!setPosFor) return; const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
