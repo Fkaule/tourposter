@@ -49,6 +49,7 @@ aside h1 small { display:block; font-weight:500; color:var(--muted); font-size:1
 #stage.setpos #overlay { pointer-events:none; }
 .row button { background:none; border:0; color:var(--muted); cursor:pointer; font-size:16px; }
 .row button:hover { color:var(--accent); }
+#autolay { margin-top:8px; }
 .btn { width:100%; box-sizing:border-box; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:9px 12px; font:600 13px Montserrat, Arial, sans-serif; cursor:pointer; text-align:left; margin-top:6px; display:flex; justify-content:space-between; }
 .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
 .btn:disabled { opacity:.4; cursor:default; }
@@ -92,7 +93,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .place.night { font-weight:700; }
 .place:hover, .place.sel { outline:1.5px dashed var(--accent); }
 .place[contenteditable="true"] { outline:2px solid var(--accent); cursor:text; }
-.pin { position:absolute; transform:translate(-50%,-50%); min-width:26px; height:26px; padding:0 8px; box-sizing:border-box; border-radius:13px; background:#fff; color:#0d1a26; box-shadow:0 4px 12px rgba(0,0,0,.5); font:700 13px/26px Montserrat, Arial, sans-serif; font-size:calc(13px * var(--ts, 1)); text-align:center; white-space:nowrap; pointer-events:none; }
+.pin { position:absolute; transform:translate(-50%,-50%); min-width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); padding:0 calc(8px * var(--ts, 1)); box-sizing:border-box; border-radius:calc(13px * var(--ts, 1)); background:#fff; color:#0d1a26; box-shadow:0 4px 12px rgba(0,0,0,.5); font:700 13px/26px Montserrat, Arial, sans-serif; font-size:calc(13px * var(--ts, 1)); line-height:calc(26px * var(--ts, 1)); text-align:center; white-space:nowrap; pointer-events:none; }
 .tile { position:absolute; border-radius:10px; overflow:hidden; box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); cursor:grab; touch-action:none; }
 .tile:active { cursor:grabbing; }
 .tile.sel { box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 2px var(--accent); }
@@ -100,8 +101,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .tile.crop .clip { outline:2px dashed var(--accent); outline-offset:-2px; cursor:move; }
 .tile.crop::before { content:"Ausschnitt: ziehen = verschieben · Rad = zoomen · Doppelklick = fertig"; position:absolute; left:50%; top:-22px; transform:translateX(-50%); background:var(--accent); color:#fff; font:700 10px/16px Montserrat, Arial, sans-serif; padding:0 6px; border-radius:8px; white-space:nowrap; z-index:2; }
 .tile .z { position:absolute; right:10px; top:12px; height:22px; padding:0 7px; border-radius:11px; background:rgba(13,26,38,.85); color:#fff; font:600 11px/22px Montserrat, Arial, sans-serif; }
-.tile .n { position:absolute; left:12px; top:12px; min-width:26px; height:26px; padding:0 8px; box-sizing:border-box; border-radius:13px; background:var(--ppill); color:#fff; font:700 13px/26px Montserrat, Arial, sans-serif; font-size:calc(13px * var(--ts, 1)); text-align:center; }
-.tile .c { position:absolute; left:0; right:0; bottom:0; padding:26px 14px 12px; background:linear-gradient(to top, rgba(6,12,18,.85), rgba(6,12,18,0)); color:#e6edf3; font:500 12px/1.2 Montserrat, Arial, sans-serif; font-size:calc(12px * var(--ts, 1)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tile .n { position:absolute; left:12px; top:12px; min-width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); padding:0 calc(8px * var(--ts, 1)); box-sizing:border-box; border-radius:calc(13px * var(--ts, 1)); background:var(--ppill); color:#fff; font:700 13px/26px Montserrat, Arial, sans-serif; font-size:calc(13px * var(--ts, 1)); line-height:calc(26px * var(--ts, 1)); text-align:center; }
+.tile .c { position:absolute; left:0; right:0; bottom:0; padding:calc(26px * max(1, var(--ts, 1))) 14px 12px; background:linear-gradient(to top, rgba(6,12,18,.85), rgba(6,12,18,0)); color:#e6edf3; font:500 12px/1.2 Montserrat, Arial, sans-serif; font-size:calc(12px * var(--ts, 1)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tile .rs { position:absolute; width:18px; height:18px; background:rgba(255,255,255,.85); border:2px solid #0d1a26; border-radius:4px; opacity:0; transition:opacity .12s; }
 .tile:hover .rs, .tile.sel .rs { opacity:1; }
 .tile .rs.nw { left:-6px; top:-6px; cursor:nwse-resize; } .tile .rs.ne { right:-6px; top:-6px; cursor:nesw-resize; }
@@ -174,6 +175,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <button data-a="hgap">Gleiche Abstände ↔</button><button data-a="vgap">Gleiche Abstände ↕</button>
         <button data-a="width">Gleiche Breite</button><button data-a="height">Gleiche Höhe</button>
       </div>
+      <button class="btn" id="autolay" title="Ordnet alle Fotos neu an: möglichst nah am Aufnahmeort, ohne Route, Titel, Ortsnamen und Höhenprofil zu überdecken">Fotos automatisch um die Route anordnen</button>
       <div class="list" id="photos"></div>
     </div>
 
@@ -237,15 +239,20 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // Papierformate: [kurze Seite mm, lange Seite mm, Gruppe]. Pixel = mm / 25,4 · 300 dpi. Bildschirm-Raster: kurze Seite immer 1123 px.
   const PAPER = { A4: [210, 297, 'DIN'], A3: [297, 420, 'DIN'], A2: [420, 594, 'DIN'], A1: [594, 841, 'DIN'],
     '20x30': [200, 300, 'Poster'], '30x40': [300, 400, 'Poster'], '30x45': [300, 450, 'Poster'], '40x50': [400, 500, 'Poster'], '40x60': [400, 600, 'Poster'],
-    '50x70': [500, 700, 'Poster'], '60x80': [600, 800, 'Poster'], '60x90': [600, 900, 'Poster'], '70x100': [700, 1000, 'Poster'] };
-  const paperPx = k => { const p = PAPER[k] || PAPER.A3; return [Math.round(p[0] / 25.4 * 300), Math.round(p[1] / 25.4 * 300)]; };
+    '50x70': [500, 700, 'Poster'], '60x80': [600, 800, 'Poster'], '60x90': [600, 900, 'Poster'], '70x100': [700, 1000, 'Poster'],
+    // Bildschirm: feste Pixelmaße (px), Texte deutlich größer, weil ein 1080-px-Handybild nur ~360 CSS-px breit dargestellt wird
+    handy: [1080, 1920, 'Screen', { px: true, ts: 2.2, tt: 1.35, label: 'Handy · 1080 × 1920 (9:16, Story/Hintergrund)' }],
+    insta45: [1080, 1350, 'Screen', { px: true, ts: 2.0, tt: 1.3, label: 'Instagram · 1080 × 1350 (4:5)' }],
+    quadrat: [1080, 1080, 'Screen', { px: true, ts: 2.0, tt: 1.3, label: 'Quadrat · 1080 × 1080' }] };
+  const isPx = k => !!(PAPER[k] || PAPER.A3)[3]?.px;
+  const paperPx = k => { const p = PAPER[k] || PAPER.A3; return p[3]?.px ? [p[0], p[1]] : [Math.round(p[0] / 25.4 * 300), Math.round(p[1] / 25.4 * 300)]; };
   // Kleintexte (Bildunterschriften, Ortsnamen, Profilachsen …) gedämpft gegen die Papiergröße skalieren: A3 = 1, A4 ≈ 1,11, A2 ≈ 0,90, 70×100 ≈ 0,77
-  const TS = () => Math.pow((PAPER[state.paper] || PAPER.A3)[0] / 297, -0.3);
+  const TS = () => { const p = PAPER[state.paper] || PAPER.A3; return p[3]?.ts || Math.pow(p[0] / 297, -0.3); };
   // Titel und Kennzahlen: nur leicht gedämpft (A4 ≈ 1,05, A2 ≈ 0,95, 70×100 ≈ 0,88)
-  const TT = () => Math.pow((PAPER[state.paper] || PAPER.A3)[0] / 297, -0.15);
+  const TT = () => { const p = PAPER[state.paper] || PAPER.A3; return p[3]?.tt || Math.pow(p[0] / 297, -0.15); };
   { const sel = $('#paper'); let grp = '';
-    for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${grp === 'DIN' ? 'DIN' : 'Posterdruck (cm)'}"></optgroup>`); }
-      sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${grp === 'DIN' ? k + ' · ' : ''}${p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm'}</option>`); } }
+    for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${{ DIN: 'DIN', Poster: 'Posterdruck (cm)', Screen: 'Bildschirm / Handy (px)' }[grp]}"></optgroup>`); }
+      sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${p[3]?.label || (grp === 'DIN' ? k + ' · ' : '') + (p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm')}</option>`); } }
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
   const state = { format: 'portrait', paper: 'A3', bandH: 113, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; setFormat(state.format); });
@@ -318,7 +325,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function clampPhotos() { for (const p of state.photos) { p.w = Math.min(p.w, CW - 60); p.h = Math.min(p.h, CH - BH() - 60); p.x = Math.max(0, Math.min(CW - p.w, p.x)); p.y = Math.max(0, Math.min(CH - BH() - p.h, p.y)); } }
   function fit() { const m = $('main'), fr = $('#frame'); const s = Math.min((m.clientWidth - 40) / CW, (m.clientHeight - (window.innerWidth <= 900 ? 60 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
   function setFormat(f) { state.format = f; const pp = PAPER[state.paper] || PAPER.A3, L = Math.round(1123 * pp[1] / pp[0]); CW = f === 'landscape' ? L : 1123; CH = f === 'landscape' ? 1123 : L;
-    stage.style.setProperty('--ts', TS().toFixed(3)); stage.style.setProperty('--tt', TT().toFixed(3)); const px = paperPx(state.paper); $('#paperhint').textContent = `${f === 'landscape' ? px[1] + ' × ' + px[0] : px[0] + ' × ' + px[1]} px · Seitenverhältnis ${(pp[1] / pp[0]).toFixed(2)} · Texte ×${TS().toFixed(2)} / Titel ×${TT().toFixed(2)}`;
+    stage.style.setProperty('--ts', TS().toFixed(3)); stage.style.setProperty('--tt', TT().toFixed(3)); const px = paperPx(state.paper); $('#paperhint').textContent = `${f === 'landscape' ? px[1] + ' × ' + px[0] : px[0] + ' × ' + px[1]} px${isPx(state.paper) ? '' : ' (300 dpi)'} · Seitenverhältnis ${(pp[1] / pp[0]).toFixed(2)} · Texte ×${TS().toFixed(2)} / Titel ×${TT().toFixed(2)}`;
     clampPhotos(); stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); }
   window.addEventListener('resize', fit);
   $('#format').addEventListener('change', e => setFormat(e.target.value));
@@ -806,11 +813,47 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   tilesEl.addEventListener('wheel', e => { const el = e.target.closest('.tile'); if (!el) return; const t = state.photos.find(x => x.id === el.dataset.id); if (!(isSel(t.id) || cropMode === t.id)) return; e.preventDefault(); zoomTile(t, e.deltaY < 0 ? 1.08 : 1 / 1.08); render(); }, { passive: false });
   // ---- Ausrichten
   const alignEl = document.getElementById('align');
+  // ---------------------------------------------------------- Automatische Anordnung: Fotos nah am Aufnahmeort, frei von Route/Titel/Ortsnamen/Profil
+  function autoLayout() {
+    if (!map || !state.photos.length) return;
+    const M = 18;                                                     // Mindestabstand zu Route, Texten und Nachbarfotos
+    const rects = [];                                                 // belegte Flächen [x, y, w, h]
+    const add = el => { if (el && el.offsetWidth) rects.push([el.offsetLeft, el.offsetTop, el.offsetWidth, el.offsetHeight]); };
+    add($('#title')); add($('#stats')); placesEl.querySelectorAll('.place').forEach(add);
+    rects.push([0, CH - BH() - 8, CW, BH() + 8]);                    // Höhenprofil
+    // Route als dichte Punktfolge in Poster-Koordinaten
+    const rp = []; for (const st of state.stages) for (const q of st.points) { const pt = map.project([q[1], q[0]]); rp.push([pt.x, pt.y]); }
+    const route = []; for (let i = 1; i < rp.length; i++) { const [ax, ay] = rp[i - 1], [bx, by] = rp[i]; const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 6)); for (let k = 0; k < n; k++) route.push([ax + (bx - ax) * k / n, ay + (by - ay) * k / n]); }
+    route.push(rp.at(-1) || [CW / 2, CH / 2]);
+    const hitsRoute = (x, y, w, h) => { const x0 = x - M, y0 = y - M, x1 = x + w + M, y1 = y + h + M; for (const [px, py] of route) if (px >= x0 && px <= x1 && py >= y0 && py <= y1) return true; return false; };
+    const hitsRect = (x, y, w, h) => rects.some(([rx, ry, rw, rh]) => x < rx + rw + M && x + w > rx - M && y < ry + rh + M && y + h > ry - M);
+    const free = (x, y, w, h) => x >= 40 && y >= 40 && x + w <= CW - 40 && y + h <= CH - BH() - 20 && !hitsRect(x, y, w, h) && !hitsRoute(x, y, w, h);
+    // Grundgröße nach Fotoanzahl (Anteil der Posterbreite), Seitenverhältnis des Fotos bleibt
+    const n = state.photos.length, base = CW * (n <= 4 ? .30 : n <= 8 ? .25 : n <= 12 ? .21 : .17);
+    const order = [...state.photos].sort((a, b) => a.num - b.num);
+    let placed = 0;
+    for (const p of order) {
+      const ar = p.w / p.h; const anchor = p.lat != null ? map.project([p.lon, p.lat]) : { x: CW / 2, y: CH / 2 };
+      let done = false;
+      for (let sc = 1; sc >= .55 && !done; sc *= .88) {
+        const w = Math.round((ar >= 1 ? base : base * .78) * sc), h = Math.round(w / ar);
+        // Kandidaten auf einem Raster, nach Abstand zum Aufnahmeort sortiert; Ziel: Foto möglichst nah am Pin, aber nicht darüber
+        const cands = [];
+        for (let y = 40; y + h <= CH - BH() - 20; y += 24) for (let x = 40; x + w <= CW - 40; x += 24) { const cx = x + w / 2, cy = y + h / 2; const d = Math.hypot(cx - anchor.x, cy - anchor.y); cands.push([d, x, y]); }
+        cands.sort((a, b) => a[0] - b[0]);
+        for (const [, x, y] of cands) { if (free(x, y, w, h)) { p.x = x; p.y = y; p.w = w; p.h = h; rects.push([x, y, w, h]); done = true; placed++; break; } }
+      }
+      if (!done) { p.w = Math.round(base * .6); p.h = Math.round(p.w / ar); }   // kein freier Platz: Größe verkleinern, Position lassen
+    }
+    selected = new Set(); render();
+    say(placed === n ? `${n} Fotos um die Route angeordnet – Feinschliff per Ziehen.` : `${placed} von ${n} Fotos frei platziert, ${n - placed} passten nicht ohne Überdeckung (Karte weiter herauszoomen oder Fotos verkleinern).`, placed === n ? 'ok' : 'warn');
+  }
+  $('#autolay').addEventListener('click', autoLayout);
   const zoomSl = $('#zoomsl');
   zoomSl.addEventListener('input', () => { for (const t of state.photos) if (isSel(t.id)) { t.zoom = +zoomSl.value / 100; if (t.zoom <= 1) delete t.zoom; const img = tilesEl.querySelector(`[data-id="${t.id}"] img`); if (img) applyCrop(img, t); } $('#zval').textContent = zoomSl.value + ' %'; });
   zoomSl.addEventListener('change', () => render());
   function updateZoomSlider() { const sel = state.photos.filter(t => isSel(t.id)); zoomSl.disabled = !sel.length; if (sel.length) { zoomSl.value = Math.round((sel[0].zoom ?? 1) * 100); $('#zval').textContent = zoomSl.value + ' %'; } else $('#zval').textContent = '–'; }
-  function updateAlignButtons() { updateZoomSlider(); const n = selected.size; alignEl.querySelectorAll('button').forEach(b => { const a = b.dataset.a; b.disabled = (a === 'hgap' || a === 'vgap') ? n < 3 : n < 2; }); }
+  function updateAlignButtons() { updateZoomSlider(); $('#autolay').disabled = !state.photos.length || !map; const n = selected.size; alignEl.querySelectorAll('button').forEach(b => { const a = b.dataset.a; b.disabled = (a === 'hgap' || a === 'vgap') ? n < 3 : n < 2; }); }
   alignEl.addEventListener('click', e => {
     const a = e.target.dataset.a; if (!a) return; const ts = state.photos.filter(t => isSel(t.id)); if (ts.length < 2) return;
     const minX = Math.min(...ts.map(t => t.x)), maxX = Math.max(...ts.map(t => t.x + t.w)), minY = Math.min(...ts.map(t => t.y)), maxY = Math.max(...ts.map(t => t.y + t.h));
@@ -886,10 +929,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = P(30); g.shadowOffsetY = P(14); rr(g, bx, by, bw, bh, P(10)); g.fillStyle = '#000'; g.fill(); g.restore();
       g.save(); rr(g, bx, by, bw, bh, P(10)); g.clip();
       const s = Math.max(bw / im.width, bh / im.height) * Math.max(1, p.zoom ?? 1); const iw = im.width * s, ih = im.height * s; g.drawImage(im, bx - (iw - bw) * (p.ax ?? 50) / 100, by - (ih - bh) * (p.ay ?? 50) / 100, iw, ih);
-      const cg = g.createLinearGradient(0, by + bh - P(70), 0, by + bh); cg.addColorStop(0, 'rgba(6,12,18,0)'); cg.addColorStop(1, 'rgba(6,12,18,.85)'); g.fillStyle = cg; g.fillRect(bx, by + bh - P(70), bw, P(70));
+      const gh = 70 * Math.max(1, TS()); const cg = g.createLinearGradient(0, by + bh - P(gh), 0, by + bh); cg.addColorStop(0, 'rgba(6,12,18,0)'); cg.addColorStop(1, 'rgba(6,12,18,.85)'); g.fillStyle = cg; g.fillRect(bx, by + bh - P(gh), bw, P(gh));
       g.fillStyle = '#e6edf3'; let fs = 12; g.font = F(500, fs); const cap = p.caption ?? autoCaption(p); while (fs > 8.5 && g.measureText(cap).width > bw - P(28)) { fs -= .5; g.font = F(500, fs); }
       g.fillText(cap, bx + P(14), by + bh - P(14));
-      pill(g, bx + P(25), by + P(25), String(p.num), T.pill, '#fff'); g.restore();
+      pill(g, bx + P(12 + 13 * TS()), by + P(12 + 13 * TS()), String(p.num), T.pill, '#fff'); g.restore();
     }
     // Pins
     if (map) for (const d of pinsEl.children) { const px = P(parseFloat(d.style.left)), py = P(parseFloat(d.style.top)); g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(8); g.shadowOffsetY = P(4); pill(g, px, py, d.textContent, T.pinBg, T.pinFg); g.restore(); }
@@ -903,12 +946,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   function spaced(g, txt, x, y, gap) { for (const ch of txt) { g.fillText(ch, x, y); x += g.measureText(ch).width + gap; } return x; }
   function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
-  function pill(g, cx, cy, txt, bg, fg) { g.font = F(700, 13); const w = Math.max(P(26), g.measureText(txt).width + P(16)); rr(g, cx - w / 2, cy - P(13), w, P(26), P(13)); g.fillStyle = bg; g.fill(); g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, cx, cy); g.textAlign = 'left'; g.textBaseline = 'alphabetic'; }
+  function pill(g, cx, cy, txt, bg, fg) { const t = TS(); g.font = F(700, 13); const w = Math.max(P(26 * t), g.measureText(txt).width + P(16 * t)); rr(g, cx - w / 2, cy - P(13 * t), w, P(26 * t), P(13 * t)); g.fillStyle = bg; g.fill(); g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, cx, cy); g.textAlign = 'left'; g.textBaseline = 'alphabetic'; }
   function loadImg(src, big) { return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
   function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
   const fname = () => (state.title || 'Tourposter').replace(/\s+/g, '_').replace(/[^\wäöüÄÖÜß_-]/g, '');
   $('#expng').addEventListener('click', async () => { if (!exportOk()) return; try { say('Rendert …'); const c = await renderPrint(); c.toBlob(b => { download(b, fname() + '_' + state.paper + '.png'); say('PNG gespeichert.', 'ok'); }, 'image/png'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
-  $('#expdf').addEventListener('click', async () => { if (!exportOk()) return; try { say('Rendert …'); const c = await renderPrint(); const land = state.format === 'landscape'; const pp = PAPER[state.paper] || PAPER.A3; const pdf = new jsPDF({ orientation: land ? 'landscape' : 'portrait', unit: 'mm', format: [pp[0], pp[1]], compress: true }); pdf.addImage(c.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, land ? pp[1] : pp[0], land ? pp[0] : pp[1]); pdf.save(fname() + '_' + state.paper + '.pdf'); say('PDF gespeichert.', 'ok'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
+  $('#expdf').addEventListener('click', async () => { if (!exportOk()) return; try { say('Rendert …'); const c = await renderPrint(); const land = state.format === 'landscape'; const pp = PAPER[state.paper] || PAPER.A3; const mm = isPx(state.paper) ? [pp[0] / 300 * 25.4, pp[1] / 300 * 25.4] : [pp[0], pp[1]]; const pdf = new jsPDF({ orientation: land ? 'landscape' : 'portrait', unit: 'mm', format: mm, compress: true }); pdf.addImage(c.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, land ? mm[1] : mm[0], land ? mm[0] : mm[1]); pdf.save(fname() + '_' + state.paper + '.pdf'); say('PDF gespeichert.', 'ok'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
 
   // ------------------------------------------------------------ Speichern (nur im Browser) / JSON
   // Vor dem Export: fehlen Originale, erst warnen; zweiter Klick innerhalb von 15 s exportiert trotzdem (Vorschau 360 px)
