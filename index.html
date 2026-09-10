@@ -42,10 +42,16 @@ aside h1 small { display:block; font-weight:500; color:var(--muted); font-size:1
 #stage.setpos #map { pointer-events:auto; }
 #stage.setpos #map, #stage.setpos #map * { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23000' stroke-width='3.5' opacity='.6'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Cg stroke='%23000' stroke-width='3.5' opacity='.6'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='1.5'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='1.6' fill='%23ff5a36'/%3E%3C/svg%3E") 20 20, crosshair !important; }
 #stage.setpos #tiles, #stage.setpos #pins, #stage.setpos #places { pointer-events:none; }
-.tile .geos { position:absolute; left:calc(12px + 26px * var(--ts, 1) + 8px); top:12px; display:flex; gap:6px; }
-.tile .n { cursor:pointer; }
+.tile .geos { position:absolute; left:calc(12px + 26px * var(--ts, 1) + 6px); top:calc(12px + 13px * var(--ts, 1) - 11px); display:flex; gap:4px; }
 .tile .n.star { background:#f2b632; color:#1c1a12; }
 .tile .fx { position:absolute; right:10px; bottom:calc(12px + 26px * max(1, var(--ts, 1))); height:20px; padding:0 8px; border-radius:10px; background:rgba(13,26,38,.85); color:#ffc857; font:600 10px/20px Montserrat, Arial, sans-serif; cursor:pointer; }
+.tile .ico { width:22px; height:22px; border-radius:11px; background:rgba(13,26,38,.82); color:#e6edf3; display:grid; place-items:center; cursor:pointer; opacity:.85; }
+.tile .ico:hover { opacity:1; background:rgba(13,26,38,.95); }
+.tile .ico.star { color:#8fa3b8; }
+.tile .ico.star.on { color:#1c1a12; background:#f2b632; opacity:1; }
+.tile .ico.gps { color:#ff8a70; }
+.tile .ico.gps.on { background:var(--accent); color:#fff; animation:geoblink 1s infinite; }
+.tile .ico.gps.on .slash { display:none; }
 .tile .geo { height:26px; padding:0 9px; border-radius:13px; background:rgba(13,26,38,.85); color:#fff; font:600 11px/26px Montserrat, Arial, sans-serif; white-space:nowrap; cursor:pointer; }
 .tile .geo.on { background:var(--accent); animation:geoblink 1s infinite; }
 @keyframes geoblink { 50% { opacity:.55; } }
@@ -610,10 +616,14 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const clip = document.createElement('div'); clip.className = 'clip'; el.appendChild(clip);
       const img = document.createElement('img'); img.src = p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
-      const n = document.createElement('div'); n.className = 'n' + (p.star ? ' star' : ''); n.textContent = p.num + (p.star ? ' ★' : ''); n.title = 'Klick = Highlight an/aus (größer im Automatik-Layout)'; n.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); n.addEventListener('click', e => { e.stopPropagation(); p.star = !p.star; render(); scheduleAuto('star'); }); clip.appendChild(n);
+      const n = document.createElement('div'); n.className = 'n' + (p.star ? ' star' : ''); n.textContent = p.num + (p.star ? ' ★' : ''); clip.appendChild(n);
       if (p.fixed && autoOn()) { const fx = document.createElement('div'); fx.className = 'fx'; fx.title = 'Foto ist fixiert (von Hand gesetzt) – Klick gibt es für die Automatik frei'; fx.textContent = '⌖ fixiert'; fx.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); fx.addEventListener('click', e => { e.stopPropagation(); delete p.fixed; render(); scheduleAuto('unfix'); }); clip.appendChild(fx); }
-      if (map && (p.lat == null || setPosFor === p.id)) { const wrap = document.createElement('div'); wrap.className = 'geos'; clip.appendChild(wrap); const gb = document.createElement('div'); gb.className = 'geo' + (setPosFor === p.id ? ' on' : ''); gb.title = 'Aufnahmeort auf der Karte setzen'; gb.textContent = setPosFor === p.id ? '▸ auf die Karte klicken' : '⚑ kein Ort – setzen'; gb.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); gb.addEventListener('click', e => { e.stopPropagation(); startSetPos(p); }); wrap.appendChild(gb);
-        if (setPosFor !== p.id) { const gs = document.createElement('div'); gs.className = 'geo srch'; gs.title = 'Ort per Name suchen (in der Fotoliste links)'; gs.textContent = '⌕ suchen'; gs.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); gs.addEventListener('click', e => { e.stopPropagation(); searchFor = p.id; searchHits = null; render(); const r = $('#photos .row.photo .psearch'); if (r) r.scrollIntoView({ block: 'center', behavior: 'smooth' }); }); wrap.appendChild(gs); } }
+      { const wrap = document.createElement('div'); wrap.className = 'geos'; clip.appendChild(wrap);
+        const ico = (cls, svg, title, fn) => { const d = document.createElement('div'); d.className = 'ico ' + cls; d.innerHTML = svg; d.title = title; d.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); d.addEventListener('click', e => { e.stopPropagation(); fn(); }); wrap.appendChild(d); return d; };
+        ico('star' + (p.star ? ' on' : ''), ICONS.star, p.star ? 'Highlight aus' : 'Highlight: größer im Automatik-Layout', () => { p.star = !p.star; render(); scheduleAuto('star'); });
+        if (map && (p.lat == null || setPosFor === p.id)) {
+          ico('gps' + (setPosFor === p.id ? ' on' : ''), ICONS.pin, setPosFor === p.id ? 'Jetzt auf die Karte klicken (Esc = abbrechen)' : 'Kein Aufnahmeort – auf der Karte setzen', () => startSetPos(p));
+          if (setPosFor !== p.id) ico('srch', ICONS.search, 'Ort per Name suchen', () => { searchFor = p.id; searchHits = null; render(); const r = $('#photos .row.photo .psearch'); if (r) r.scrollIntoView({ block: 'center', behavior: 'smooth' }); }); } }
       const c = document.createElement('div'); c.className = 'c'; c.textContent = p.caption ?? autoCaption(p); clip.appendChild(c);
       for (const k of ['nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w']) { const rs = document.createElement('div'); rs.className = 'rs ' + k; rs.dataset.k = k; el.appendChild(rs); }
       tilesEl.appendChild(el);
@@ -827,6 +837,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   tilesEl.addEventListener('pointerup', () => { if (drag) { const d = drag; drag = null; showGuides([]); if ((d.mode === 'move' || d.mode === 'resize') && (d.t.x !== d.x || d.t.y !== d.y || d.t.w !== d.w || d.t.h !== d.h)) { for (const t of state.photos) if (isSel(t.id) || t.id === d.t.id) t.fixed = true; scheduleAuto('drag'); } render(); } });
   tilesEl.addEventListener('wheel', e => { const el = e.target.closest('.tile'); if (!el) return; const t = state.photos.find(x => x.id === el.dataset.id); if (!(isSel(t.id) || cropMode === t.id)) return; e.preventDefault(); zoomTile(t, e.deltaY < 0 ? 1.08 : 1 / 1.08); render(); }, { passive: false });
   // ---- Ausrichten
+  const ICONS = {
+    star: '<svg viewBox="0 0 24 24" width="13" height="13"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="currentColor"/></svg>',
+    pin: '<svg viewBox="0 0 24 24" width="13" height="13"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="currentColor"/><path d="M3 21L21 3" stroke="currentColor" stroke-width="2.4" class="slash"/></svg>',
+    search: '<svg viewBox="0 0 24 24" width="13" height="13"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M15 15l6 6" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>' };
   const alignEl = document.getElementById('align');
   // ---------------------------------------------------------- Automatische Anordnung: Fotos nah am Aufnahmeort, frei von Route/Titel/Ortsnamen/Profil
   // Fotos: p.fixed = von Hand gesetzt (Position+Größe bleiben, andere weichen aus), p.star = Highlight (≈ 1,6-fache Fläche, wird zuerst platziert)
