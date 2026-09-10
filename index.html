@@ -44,10 +44,13 @@ aside h1 small { display:block; font-weight:500; color:var(--muted); font-size:1
 #stage.setpos #tiles, #stage.setpos #pins, #stage.setpos #places { pointer-events:none; }
 .tile .geos { position:absolute; left:calc(12px + 26px * var(--ts, 1) + 6px); top:calc(12px + 13px * var(--ts, 1) - 11px); display:flex; gap:4px; }
 .tile .n.star { background:#f2b632; color:#1c1a12; }
-.tile .fx { position:absolute; right:10px; bottom:calc(12px + 26px * max(1, var(--ts, 1))); height:20px; padding:0 8px; border-radius:10px; background:rgba(13,26,38,.85); color:#ffc857; font:600 10px/20px Montserrat, Arial, sans-serif; cursor:pointer; }
 .tile .ico { width:22px; height:22px; border-radius:11px; background:rgba(13,26,38,.82); color:#e6edf3; display:grid; place-items:center; cursor:pointer; opacity:.85; }
 .tile .ico:hover { opacity:1; background:rgba(13,26,38,.95); }
 .tile .ico.star { color:#8fa3b8; }
+.tile .ico.lock { color:#8fa3b8; }
+.tile .ico.lock .shackle { transform:translate(3px,-2px) rotate(20deg); transform-origin:16px 7px; }
+.tile .ico.lock.on { color:#1c1a12; background:#ffc857; opacity:1; }
+.tile .ico.lock.on .shackle { transform:none; }
 .tile .ico.star.on { color:#1c1a12; background:#f2b632; opacity:1; }
 .tile .ico.gps { color:#ff8a70; }
 .tile .ico.gps.on { background:var(--accent); color:#fff; animation:geoblink 1s infinite; }
@@ -617,9 +620,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const img = document.createElement('img'); img.src = p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
       const n = document.createElement('div'); n.className = 'n' + (p.star ? ' star' : ''); n.textContent = p.num + (p.star ? ' ★' : ''); clip.appendChild(n);
-      if (p.fixed && autoOn()) { const fx = document.createElement('div'); fx.className = 'fx'; fx.title = 'Foto ist fixiert (von Hand gesetzt) – Klick gibt es für die Automatik frei'; fx.textContent = '⌖ fixiert'; fx.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); fx.addEventListener('click', e => { e.stopPropagation(); delete p.fixed; render(); scheduleAuto('unfix'); }); clip.appendChild(fx); }
+
       { const wrap = document.createElement('div'); wrap.className = 'geos'; clip.appendChild(wrap);
         const ico = (cls, svg, title, fn) => { const d = document.createElement('div'); d.className = 'ico ' + cls; d.innerHTML = svg; d.title = title; d.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); d.addEventListener('click', e => { e.stopPropagation(); fn(); }); wrap.appendChild(d); return d; };
+        ico('lock' + (p.fixed ? ' on' : ''), ICONS.lock, p.fixed ? 'Fixiert (von Hand gesetzt) – Klick gibt das Foto für die Automatik frei' : 'Für die Automatik fixieren (Position und Größe bleiben)', () => { if (p.fixed) delete p.fixed; else p.fixed = true; render(); scheduleAuto('fix'); });
         ico('star' + (p.star ? ' on' : ''), ICONS.star, p.star ? 'Highlight aus' : 'Highlight: größer im Automatik-Layout', () => { p.star = !p.star; render(); scheduleAuto('star'); });
         if (map && (p.lat == null || setPosFor === p.id)) {
           ico('gps' + (setPosFor === p.id ? ' on' : ''), ICONS.pin, setPosFor === p.id ? 'Jetzt auf die Karte klicken (Esc = abbrechen)' : 'Kein Aufnahmeort – auf der Karte setzen', () => startSetPos(p));
@@ -840,6 +844,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const ICONS = {
     star: '<svg viewBox="0 0 24 24" width="13" height="13"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="currentColor"/></svg>',
     pin: '<svg viewBox="0 0 24 24" width="13" height="13"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="currentColor"/><path d="M3 21L21 3" stroke="currentColor" stroke-width="2.4" class="slash"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" width="13" height="13"><rect x="5" y="10.5" width="14" height="11" rx="2" fill="currentColor"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4" class="shackle"/></svg>',
     search: '<svg viewBox="0 0 24 24" width="13" height="13"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M15 15l6 6" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>' };
   const alignEl = document.getElementById('align');
   // ---------------------------------------------------------- Automatische Anordnung: Fotos nah am Aufnahmeort, frei von Route/Titel/Ortsnamen/Profil
