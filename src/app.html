@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tourposter – Prototyp</title>
+<title>Tourposter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap">
 <style>
@@ -63,6 +63,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 [contenteditable]:hover { box-shadow:0 0 0 1.5px rgba(255,90,54,.6); }
 [contenteditable]:focus { box-shadow:0 0 0 2px var(--accent); }
 #band { position:absolute; left:0; bottom:0; width:100%; height:113px; background:var(--pband); border-top:1px solid var(--pline); pointer-events:none; }
+#bandgrip { position:absolute; left:0; right:0; top:-6px; height:12px; cursor:ns-resize; pointer-events:auto; touch-action:none; }
+#bandgrip::after { content:''; position:absolute; left:50%; top:4px; width:44px; height:4px; margin-left:-22px; border-radius:2px; background:var(--pmuted); opacity:0; transition:opacity .15s; }
+#bandgrip:hover::after, #bandgrip.on::after { opacity:.8; }
+#bandgrip.on { background:rgba(255,255,255,.04); }
 #band svg { position:absolute; inset:0; width:100%; height:100%; }
 .place { position:absolute; transform:translate(0,-50%); white-space:nowrap; color:var(--pcap); font:600 17px Montserrat, Arial, sans-serif; text-shadow:0 0 3px var(--phalo),0 0 3px var(--phalo),0 0 2px var(--phalo); cursor:move; padding:2px 4px; margin:-2px -4px; border-radius:4px; touch-action:none; }
 .place.night { font-weight:700; }
@@ -187,11 +191,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <div id="places"></div>
         <div id="pins"></div>
         <div id="tiles"></div>
-        <div id="band"><svg id="profile" viewBox="0 0 1123 113" preserveAspectRatio="none"></svg></div>
+        <div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 113" preserveAspectRatio="none"></svg></div>
       </div>
     </div></div>
     <div id="maptools"><button id="mapbtn">Karte verschieben / zoomen</button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div></div>
-    <div id="hint">Fotos: ziehen = verschieben (rastet an Kanten/gleichen Abständen ein) · Ecken = Größe (Shift = Seitenverhältnis) · Shift-Klick = mehrere wählen → Ausrichten · Doppelklick = Bildausschnitt (ziehen + Mausrad, oder Alt-Ziehen) · Entf = entfernen · Karte: Button rechts oben, dann Maus/Rad · Ortsnamen (Start/Ziel/Übernachtung): ziehen = verschieben, Doppelklick = Text ändern</div>
+    <div id="hint">Fotos: ziehen = verschieben (rastet an Kanten/gleichen Abständen ein) · Ecken = Größe (Shift = Seitenverhältnis) · Shift-Klick = mehrere wählen → Ausrichten · Doppelklick = Bildausschnitt (ziehen + Mausrad, oder Alt-Ziehen) · Entf = entfernen · Höhenprofil: Oberkante ziehen = Höhe (Doppelklick = zurücksetzen) · Karte: Button rechts oben, dann Maus/Rad · Ortsnamen (Start/Ziel/Übernachtung): ziehen = verschieben, Doppelklick = Text ändern</div>
   </main>
 </div>
 
@@ -206,7 +210,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   let CW = 1123, CH = 1587;
   const PAPER = { A4: [2480, 3508, 210, 297], A3: [3508, 4961, 297, 420], A2: [4961, 7016, 420, 594] };   // px bei 300 dpi, mm
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
-  const state = { format: 'portrait', paper: 'A3', stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const state = { format: 'portrait', paper: 'A3', bandH: 113, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
@@ -273,9 +277,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   $('#mapbtn').addEventListener('click', () => { const on = $('#map').classList.toggle('locked'); $('#mapbtn').classList.toggle('on', !on); stage.classList.toggle('mapmode', !on); });
 
   // ------------------------------------------------------------ Größe / Format
+  const BH = () => state.bandH || 113;
+  function clampPhotos() { for (const p of state.photos) { p.w = Math.min(p.w, CW - 60); p.h = Math.min(p.h, CH - BH() - 60); p.x = Math.max(0, Math.min(CW - p.w, p.x)); p.y = Math.max(0, Math.min(CH - BH() - p.h, p.y)); } }
   function fit() { const m = $('main'), fr = $('#frame'); const s = Math.min((m.clientWidth - 40) / CW, (m.clientHeight - (window.innerWidth <= 900 ? 60 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
   function setFormat(f) { state.format = f; CW = f === 'landscape' ? 1587 : 1123; CH = f === 'landscape' ? 1123 : 1587;
-    for (const p of state.photos) { p.w = Math.min(p.w, CW - 60); p.h = Math.min(p.h, CH - 113 - 60); p.x = Math.max(0, Math.min(CW - p.w, p.x)); p.y = Math.max(0, Math.min(CH - 113 - p.h, p.y)); } stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; $('#profile').setAttribute('viewBox', `0 0 ${CW} 113`); fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); }
+    clampPhotos(); stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); }
   window.addEventListener('resize', fit);
   $('#format').addEventListener('change', e => setFormat(e.target.value));
 
@@ -516,9 +522,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     return { xs, ys: smooth(ys, 2), bounds, total: off };
   }
   function renderProfile() {
-    const svg = $('#profile'); if (!state.stages.length) { svg.innerHTML = ''; return; }
-    const { xs, ys, bounds, total } = profileData(); const x0 = 84, x1 = CW - 56, yt = 44, yb = 113 - 24;
-    const maxE = Math.max(...ys); const stepG = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000].find(st => (maxE * 1.15) / st <= 4) || 2000; const ymax = Math.ceil((maxE * 1.15) / stepG) * stepG || 50;
+    const svg = $('#profile'); const H = BH(); $('#band').style.height = H + 'px'; svg.setAttribute('viewBox', `0 0 ${CW} ${H}`); if (!state.stages.length) { svg.innerHTML = ''; return; }
+    const { xs, ys, bounds, total } = profileData(); const x0 = 84, x1 = CW - 56, yt = 44, yb = H - 24;
+    // Rasterlinien: ca. alle 16 px eine, mindestens 3, höchstens 14 – Schrittweite passt sich der Höhe an
+    const nLines = Math.max(3, Math.min(14, Math.floor((yb - yt) / 16)));
+    const maxE = Math.max(...ys); const stepG = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000].find(st => (maxE * 1.15) / st <= nLines) || 2000; const ymax = Math.ceil((maxE * 1.15) / stepG) * stepG || 50;
     const X = v => x0 + v / total * (x1 - x0), Y = v => yb - v / ymax * (yb - yt);
     let g = '';
     for (let h = 0; h <= ymax; h += stepG) g += `<line x1="${x0}" y1="${Y(h)}" x2="${x1}" y2="${Y(h)}" stroke="${T.grid}" stroke-width=".5"/>` + (h ? `<text x="${x0 - 6}" y="${Y(h) + 3}" fill="${T.axis}" font-size="8" text-anchor="end" font-family="Montserrat">${nf(h)} m</text>` : '');
@@ -547,7 +555,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const d = document.createElement('div'); d.className = 'guide ' + g.k; d.style[g.k === 'v' ? 'left' : 'top'] = g.v + 'px'; guidesEl.appendChild(d);
       if (g.same) { const el = tilesEl.querySelector(`[data-id="${g.same.id}"]`); if (el) el.classList.add('same'); } } }
   function snapTargets(exclude) {
-    const xs = [56, CW - 56, CW / 2], ys = [56, CH - 113 - 12, CH / 2];
+    const xs = [56, CW - 56, CW / 2], ys = [56, CH - BH() - 12, CH / 2];
     for (const o of state.photos) if (!exclude.has(o.id)) { xs.push(o.x, o.x + o.w, o.x + o.w / 2); ys.push(o.y, o.y + o.h, o.y + o.h / 2); }
     return { xs, ys };
   }
@@ -692,6 +700,13 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   });
   document.addEventListener('keydown', e => { if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable) return; if (e.key === 'Escape') { cropMode = null; render(); } if ((e.key === '+' || e.key === '-') && selected.size) { for (const t of state.photos) if (isSel(t.id)) zoomTile(t, e.key === '+' ? 1.08 : 1 / 1.08); render(); } });
   document.addEventListener('keydown', e => { if ((e.key === 'Delete' || e.key === 'Backspace') && selected.size && !document.activeElement.isContentEditable && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') { state.photos = state.photos.filter(x => !isSel(x.id)); selected = new Set(); render(); } });
+  // Höhenprofil in der Höhe ziehen (Oberkante), Skala passt sich an
+  { const grip = $('#bandgrip'); let gd = null;
+    grip.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); gd = { y: e.clientY, h: BH(), s: +stage.dataset.scale || 1 }; grip.classList.add('on'); grip.setPointerCapture(e.pointerId); });
+    grip.addEventListener('pointermove', e => { if (!gd) return; state.bandH = Math.round(Math.max(90, Math.min(Math.round(CH * .45), gd.h - (e.clientY - gd.y) / gd.s))); renderProfile(); });
+    const end = () => { if (!gd) return; gd = null; grip.classList.remove('on'); clampPhotos(); render(); };
+    grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
+    grip.addEventListener('dblclick', () => { state.bandH = 113; clampPhotos(); render(); }); }
   stage.addEventListener('pointerdown', e => { if (e.target.id === 'overlay' || e.target.id === 'vig' || e.target.closest('#map')) { selected = new Set(); selPlace = null; cropMode = null; render(); } });
   $('#reset').addEventListener('click', () => { if (!confirm('Alles zurücksetzen? Tour, Fotos und Texte werden aus dieser Seite und dem Browser-Speicher entfernt.')) return; try { localStorage.removeItem(KEY); } catch (e) {} location.reload(); });
   function wireDrop(el, fn) {
@@ -752,9 +767,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     // Ortsnamen
     if (map) for (const p of state.places) { if (!p.text) continue; const pt = map.project([p.lon, p.lat]); const x = P(pt.x + p.dx), y = P(pt.y + p.dy); g.font = F(p.kind === 'night' ? 700 : 600, 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = T.halo; g.strokeText(p.text, x, y); g.fillStyle = T.cap; g.fillText(p.text, x, y); g.textBaseline = 'alphabetic'; }
     // Höhenprofil-Band (SVG rastern)
-    const band = new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CW} 113" width="${W}" height="${P(113)}"><style>text{font-family:Montserrat,Arial,sans-serif}</style>${$('#profile').innerHTML}</svg>`], { type: 'image/svg+xml' });
-    g.fillStyle = T.band; g.fillRect(0, H - P(113), W, P(113)); g.fillStyle = T.line; g.fillRect(0, H - P(113), W, P(.6));
-    try { const bi = await loadImg(URL.createObjectURL(band)); g.drawImage(bi, 0, H - P(113), W, P(113)); } catch (e) { console.warn('Profil', e); }
+    const band = new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CW} ${BH()}" width="${W}" height="${P(BH())}"><style>text{font-family:Montserrat,Arial,sans-serif}</style>${$('#profile').innerHTML}</svg>`], { type: 'image/svg+xml' });
+    g.fillStyle = T.band; g.fillRect(0, H - P(BH()), W, P(BH())); g.fillStyle = T.line; g.fillRect(0, H - P(BH()), W, P(.6));
+    try { const bi = await loadImg(URL.createObjectURL(band)); g.drawImage(bi, 0, H - P(BH()), W, P(BH())); } catch (e) { console.warn('Profil', e); }
     return c;
   }
   function spaced(g, txt, x, y, gap) { for (const ch of txt) { g.fillText(ch, x, y); x += g.measureText(ch).width + gap; } return x; }
@@ -772,7 +787,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   $('#save').addEventListener('click', () => { try { localStorage.setItem(KEY, JSON.stringify(serial())); say('Layout im Browser gespeichert (Fotos nur als Vorschau – Originale beim nächsten Mal wieder hinzufügen).', 'ok'); } catch (e) { say('Speichern fehlgeschlagen: ' + e.message, 'err'); } });
   $('#exjson').addEventListener('click', () => download(new Blob([JSON.stringify(serial(), null, 1)], { type: 'application/json' }), fname() + '.json'));
   function restore(obj) {
-    Object.assign(state, obj); applyTheme(state.theme || 'nacht'); $('#format').value = state.format || 'portrait'; $('#paper').value = state.paper || 'A3'; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); state.bandH = obj.bandH || 113; applyTheme(state.theme || 'nacht'); $('#format').value = state.format || 'portrait'; $('#paper').value = state.paper || 'A3'; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
     render();
   }
