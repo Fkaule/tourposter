@@ -525,9 +525,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       try { f = await decodable(f); } catch (e) { say(`${f.name}: ${e.message}`, 'err'); continue; }
       const url = URL.createObjectURL(f); originals.set(id, f);
       const dims = await new Promise(r => { const im = new Image(); im.onload = () => r([im.naturalWidth, im.naturalHeight]); im.onerror = () => r([3, 4]); im.src = url; });
-      const land = dims[0] > dims[1]; const slots = state.format === 'landscape' ? SLOTS_L : SLOTS_P;
+      const slots = state.format === 'landscape' ? SLOTS_L : SLOTS_P;
       const used = state.photos.map(p => p.x + ',' + p.y); const slot = slots.find(s => !used.includes(s[0] + ',' + s[1])) || [400, 600, 232, 310];
-      const size = land ? [298, 224] : [slot[2], slot[3]];
+      // Kachel im echten Seitenverhältnis des Fotos (kein Anschnitt), Fläche wie ein 232×310-Slot; extreme Formate (Panorama, 9:16) auf 1:2 … 2:1 begrenzt
+      const ar = Math.min(2, Math.max(.5, dims[0] / dims[1])); const A = 232 * 310; const size = [Math.round(Math.sqrt(A * ar)), Math.round(Math.sqrt(A / ar))];
       state.photos.push({ id, name: f.name, x: slot[0], y: slot[1], w: size[0], h: size[1], ax: 50, ay: 50, lat, lon, date, url, thumb: await thumb(url) }); added.push(id);
     }
     render();
