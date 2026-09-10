@@ -121,9 +121,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #overlay { position:absolute; inset:0; }
 #vig { position:absolute; left:0; top:0; width:100%; height:var(--vigH,480px); background:linear-gradient(rgba(var(--pvig),var(--pvigA,.9)) 0%, rgba(var(--pvig),calc(var(--pvigA,.9) * .8)) 45%, rgba(var(--pvig),0) 100%); pointer-events:none; }
 #bandfade { position:absolute; left:0; bottom:var(--bandH,100px); width:100%; height:46px; background:linear-gradient(rgba(var(--pvig),0), rgba(var(--pvig),calc(var(--pvigA,.9) * .75))); pointer-events:none; }
-#title { position:absolute; left:56px; top:52px; --halo: 0 0 6px var(--pbg), 0 0 6px var(--pbg), 0 0 3px var(--pbg), 0 0 12px var(--pbg); }
-#title .date, #title .h, #title .sub, #stats b, #stats span { text-shadow:var(--halo, none); }
-#stats { --halo: 0 0 6px var(--pbg), 0 0 6px var(--pbg), 0 0 3px var(--pbg), 0 0 12px var(--pbg); }
+#title { position:absolute; left:56px; top:52px; }
 #title .date { color:var(--pa); font-weight:700; font-size:calc(12px * var(--ts, 1)); letter-spacing:.32em; display:flex; align-items:center; gap:12px; }
 #title .date::before { content:""; width:28px; height:2px; background:var(--pa); display:inline-block; }
 #title .h { font-weight:900; font-size:calc(80px * var(--tt, 1)); line-height:.92; letter-spacing:-.02em; color:var(--ptext); margin-top:14px; white-space:pre-line; }
@@ -417,7 +415,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function initMap() {
     map = new maplibregl.Map({ container: 'map', style: T.map, center: [11.5, 51.5], zoom: 6, attributionControl: true, preserveDrawingBuffer: true, interactive: true, pitchWithRotate: false, dragRotate: false, touchZoomRotate: false });
     map.on('load', () => { addRouteLayers(); if (state.stages.length) fitRoute(); }); map.on('click', mapClickSetPos); map.on('moveend', () => { if (!layouting) scheduleAuto('map'); });
-    map.on('move', () => { renderPins(); renderPlaces(); const z = map.getZoom(); $('#mapzoomsl').value = z; $('#mzval').textContent = z.toFixed(1); });
+    window.__map = map;   // für Tests
+    map.on('idle', () => titleBlocker()); map.on('load', () => titleBlocker());
+    map.on('move', () => { renderPins(); renderPlaces(); titleBlocker(); const z = map.getZoom(); $('#mapzoomsl').value = z; $('#mzval').textContent = z.toFixed(1); });
     $('#mapzoomsl').addEventListener('input', e => map.setZoom(+e.target.value));
     $('#mapfit').addEventListener('click', e => { e.preventDefault(); fitRoute(); });
     map.on('idle', () => { if (fillPlaceNames()) render(); });
@@ -438,8 +438,20 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     return { type: 'FeatureCollection', features: f };
   }
   function calmMap() { try { for (const l of map.getStyle().layers || []) if (/poi|housenum|transit|aeroway_label|airport/i.test(l.id) && l.type === 'symbol') map.setLayoutProperty(l.id, 'visibility', 'none'); } catch (e) {} }
+  // Titelblock als Kollisionsfläche: ein transparentes Icon in Größe des Blocks; MapLibre blendet Beschriftungen aus, die damit kollidieren
+  function titleBlocker() {
+    if (!map || !map.isStyleLoaded()) return; const t = $('#title'), st = $('#stats'); if (!t) return;
+    const x0 = t.offsetLeft - 12, y0 = t.offsetTop - 8, x1 = Math.max(t.offsetLeft + t.offsetWidth, st ? st.offsetLeft + st.offsetWidth : 0) + 12, y1 = (st && st.offsetHeight ? st.offsetTop + st.offsetHeight : t.offsetTop + t.offsetHeight) + 8;
+    const w = Math.max(1, Math.round(x1 - x0)), h = Math.max(1, Math.round(y1 - y0)); const key = w + 'x' + h;
+    if (map.__blockKey !== key || !map.hasImage('title-block')) { try { if (map.hasImage('title-block')) map.removeImage('title-block'); map.addImage('title-block', { width: w, height: h, data: new Uint8Array(w * h * 4) }); map.__blockKey = key; } catch (e) {} }
+    const c = map.unproject([(x0 + x1) / 2, (y0 + y1) / 2]); const data = { type: 'Feature', geometry: { type: 'Point', coordinates: [c.lng, c.lat] } };
+    const sig = key + '|' + c.lng.toFixed(6) + ',' + c.lat.toFixed(6); if (map.__blockSig === sig && map.getSource('title-block')) return; map.__blockSig = sig;
+    if (map.getSource('title-block')) map.getSource('title-block').setData(data);
+    else { map.addSource('title-block', { type: 'geojson', data }); map.addLayer({ id: 'title-block', type: 'symbol', source: 'title-block', layout: { 'icon-image': 'title-block', 'icon-allow-overlap': true, 'icon-ignore-placement': false, 'icon-pitch-alignment': 'viewport', 'icon-rotation-alignment': 'viewport' } }); }
+    if (map.getLayer('title-block')) { try { map.setLayoutProperty('title-block', 'icon-image', 'title-block'); } catch (e) {} }
+  }
   function addRouteLayers() {
-    calmMap();
+    calmMap(); titleBlocker();
     if (map.getSource('route')) { map.getSource('route').setData(routeGeo()); map.getSource('pts').setData(nightsGeo()); map.setPaintProperty('route', 'line-color', T.accent); map.setPaintProperty('route-halo', 'line-color', T.halo); map.setPaintProperty('pts-end', 'circle-color', T.bg); map.setPaintProperty('pts-end', 'circle-stroke-color', T.accent); map.setPaintProperty('pts-night', 'circle-color', T.accent); map.setPaintProperty('pts-night', 'circle-stroke-color', T.halo); return; }
     map.addSource('route', { type: 'geojson', data: routeGeo() });
     map.addSource('pts', { type: 'geojson', data: nightsGeo() });
@@ -797,7 +809,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     $('#title .date').textContent = state.date || ''; $('#title .h').textContent = state.title || ''; $('#title .sub').textContent = state.subline || '';
     stage.style.setProperty('--statsTop', ($('#title').offsetTop + $('#title').offsetHeight + 24) + 'px');
     // Vignette reicht immer bis unter die Kennzahlen (Titelblock bleibt auf jeder Karte lesbar)
-    stage.style.setProperty('--vigH', Math.max(480, $('#title').offsetTop + $('#title').offsetHeight + 24 + ($('#stats').offsetHeight || 60) + 110) + 'px');
+    titleBlocker(); stage.style.setProperty('--vigH', Math.max(480, $('#title').offsetTop + $('#title').offsetHeight + 24 + ($('#stats').offsetHeight || 60) + 110) + 'px');
     $('#stats').innerHTML = (state.stats || []).map(([n, l]) => `<div><b contenteditable="true" spellcheck="false">${n}</b><span contenteditable="true" spellcheck="false">${l}</span></div>`).join('');
     $('#stages').innerHTML = state.stages.map((s, i) => `<div class="row"><div class="n">${i + 1}</div><div><input value="${(s.name || '').replace(/"/g, '&quot;')}" data-i="${i}" aria-label="Etappenname"><div class="meta">${(s.distance / 1000).toFixed(0)} km · ${nf(s.gain)} Hm${s.hasEle ? '' : ' · keine Höhendaten'}</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
     $('#stages').querySelectorAll('input').forEach(inp => inp.addEventListener('change', e => { state.stages[+e.target.dataset.i].name = e.target.value; renderProfile(); }));
@@ -1182,10 +1194,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     // Titelblock
     const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(57), P(28), P(2));
     // Halo in Posterfarbe hinter allen Titeltexten (weicher Schatten + dünne Kontur) – lesbar auch über Kartenbeschriftung
-    const haloOn = () => { g.shadowColor = T.bg; g.shadowBlur = P(10); g.lineJoin = 'round'; g.strokeStyle = T.bg; g.lineWidth = P(4); };
-    const haloOff = () => { g.shadowBlur = 0; g.shadowColor = 'transparent'; };
-    const textH = (t, x, y) => { haloOn(); g.strokeText(t, x, y); g.strokeText(t, x, y); haloOff(); g.fillText(t, x, y); };
-    const spacedH = (t, x, y, gap) => { haloOn(); let xx = x; for (const ch of t) { g.strokeText(ch, xx, y); xx += g.measureText(ch).width + gap; } haloOff(); return spaced(g, t, x, y, gap); };
+    const textH = (t, x, y) => g.fillText(t, x, y); const spacedH = (t, x, y, gap) => spaced(g, t, x, y, gap);
     g.font = F(700, 12); g.textBaseline = 'top'; spacedH(state.date || '', x0 + P(40), P(52), P(3.6));
     g.fillStyle = T.text; g.font = F(900, 80, false); g.textBaseline = 'alphabetic';
     const tsz = 80 * TT(), tl = (state.title || '').split('\n'); tl.forEach((l, i) => textH(l, x0 - P(4), P(78 + tsz * .92 * .78 + i * tsz * .925)));
