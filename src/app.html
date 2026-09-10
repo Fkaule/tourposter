@@ -326,6 +326,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const dropfit = $('#dropfit');
   wireDrop(dropfit, addTourFiles);
   async function addTourFiles(files) {
+    if (!files.length) return;
     for (const f of [...files].sort((a, b) => a.name.localeCompare(b.name))) {
       try {
         if (typeof FitParser === 'undefined') { say('Bibliotheken nicht geladen – Datei bitte komplett herunterladen und neu öffnen (Browser: ' + navigator.userAgent.split(') ').pop() + ').', 'err'); return; }
@@ -841,7 +842,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     input.addEventListener('change', () => { const fs = [...input.files]; input.value = ''; fn(fs); });
   }
   stage.addEventListener('dragover', e => e.preventDefault());
-  stage.addEventListener('drop', e => { e.preventDefault(); const fs = [...e.dataTransfer.files]; addPhotos(fs.filter(f => f.type.startsWith('image/'))); addTourFiles(fs.filter(f => /\.(fit|gpx|tcx)$/i.test(f.name))); });
+  stage.addEventListener('drop', e => { e.preventDefault(); const fs = [...e.dataTransfer.files]; const ph = fs.filter(f => f.type.startsWith('image/') || /\.(heic|heif|json)$/i.test(f.name)), tr = fs.filter(f => /\.(fit|gpx|tcx)$/i.test(f.name)); if (ph.length) addPhotos(ph); if (tr.length) addTourFiles(tr); });
 
   // ------------------------------------------------------------ Export (300 dpi)
   async function fontsReady() { try { await document.fonts.load('900 80px Montserrat'); await document.fonts.load('400 16px Montserrat'); } catch (e) {} }
