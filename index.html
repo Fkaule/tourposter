@@ -447,7 +447,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   function thumb(url) { return new Promise(r => { const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); const s = 360 / Math.max(im.width, im.height); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); r(c.toDataURL('image/jpeg', .72)); }; im.onerror = () => r(''); im.src = url; }); }
   function renumber() { [...state.photos].sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.name.localeCompare(b.name)).forEach((p, i) => p.num = i + 1); }
-  function autoCaption(p) { const d = p.date ? new Date(p.date) : null; return [p.place, d ? `${d.getDate()}. ${MONk[d.getMonth()]}` : ''].filter(Boolean).join(' · '); }
+  // Eintagestour: Datum nur anzeigen, wenn das Foto nicht am Tourtag entstanden ist
+  function tourDays() { const days = new Set(); for (const st of state.stages) for (const t of [st.start, st.end]) if (t) days.add(new Date(t).toDateString()); return days; }
+  function autoCaption(p) { const d = p.date ? new Date(p.date) : null; const days = tourDays(); const showDate = d && !(days.size === 1 && days.has(d.toDateString())); return [p.place, showDate ? `${d.getDate()}. ${MONk[d.getMonth()]}` : ''].filter(Boolean).join(' · '); }
 
   // ------------------------------------------------------------ Ortsnamen (Start / Ziel / Übernachtungen)
   function buildPlaces() {
