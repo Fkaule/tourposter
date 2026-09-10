@@ -58,6 +58,7 @@ select, input.t { width:100%; box-sizing:border-box; background:var(--panel2); c
 #status { font-size:11.5px; color:var(--muted); min-height:16px; padding:8px 18px; }
 #status.ok { color:var(--ok); }
 #status.err { color:#ff8a70; }
+#status.warn { color:#ffc857; }
 .hint { font-size:11px; color:#5f7288; margin-top:6px; }
 main { position:relative; overflow:hidden; display:grid; place-items:center; background:#08111a; }
 #frame { position:relative; }
@@ -906,13 +907,27 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function loadImg(src, big) { return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
   function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
   const fname = () => (state.title || 'Tourposter').replace(/\s+/g, '_').replace(/[^\wäöüÄÖÜß_-]/g, '');
-  $('#expng').addEventListener('click', async () => { try { say('Rendert …'); const c = await renderPrint(); c.toBlob(b => { download(b, fname() + '_' + state.paper + '.png'); say('PNG gespeichert.', 'ok'); }, 'image/png'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
-  $('#expdf').addEventListener('click', async () => { try { say('Rendert …'); const c = await renderPrint(); const land = state.format === 'landscape'; const pp = PAPER[state.paper] || PAPER.A3; const pdf = new jsPDF({ orientation: land ? 'landscape' : 'portrait', unit: 'mm', format: [pp[0], pp[1]], compress: true }); pdf.addImage(c.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, land ? pp[1] : pp[0], land ? pp[0] : pp[1]); pdf.save(fname() + '_' + state.paper + '.pdf'); say('PDF gespeichert.', 'ok'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
+  $('#expng').addEventListener('click', async () => { if (!exportOk()) return; try { say('Rendert …'); const c = await renderPrint(); c.toBlob(b => { download(b, fname() + '_' + state.paper + '.png'); say('PNG gespeichert.', 'ok'); }, 'image/png'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
+  $('#expdf').addEventListener('click', async () => { if (!exportOk()) return; try { say('Rendert …'); const c = await renderPrint(); const land = state.format === 'landscape'; const pp = PAPER[state.paper] || PAPER.A3; const pdf = new jsPDF({ orientation: land ? 'landscape' : 'portrait', unit: 'mm', format: [pp[0], pp[1]], compress: true }); pdf.addImage(c.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, land ? pp[1] : pp[0], land ? pp[0] : pp[1]); pdf.save(fname() + '_' + state.paper + '.pdf'); say('PDF gespeichert.', 'ok'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
 
   // ------------------------------------------------------------ Speichern (nur im Browser) / JSON
+  // Vor dem Export: fehlen Originale, erst warnen; zweiter Klick innerhalb von 15 s exportiert trotzdem (Vorschau 360 px)
+  let exportForce = 0;
+  function exportOk() { const miss = missingOriginals(); if (!miss.length || Date.now() < exportForce) return true; exportForce = Date.now() + 15000;
+    say(`${miss.length} Foto(s) liegen nur als 360-px-Vorschau vor (${miss.map(p => p.name).join(', ')}) – im Druck unscharf. Originale über „Fotos“ erneut hinzufügen (Zuordnung per Dateiname) oder innerhalb von 15 s nochmal klicken, um trotzdem zu exportieren.`, 'err'); return false; }
   const KEY = 'tourposter-proto';
+  // Originale (Dateien in voller Auflösung) in IndexedDB – bleiben so über Neuladen/Browserstart erhalten
+  const idb = { db: null,
+    open() { return this.db || (this.db = new Promise((res, rej) => { const r = indexedDB.open('tourposter', 1); r.onupgradeneeded = () => r.result.createObjectStore('originals'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); })); },
+    async put(id, file) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction('originals', 'readwrite'); t.objectStore('originals').put(file, id); t.oncomplete = res; t.onerror = () => rej(t.error); }); },
+    async get(id) { const db = await this.open(); return new Promise((res, rej) => { const r = db.transaction('originals').objectStore('originals').get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+    async keep(ids) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction('originals', 'readwrite'), st = t.objectStore('originals'); const r = st.getAllKeys(); r.onsuccess = () => { for (const k of r.result) if (!ids.includes(k)) st.delete(k); }; t.oncomplete = res; t.onerror = () => rej(t.error); }); } };
+  async function saveOriginals() { try { const ids = state.photos.map(p => p.id); await idb.keep(ids); let n = 0; for (const p of state.photos) { const f = originals.get(p.id); if (f) { await idb.put(p.id, f); n++; } } return n; } catch (e) { console.warn('IndexedDB', e); return -1; } }
+  async function loadOriginals() { let n = 0; for (const p of state.photos) { if (originals.has(p.id)) continue; try { const f = await idb.get(p.id); if (f) { originals.set(p.id, f); p.url = URL.createObjectURL(f); n++; } } catch (e) {} } return n; }
+  const missingOriginals = () => state.photos.filter(p => !originals.has(p.id));
   function serial() { return { ...state, photos: state.photos.map(({ url, ...p }) => p), map: map ? { center: map.getCenter().toArray(), zoom: map.getZoom() } : null }; }
-  $('#save').addEventListener('click', () => { try { localStorage.setItem(KEY, JSON.stringify(serial())); say('Layout im Browser gespeichert (Fotos nur als Vorschau – Originale beim nächsten Mal wieder hinzufügen).', 'ok'); } catch (e) { say('Speichern fehlgeschlagen: ' + e.message, 'err'); } });
+  $('#save').addEventListener('click', async () => { try { localStorage.setItem(KEY, JSON.stringify(serial())); say('Speichert …'); const n = await saveOriginals(); const miss = missingOriginals().length;
+    say(n < 0 ? 'Layout gespeichert, Fotos konnten nicht im Browser abgelegt werden (Speicher gesperrt?) – Originale beim nächsten Mal wieder hinzufügen.' : `Layout und ${n} Foto(s) in Originalgröße im Browser gespeichert${miss ? ` – ${miss} Foto(s) fehlen als Original (nur Vorschau).` : '.'}`, miss || n < 0 ? 'warn' : 'ok'); } catch (e) { say('Speichern fehlgeschlagen: ' + e.message, 'err'); } });
   $('#exjson').addEventListener('click', () => download(new Blob([JSON.stringify(serial(), null, 1)], { type: 'application/json' }), fname() + '.json'));
   function restore(obj) {
     Object.assign(state, obj); state.bandH = obj.bandH || 113; applyTheme(state.theme || 'nacht'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
@@ -926,7 +941,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
   // ------------------------------------------------------------ Start
   setFormat('portrait'); applyTheme('nacht'); initMap();
-  try { const s = localStorage.getItem(KEY); if (s) { restore(JSON.parse(s)); afterTourChange(); say('Gespeichertes Layout geladen.', 'ok'); } } catch (e) {}
+  try { const s = localStorage.getItem(KEY); if (s) { restore(JSON.parse(s)); afterTourChange(); loadOriginals().then(n => { const miss = missingOriginals().length; say(`Gespeichertes Layout geladen${n ? `, ${n} Foto(s) in Originalgröße` : ''}${miss ? ` – ${miss} Foto(s) nur als Vorschau: Originale bitte erneut hinzufügen (Zuordnung per Dateiname)` : ''}.`, miss ? 'warn' : 'ok'); render(); }); } } catch (e) {}
   render();
 })();
 </script>
