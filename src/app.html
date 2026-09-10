@@ -145,9 +145,14 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .place:hover, .place.sel { outline:1.5px dashed var(--accent); }
 .place[contenteditable="true"] { outline:2px solid var(--accent); cursor:text; }
 .pin { position:absolute; transform:translate(-50%,-50%); min-width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); padding:0 calc(8px * var(--ts, 1)); box-sizing:border-box; border-radius:calc(13px * var(--ts, 1)); background:#fff; color:#0d1a26; box-shadow:0 4px 12px rgba(0,0,0,.5); font:700 13px/26px Montserrat, Arial, sans-serif; font-size:calc(13px * var(--ts, 1)); line-height:calc(26px * var(--ts, 1)); text-align:center; white-space:nowrap; pointer-events:none; }
-.tile { position:absolute; border-radius:10px; overflow:hidden; box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); cursor:grab; touch-action:none; }
+.tile { position:absolute; border-radius:var(--fr,10px); overflow:hidden; box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); cursor:grab; touch-action:none; }
+#stage.mat .tile { box-shadow:0 0 0 var(--mat) var(--pbg), 0 0 0 var(--mat1) var(--pline), 0 24px 48px rgba(0,0,0,.45); }
+#stage.fray:not(.mat) .tile { box-shadow:none; filter:drop-shadow(0 18px 24px rgba(0,0,0,.5)); }
+#stage.marks .tile::before, #stage.marks .tile::after { content:''; position:absolute; width:12px; height:12px; border:1.5px solid var(--pa); pointer-events:none; z-index:2; }
+#stage.marks .tile::before { left:calc(-1 * var(--mk)); top:calc(-1 * var(--mk)); border-right:0; border-bottom:0; }
+#stage.marks .tile::after { right:calc(-1 * var(--mk)); bottom:calc(-1 * var(--mk)); border-left:0; border-top:0; }
 .tile:active { cursor:grabbing; }
-.tile.sel { box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 2px var(--accent); }
+.tile.sel { box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 2px var(--accent) !important; filter:none !important; }
 .tile img { position:absolute; left:0; top:0; width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)); }
 .tile .clip::after { content:''; position:absolute; inset:0; background:var(--gtint,transparent); mix-blend-mode:soft-light; opacity:var(--gta,0); pointer-events:none; }
 .tile.crop .clip { outline:2px dashed var(--accent); outline-offset:-2px; cursor:move; }
@@ -165,8 +170,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .tile .rs.e, .tile .rs.w { top:50%; margin-top:-14px; width:8px; height:28px; border-radius:4px; }
 .tile .rs.n { top:-5px; cursor:ns-resize; } .tile .rs.s { bottom:-5px; cursor:ns-resize; } .tile .rs.e { right:-5px; cursor:ew-resize; } .tile .rs.w { left:-5px; cursor:ew-resize; }
 .tile { overflow:visible; }
-.tile .clip { position:absolute; inset:0; border-radius:10px; overflow:hidden; }
-.tile.same { box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 2px var(--accent); }
+.tile .clip { position:absolute; inset:0; border-radius:var(--fr,10px); overflow:hidden; }
+.tile.same { box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 2px var(--accent) !important; }
 .tile.same::after { content:"gleiche Größe"; position:absolute; left:50%; top:-22px; transform:translateX(-50%); background:var(--accent); color:#fff; font:700 10px/16px Montserrat, Arial, sans-serif; padding:0 6px; border-radius:8px; white-space:nowrap; }
 .gap { position:absolute; background:rgba(255,90,54,.22); border-left:1px solid var(--accent); border-right:1px solid var(--accent); pointer-events:none; display:grid; place-items:center; color:#fff; font:700 11px Montserrat, Arial, sans-serif; }
 .gap.h { border:0; border-top:1px solid var(--accent); border-bottom:1px solid var(--accent); }
@@ -290,6 +295,13 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <option value="hell">Hell – helle Karte, Rot</option>
         <option value="retro">Retro – bunte Karte, Ziegel</option>
       </select>
+      <label class="f">Rahmen der Fotos</label>
+      <div class="seg" id="cornerseg"><button data-v="round" class="on">Runde Ecken</button><button data-v="sharp">Kantig</button></div>
+      <div class="grid2" style="margin-top:8px">
+        <div><label class="f" style="margin-top:0">Passepartout <span id="matval">aus</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="0" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um das Foto (Postkarten-Look)"></div>
+        <div><label class="f" style="margin-top:0">Ausgefranster Rand <span id="frayval">aus</span></label><input type="range" id="fraysl" min="0" max="10" step="1" value="0" style="width:100%" title="Fotokante leicht unregelmäßig wie gerissenes Papier"></div>
+      </div>
+      <label class="switch" style="margin-top:8px"><input type="checkbox" id="marks"><span class="kn"></span><span>Eckmarken<small>kleine Winkel in Akzentfarbe an zwei Ecken (nur mit Passepartout)</small></span></label>
       <label class="f">Farbabstimmung der Fotos <span id="gradeval">60 %</span></label>
       <input type="range" id="grade" min="0" max="100" step="5" value="60" style="width:100%" title="Fotos an die Farbstimmung des Posters angleichen: Sättigung dämpfen, Tönung in der Themenfarbe">
       <div class="hint">Titel, Untertitel und Kennzahlen direkt im Poster antippen und schreiben. Höhenprofil: Oberkante ziehen.</div>
@@ -370,7 +382,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${{ DIN: 'DIN', Poster: 'Posterdruck (cm)', Screen: 'Bildschirm / Handy (px)' }[grp]}"></optgroup>`); }
       sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${p[3]?.label || (grp === 'DIN' ? k + ' · ' : '') + (p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm')}</option>`); } }
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
-  const state = { format: 'portrait', paper: 'A3', bandH: 100, grade: 60, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const state = { format: 'portrait', paper: 'A3', bandH: 100, grade: 60, frame: { corners: 'round', mat: 0, marks: false, fray: 0 }, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; setFormat(state.format); });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
@@ -453,6 +465,19 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   $('#helpbtn').addEventListener('click', () => { $('#help').hidden = false; }); $('#helpbtn2').addEventListener('click', () => { $('#help').hidden = false; }); $('#helpclose').addEventListener('click', () => { $('#help').hidden = true; }); $('#help').addEventListener('click', e => { if (e.target.id === 'help') $('#help').hidden = true; });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#help').hidden) $('#help').hidden = true; if (e.key === '?' && !e.target.isContentEditable && e.target.tagName !== 'INPUT') $('#help').hidden = !$('#help').hidden; });
   $('#grade').addEventListener('input', e => { state.grade = +e.target.value; applyGrade(); });
+  // Rahmen-Optionen
+  const FR = () => state.frame || (state.frame = { corners: 'round', mat: 0, marks: false, fray: 0 });
+  function applyFrame() { const f = FR(); $('#cornerseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === f.corners)); $('#matsl').value = f.mat; $('#fraysl').value = f.fray; $('#marks').checked = !!f.marks;
+    $('#matval').textContent = f.mat ? f.mat + ' px' : 'aus'; $('#frayval').textContent = f.fray ? '±' + f.fray + ' px' : 'aus';
+    const st = stage.style; st.setProperty('--fr', (f.corners === 'sharp' ? 2 : 10) + 'px'); st.setProperty('--mat', f.mat + 'px'); st.setProperty('--mat1', (f.mat + 1) + 'px'); st.setProperty('--mk', (f.mat + 7) + 'px');
+    stage.classList.toggle('mat', f.mat > 0); stage.classList.toggle('marks', f.mat > 0 && !!f.marks); stage.classList.toggle('fray', f.fray > 0); render(); }
+  $('#cornerseg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; FR().corners = b.dataset.v; applyFrame(); });
+  $('#matsl').addEventListener('input', e => { FR().mat = +e.target.value; applyFrame(); });
+  $('#fraysl').addEventListener('input', e => { FR().fray = +e.target.value; applyFrame(); });
+  $('#marks').addEventListener('change', e => { FR().marks = e.target.checked; applyFrame(); });
+  // Maske für den ausgefransten Rand (SVG mit Rauschen), Größe in px, Ausschlag a
+  function frayMask(w, h, a, r, seed) { const inset = a + 1; return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><filter id="f" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="${(0.9 / Math.max(6, a)).toFixed(3)}" numOctaves="3" seed="${seed}"/><feDisplacementMap in="SourceGraphic" scale="${a * 2}" xChannelSelector="R" yChannelSelector="G"/></filter><rect x="${inset}" y="${inset}" width="${w - 2 * inset}" height="${h - 2 * inset}" rx="${Math.max(0, r - inset)}" fill="#fff" filter="url(#f)"/></svg>`; }
+  const seedOf = id => [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 1000, 7);
   $('#formatseg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('#format').value = b.dataset.v; setFormat(b.dataset.v); });
   function syncSeg() { $('#formatseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === state.format)); }
   // Mobile Tabs
@@ -729,6 +754,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const el = document.createElement('div'); el.className = 'tile' + (isSel(p.id) ? ' sel' : '') + (cropMode === p.id ? ' crop' : ''); el.dataset.id = p.id;
       Object.assign(el.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px' });
       const clip = document.createElement('div'); clip.className = 'clip'; el.appendChild(clip);
+      if (FR().fray > 0) { const m = 'url("data:image/svg+xml;base64,' + btoa(frayMask(p.w, p.h, FR().fray, FR().corners === 'sharp' ? 2 : 10, seedOf(p.id))) + '")'; clip.style.webkitMaskImage = m; clip.style.maskImage = m; clip.style.webkitMaskSize = '100% 100%'; clip.style.maskSize = '100% 100%'; clip.style.borderRadius = '0'; }
       const img = document.createElement('img'); img.src = p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
       const hud = document.createElement('div'); hud.className = 'hud'; clip.appendChild(hud);
@@ -969,7 +995,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (!map || !state.photos.length) return;
     layouting = true;
     try {
-      const M = 18;                                                   // Mindestabstand zu Route, Texten und Nachbarfotos
+      const M = 18 + (FR().mat || 0) + (FR().mat && FR().marks ? 8 : 0);   // Mindestabstand zu Route, Texten und Nachbarfotos (+ Passepartout/Eckmarken)
       const movable = state.photos.filter(p => (only ? only.has(p.id) : !p.fixed) );
       const order = movable.sort((a, b) => (b.star ? 1 : 0) - (a.star ? 1 : 0) || a.num - b.num);
       const n = state.photos.length;
@@ -1114,17 +1140,25 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const p of state.photos) {
       const src = originals.get(p.id); const im = await loadImg(src ? URL.createObjectURL(src) : p.thumb, !!src);
       const bx = P(p.x), by = P(p.y), bw = P(p.w), bh = P(p.h);
-      g.save(); g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = P(30); g.shadowOffsetY = P(14); rr(g, bx, by, bw, bh, P(10)); g.fillStyle = '#000'; g.fill(); g.restore();
-      g.save(); rr(g, bx, by, bw, bh, P(10)); g.clip();
-      const s = Math.max(bw / im.width, bh / im.height) * Math.max(1, p.zoom ?? 1); const iw = im.width * s, ih = im.height * s; g.drawImage(im, bx - (iw - bw) * (p.ax ?? 50) / 100, by - (ih - bh) * (p.ay ?? 50) / 100, iw, ih);
-      { const v = gradeVals(); if (v.sat < .999) { g.globalCompositeOperation = 'saturation'; g.globalAlpha = 1 - v.sat; g.fillStyle = '#808080'; g.fillRect(bx, by, bw, bh); }
-        if (v.ta > 0) { g.globalCompositeOperation = 'soft-light'; g.globalAlpha = v.ta; g.fillStyle = v.tint; g.fillRect(bx, by, bw, bh); }
-        if (v.con > 1.001) { g.globalCompositeOperation = 'overlay'; g.globalAlpha = (v.con - 1) * 2.5; g.drawImage(im, bx - (iw - bw) * (p.ax ?? 50) / 100, by - (ih - bh) * (p.ay ?? 50) / 100, iw, ih); }   // Bild über sich selbst (overlay) = etwas mehr Kontrast
-        g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
-      const gh = 70 * Math.max(1, TS()); const cg = g.createLinearGradient(0, by + bh - P(gh), 0, by + bh); cg.addColorStop(0, 'rgba(6,12,18,0)'); cg.addColorStop(1, 'rgba(6,12,18,.85)'); g.fillStyle = cg; g.fillRect(bx, by + bh - P(gh), bw, P(gh));
-      g.fillStyle = '#e6edf3'; let fs = 12; g.font = F(500, fs); const cap = p.caption ?? autoCaption(p); while (fs > 8.5 && g.measureText(cap).width > bw - P(28)) { fs -= .5; g.font = F(500, fs); }
-      g.fillText(cap, bx + P(14), by + bh - P(14));
-      pill(g, bx + P(12 + 13 * TS()), by + P(12 + 13 * TS()), String(p.num), T.pill, '#fff'); g.restore();
+      const fr = FR(), R = P(fr.corners === 'sharp' ? 2 : 10), mat = P(fr.mat), fray = P(fr.fray);
+      // Schatten (+ Passepartout mit Haarlinie und Eckmarken)
+      g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(30); g.shadowOffsetY = P(14); rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, mat ? R * .4 : R); g.fillStyle = '#000'; g.fill(); g.restore();
+      if (mat) { rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, R * .4); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(1); g.strokeStyle = T.line; g.stroke();
+        if (fr.marks) { const k = P(12), o = mat + P(7); g.strokeStyle = T.accent; g.lineWidth = P(1.5); g.beginPath(); g.moveTo(bx - o, by - o + k); g.lineTo(bx - o, by - o); g.lineTo(bx - o + k, by - o); g.moveTo(bx + bw + o - k, by + bh + o); g.lineTo(bx + bw + o, by + bh + o); g.lineTo(bx + bw + o, by + bh + o - k); g.stroke(); } }
+      // Foto samt Farbabstimmung, Bildunterschrift und Nummer in eine Zwischenfläche zeichnen – dann ggf. ausgefranst maskieren
+      const off = document.createElement('canvas'); off.width = Math.round(bw); off.height = Math.round(bh); const o = off.getContext('2d');
+      const s = Math.max(bw / im.width, bh / im.height) * Math.max(1, p.zoom ?? 1); const iw = im.width * s, ih = im.height * s; const ox = -(iw - bw) * (p.ax ?? 50) / 100, oy = -(ih - bh) * (p.ay ?? 50) / 100;
+      o.drawImage(im, ox, oy, iw, ih);
+      { const v = gradeVals(); if (v.sat < .999) { o.globalCompositeOperation = 'saturation'; o.globalAlpha = 1 - v.sat; o.fillStyle = '#808080'; o.fillRect(0, 0, bw, bh); }
+        if (v.ta > 0) { o.globalCompositeOperation = 'soft-light'; o.globalAlpha = v.ta; o.fillStyle = v.tint; o.fillRect(0, 0, bw, bh); }
+        if (v.con > 1.001) { o.globalCompositeOperation = 'overlay'; o.globalAlpha = (v.con - 1) * 2.5; o.drawImage(im, ox, oy, iw, ih); }
+        o.globalAlpha = 1; o.globalCompositeOperation = 'source-over'; }
+      const gh = 70 * Math.max(1, TS()); const cg = o.createLinearGradient(0, bh - P(gh), 0, bh); cg.addColorStop(0, 'rgba(6,12,18,0)'); cg.addColorStop(1, 'rgba(6,12,18,.85)'); o.fillStyle = cg; o.fillRect(0, bh - P(gh), bw, P(gh));
+      o.fillStyle = '#e6edf3'; let fs = 12; o.font = F(500, fs); const cap = p.caption ?? autoCaption(p); while (fs > 8.5 && o.measureText(cap).width > bw - P(28)) { fs -= .5; o.font = F(500, fs); }
+      o.fillText(cap, P(14), bh - P(14));
+      pill(o, P(12 + 13 * TS()), P(12 + 13 * TS()), String(p.num), T.pill, '#fff');
+      if (fray > 0) { try { const mk = await loadImg('data:image/svg+xml;base64,' + btoa(frayMask(Math.round(bw), Math.round(bh), Math.round(fray), R, seedOf(p.id)))); o.globalCompositeOperation = 'destination-in'; o.drawImage(mk, 0, 0, bw, bh); o.globalCompositeOperation = 'source-over'; } catch (e) { console.warn('Maske', e); } }
+      g.save(); if (!(fray > 0)) { rr(g, bx, by, bw, bh, R); g.clip(); } g.drawImage(off, bx, by, bw, bh); g.restore();
     }
     // Pins
     if (map) for (const d of pinsEl.children) { const px = P(parseFloat(d.style.left)), py = P(parseFloat(d.style.top)); g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(8); g.shadowOffsetY = P(4); pill(g, px, py, d.textContent, T.pinBg, T.pinFg); g.restore(); }
@@ -1165,9 +1199,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     say(n < 0 ? 'Layout gespeichert, Fotos konnten nicht im Browser abgelegt werden (Speicher gesperrt?) – Originale beim nächsten Mal wieder hinzufügen.' : `Layout und ${n} Foto(s) in Originalgröße im Browser gespeichert${miss ? ` – ${miss} Foto(s) fehlen als Original (nur Vorschau).` : '.'}`, miss || n < 0 ? 'warn' : 'ok'); } catch (e) { say('Speichern fehlgeschlagen: ' + e.message, 'err'); } });
   $('#exjson').addEventListener('click', () => download(new Blob([JSON.stringify(serial(), null, 1)], { type: 'application/json' }), fname() + '.json'));
   function restore(obj) {
-    Object.assign(state, obj); state.bandH = obj.bandH || 100; state.grade = obj.grade ?? 60; $('#grade').value = state.grade; applyTheme(state.theme || 'nacht'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); state.bandH = obj.bandH || 100; state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'round', mat: 0, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'nacht'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
-    render();
+    applyFrame(); render();
   }
   async function loadJsonFile(f) { try { restore(JSON.parse(await f.text())); afterTourChange(); say(`Layout „${f.name}“ geladen – Fotos in Originalgröße bitte erneut hinzufügen (werden anhand des Dateinamens zugeordnet).`, 'ok'); } catch (err) { say('JSON nicht lesbar: ' + err.message, 'err'); } }
   $('#ldjson input').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadJsonFile(f); });
@@ -1175,7 +1209,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   dropfit.addEventListener('drop', e => { for (const f of e.dataTransfer.files) if (/\.json$/i.test(f.name)) loadJsonFile(f); });
 
   // ------------------------------------------------------------ Start
-  setFormat('portrait'); applyTheme('nacht'); initMap();
+  setFormat('portrait'); applyTheme('nacht'); initMap(); applyFrame();
   try { const s = localStorage.getItem(KEY); if (s) { restore(JSON.parse(s)); afterTourChange(); loadOriginals().then(n => { const miss = missingOriginals().length; say(`Gespeichertes Layout geladen${n ? `, ${n} Foto(s) in Originalgröße` : ''}${miss ? ` – ${miss} Foto(s) nur als Vorschau: Originale bitte erneut hinzufügen (Zuordnung per Dateiname)` : ''}.`, miss ? 'warn' : 'ok'); render(); }); } } catch (e) {}
   render();
 })();
