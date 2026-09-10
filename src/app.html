@@ -29,7 +29,12 @@ aside h1 small { display:block; font-weight:500; color:var(--muted); font-size:1
 .row input { width:100%; box-sizing:border-box; background:transparent; border:0; border-bottom:1px solid #2c4258; color:var(--text); font:12px Montserrat, Arial, sans-serif; padding:2px 0; }
 .row .meta { font-size:10px; color:var(--muted); }
 .row .meta a { color:var(--accent); font-weight:600; }
-#stage.setpos #map { cursor:crosshair; pointer-events:auto; }
+#stage.setpos #map { pointer-events:auto; }
+#stage.setpos #map, #stage.setpos #map * { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23000' stroke-width='3.5' opacity='.6'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Cg stroke='%23000' stroke-width='3.5' opacity='.6'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='1.5'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='1.6' fill='%23ff5a36'/%3E%3C/svg%3E") 20 20, crosshair !important; }
+#stage.setpos #tiles, #stage.setpos #pins, #stage.setpos #places { pointer-events:none; }
+.tile .geo { position:absolute; left:46px; top:12px; height:26px; padding:0 9px; border-radius:13px; background:rgba(13,26,38,.85); color:#fff; font:600 11px/26px Montserrat, Arial, sans-serif; white-space:nowrap; cursor:pointer; }
+.tile .geo.on { background:var(--accent); animation:geoblink 1s infinite; }
+@keyframes geoblink { 50% { opacity:.55; } }
 #stage.setpos #overlay { pointer-events:none; }
 .row button { background:none; border:0; color:var(--muted); cursor:pointer; font-size:16px; }
 .row button:hover { color:var(--accent); }
@@ -535,6 +540,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const img = document.createElement('img'); img.src = p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
       const n = document.createElement('div'); n.className = 'n'; n.textContent = p.num; clip.appendChild(n);
+      if (map && (p.lat == null || setPosFor === p.id)) { const gb = document.createElement('div'); gb.className = 'geo' + (setPosFor === p.id ? ' on' : ''); gb.title = 'Aufnahmeort auf der Karte setzen'; gb.textContent = setPosFor === p.id ? '▸ auf die Karte klicken' : '⚑ kein Ort – setzen'; gb.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); gb.addEventListener('click', e => { e.stopPropagation(); startSetPos(p); }); clip.appendChild(gb); }
       const c = document.createElement('div'); c.className = 'c'; c.textContent = p.caption ?? autoCaption(p); clip.appendChild(c);
       for (const k of ['nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w']) { const rs = document.createElement('div'); rs.className = 'rs ' + k; rs.dataset.k = k; el.appendChild(rs); }
       tilesEl.appendChild(el);
@@ -552,7 +558,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   // Foto ohne GPS (oder falscher Ort): Position per Klick auf die Karte setzen; rastet auf den nächsten Routenpunkt ein, wenn der näher als 2 km liegt
   let setPosFor = null;
-  function startSetPos(p) { if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: auf die Karte klicken, um den Aufnahmeort zu setzen (Esc = abbrechen).`); render(); }
+  function startSetPos(p) { if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: Aufnahmeort mit dem Fadenkreuz auf der Karte anklicken – rastet auf die Route ein (Esc = abbrechen).`); render(); }
   function nearestOnRoute(lat, lon) { let best = null, bd = Infinity; for (const st of state.stages) for (let i = 0; i < st.points.length; i += 3) { const q = st.points[i]; const d = hav([lat, lon], [q[0], q[1]]); if (d < bd) { bd = d; best = q; } } return best && bd < 2000 ? [best[0], best[1]] : [lat, lon]; }
   function mapClickSetPos(e) { if (!setPosFor) return; const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
     [p.lat, p.lon] = nearestOnRoute(e.lngLat.lat, e.lngLat.lng); p.place = ''; p.detailTried = false; fillPlaceNames(); say(`Aufnahmeort von Foto ${p.num} gesetzt.`, 'ok'); render(); }
