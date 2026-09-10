@@ -221,6 +221,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #autobtn.on { color:var(--text); border-color:var(--accent); }
 #autobtn.on b { color:var(--accent); }
 #mapzoom input { width:150px; margin:0; }
+#pscalebox { display:flex; align-items:center; gap:8px; white-space:nowrap; padding-left:10px; border-left:1px solid var(--line); }
+#pscalebox input { width:110px; margin:0; }
 #mapzoom a { color:var(--accent); text-decoration:none; }
 .maplibregl-ctrl-attrib { font-size:9px !important; }
 #tabs { display:none; }
@@ -243,7 +245,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   #mapbtn { padding:6px 8px; font-size:11px; }
   #maptools .w { display:none; } #maptools .s { display:inline; }
   #autobtn { padding:6px 8px; }
-  #mapzoom input { width:80px; }
+  #mapzoom input { width:70px; }
+  #pscalebox input { width:60px; } #pscalebox { padding-left:6px; gap:4px; }
   #mapzoom a { display:none; }
   main { padding-top:48px; box-sizing:border-box; }
   .step { padding:10px 14px; }
@@ -296,8 +299,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <option value="retro">Retro – bunte Karte, Ziegel</option>
       </select>
       <div class="grid2" style="margin-top:8px">
-        <div><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div>
-        <div><label class="f" style="margin-top:0">Fotogröße <span id="pscaleval">100 %</span></label><input type="range" id="pscale" min="50" max="160" step="5" value="100" style="width:100%" title="Alle Fotos gemeinsam größer/kleiner"></div>
+        <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div>
       </div>
       <label class="switch" style="margin-top:8px"><input type="checkbox" id="showband" checked><span class="kn"></span><span>Höhenprofil<small>Höhe automatisch nach Bergigkeit, per Ziehen der Oberkante änderbar</small></span></label>
       <label class="f">Farbabstimmung der Fotos <span id="gradeval">60 %</span></label>
@@ -330,7 +332,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <div id="bandfade"></div><div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg></div>
       </div>
     </div></div>
-    <div id="maptools"><button id="mapbtn"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
+    <div id="maptools"><button id="mapbtn"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><div id="pscalebox" title="Alle Fotos gemeinsam größer/kleiner (fixierte behalten ihre Position)"><span class="w">FOTOS</span><span class="s">📷</span> <input type="range" id="pscale" min="50" max="160" step="5" value="100"> <span id="pscaleval">100 %</span></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
     <div id="hint"><span>Ziehen = verschieben · Ecken/Kanten = Größe · Doppelklick = Ausschnitt · Entf = entfernen</span><button id="helpbtn" title="Hilfe">?</button></div>
     <div id="help" hidden>
       <div class="hbox">
@@ -479,9 +481,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // 8. Gesamtgröße der Fotos: Automatik → Grundgröße skaliert; sonst alle Fotos um ihre Mitte skalieren
   let lastScale = 1;
   $('#pscale').addEventListener('input', e => { const v = +e.target.value / 100; $('#pscaleval').textContent = e.target.value + ' %'; state.photoScale = v;
-    if (!autoOn()) { const k = v / lastScale; for (const p of state.photos) { const cx = p.x + p.w / 2, cy = p.y + p.h / 2; p.w = Math.round(p.w * k); p.h = Math.round(p.h * k); p.x = Math.round(cx - p.w / 2); p.y = Math.round(cy - p.h / 2); } clampPhotos(); render(); }
-    lastScale = v; });
-  $('#pscale').addEventListener('change', () => scheduleAuto('scale'));
+    const k = v / lastScale; for (const p of state.photos) { if (!autoOn() || p.fixed) { const cx = p.x + p.w / 2, cy = p.y + p.h / 2; p.w = Math.round(p.w * k); p.h = Math.round(p.h * k); p.x = Math.round(cx - p.w / 2); p.y = Math.round(cy - p.h / 2); } }
+    clampPhotos(); render(); lastScale = v; });
+  $('#pscale').addEventListener('change', () => { if (autoOn()) { clearTimeout(autoTimer); autoLayout(null, { quiet: true, allowZoom: true }); } });
   // Maske für den ausgefransten Rand (SVG mit Rauschen), Größe in px, Ausschlag a
   function frayMask(w, h, a, r, seed) { const inset = a + 1; return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><filter id="f" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="${(0.9 / Math.max(6, a)).toFixed(3)}" numOctaves="3" seed="${seed}"/><feDisplacementMap in="SourceGraphic" scale="${a * 2}" xChannelSelector="R" yChannelSelector="G"/></filter><rect x="${inset}" y="${inset}" width="${w - 2 * inset}" height="${h - 2 * inset}" rx="${Math.max(0, r - inset)}" fill="#fff" filter="url(#f)"/></svg>`; }
   const seedOf = id => [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 1000, 7);
@@ -1053,15 +1055,14 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         return placed.length;
       };
       // Grundgröße: mit der Fotoanzahl kleiner; passt nicht alles, stufenweise verkleinern, zuletzt Karte herauszoomen (Route kleiner)
-      let base = baseSize(); const want = order.length; let got = 0, zoomed = 0;
-      outer: for (let z = 0; z < 3; z++) {
-        for (let sc = 1; sc >= .5; sc -= .1) { got = attempt(base * sc, true); if (got === want) { attempt(base * sc, false); break outer; } }
-        if (only || !opts.allowZoom) break;
-        map.zoomTo(map.getZoom() - 0.35, { duration: 0 }); zoomed++; renderPins(); renderPlaces();
-      }
+      let base = baseSize(); const want = order.length; let got = 0, zoomed = 0, usedScale = 1;
+      // Erst in voller Größe versuchen – bei Platzmangel zuerst die Karte herauszoomen (bis 3×), erst dann die Fotos verkleinern
+      let fits = false;
+      for (let z = 0; z < 4; z++) { got = attempt(base, true); if (got === want) { attempt(base, false); fits = true; break; } if (only || !opts.allowZoom || z === 3) break; map.zoomTo(map.getZoom() - 0.35, { duration: 0 }); zoomed++; renderPins(); renderPlaces(); }
+      if (!fits) for (let sc = .9; sc >= .5; sc -= .1) { got = attempt(base * sc, true); if (got === want) { attempt(base * sc, false); usedScale = sc; fits = true; break; } }
       if (got < want) { for (let sc = 1; sc >= .5; sc -= .1) if (attempt(base * sc, true) === got) { attempt(base * sc, false); break; } }   // so viele wie möglich
       if (!only && !opts.quiet) selected = new Set(); render();
-      if (opts.quiet) { if (got < want) say(`${want - got} Foto(s) fanden keinen freien Platz – Karte herauszoomen, Profil kleiner ziehen oder Fotos fixieren/verkleinern.`, 'warn'); return; }
+      if (opts.quiet) { if (got < want) say(`${want - got} Foto(s) fanden keinen freien Platz – Karte herauszoomen, Profil kleiner ziehen oder Fotos fixieren/verkleinern.`, 'warn'); else if (usedScale >= .999 && !zoomed) { if (/^Fotos passen/.test(statusEl.textContent)) say(''); } else if (usedScale < .999) say(`Fotos passen bei ${Math.round(state.photoScale * 100)} % nicht alle – auf ${Math.round(usedScale * state.photoScale * 100)} % verkleinert${zoomed ? `, Karte ${zoomed}× herausgezoomt` : ''}.`, 'warn'); return; }
       say(got === want ? `${want} Fotos um die Route angeordnet${zoomed ? `, Karte ${zoomed}× herausgezoomt` : ''}${state.photos.length - want ? ` (${state.photos.length - want} fixierte unverändert)` : ''} – Feinschliff per Ziehen; von Hand bewegte Fotos gelten als fixiert.` : `${got} von ${want} Fotos frei platziert – die übrigen passten nicht ohne Überdeckung.`, got === want ? 'ok' : 'warn');
     } finally { layouting = false; }
   }
