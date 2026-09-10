@@ -29,6 +29,13 @@ aside h1 small { display:block; font-weight:500; color:var(--muted); font-size:1
 .row input { width:100%; box-sizing:border-box; background:transparent; border:0; border-bottom:1px solid #2c4258; color:var(--text); font:12px Montserrat, Arial, sans-serif; padding:2px 0; }
 .row .meta { font-size:10px; color:var(--muted); }
 .row .meta a { color:var(--accent); font-weight:600; }
+.row .psearch { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.row .psearch input { flex:1; min-width:120px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 8px; font:inherit; font-size:12px; }
+.row .psearch button { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:5px 10px; font:600 12px Montserrat, Arial, sans-serif; cursor:pointer; }
+.row .psearch .hits { flex-basis:100%; display:flex; flex-direction:column; gap:3px; font-size:11px; }
+.row .psearch .hits a { color:var(--text); text-decoration:none; padding:3px 6px; border-radius:4px; background:var(--bg); }
+.row .psearch .hits a:hover { background:var(--accent); color:#fff; }
+.row .psearch .muted { color:var(--muted); }
 #stage.setpos #map { pointer-events:auto; }
 #stage.setpos #map, #stage.setpos #map * { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23000' stroke-width='3.5' opacity='.6'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Cg stroke='%23000' stroke-width='3.5' opacity='.6'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='1.5'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='1.6' fill='%23ff5a36'/%3E%3C/svg%3E") 20 20, crosshair !important; }
 #stage.setpos #tiles, #stage.setpos #pins, #stage.setpos #places { pointer-events:none; }
@@ -485,6 +492,24 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     }
     return best;
   }
+  // Ortssuche nach Name – ohne Server: durchsucht die Kartenkacheln (Zoom 11) entlang der Route nach Ortsnamen
+  function tileFetch(Z, x, y) { const key = `${Z}/${x}/${y}`; if (!tileCache.has(key)) tileCache.set(key, fetch(tileTpl.replace('{z}', Z).replace('{x}', x).replace('{y}', y)).then(r => r.ok ? r.arrayBuffer() : null).then(b => b ? new VectorTile(new Pbf(b)) : null).catch(() => null)); return tileCache.get(key); }
+  async function searchPlace(q) {
+    q = q.trim().toLowerCase(); if (!q || !state.stages.length) return []; const tpl = await tileTemplate(); if (!tpl || typeof VectorTile === 'undefined') return [];
+    const Z = 11, n = 2 ** Z, tiles = new Map(); const pts = [];
+    for (const st of state.stages) { let last = -1e9; for (const p of st.points) { if (p[3] - last < 1500) continue; last = p[3]; pts.push(p);
+      const xt = Math.floor((p[1] + 180) / 360 * n), yt = Math.floor((1 - Math.log(Math.tan(p[0] * d2r) + 1 / Math.cos(p[0] * d2r)) / Math.PI) / 2 * n);
+      for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) tiles.set(`${xt + dx}/${yt + dy}`, [xt + dx, yt + dy]); } }
+    const list = [...tiles.values()].slice(0, 160); const hits = new Map();
+    const norm = t => (t || '').toLowerCase().replace(/ß/g, 'ss').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue'); const qn = norm(q);
+    for (let i = 0; i < list.length; i += 8) await Promise.all(list.slice(i, i + 8).map(async ([x, y]) => {
+      const vt = await tileFetch(Z, x, y); const layer = vt && vt.layers.place; if (!layer) return;
+      for (let k = 0; k < layer.length; k++) { const f = layer.feature(k).toGeoJSON(x, y, Z); const pr = f.properties; const names = [pr.name, pr['name:de'], pr['name:latin'], pr['name:en']].filter(Boolean);
+        const exact = names.some(nm => norm(nm) === qn), part = exact || names.some(nm => norm(nm).includes(qn)); if (!part) continue;
+        const c = f.geometry.coordinates; let d = Infinity; for (const p of pts) { const dd = hav([c[1], c[0]], [p[0], p[1]]); if (dd < d) d = dd; }
+        const id = (pr.name || names[0]) + '|' + c[0].toFixed(3) + '|' + c[1].toFixed(3); if (!hits.has(id) || hits.get(id).d > d) hits.set(id, { name: pr.name || names[0], cls: pr.class, lat: c[1], lon: c[0], d, exact }); } }));
+    return [...hits.values()].sort((a, b) => (b.exact - a.exact) || a.d - b.d).slice(0, 8);
+  }
   const pendingDetail = new Set();
   function queueDetail(obj, key, done, mode = 'near') {
     if (pendingDetail.has(key) || !map) return; pendingDetail.add(key);
@@ -549,7 +574,14 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       row.innerHTML = `<div class="n">${p.num}</div><img src="${p.thumb}"><div><input aria-label="Bildunterschrift"><div class="meta"></div></div><button title="Entfernen">×</button>`;
       row.querySelector('input').value = p.caption ?? autoCaption(p);
       row.querySelector('.meta').textContent = `${p.name} · ${p.lat != null ? p.lat.toFixed(3) + ', ' + p.lon.toFixed(3) : 'kein GPS'}${originals.has(p.id) ? '' : ' · Original fehlt (für Export neu hinzufügen)'}`;
-      if (map) { const a = document.createElement('a'); a.href = '#'; a.textContent = setPosFor === p.id ? 'auf die Karte klicken …' : (p.lat != null ? ' Ort ändern' : ' Ort setzen'); a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); startSetPos(p); }); row.querySelector('.meta').append(' · ', a); }
+      if (map) { const a = document.createElement('a'); a.href = '#'; a.textContent = setPosFor === p.id ? 'auf die Karte klicken …' : (p.lat != null ? ' Ort ändern' : ' Ort setzen'); a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); startSetPos(p); }); row.querySelector('.meta').append(' · ', a);
+        const b2 = document.createElement('a'); b2.href = '#'; b2.textContent = searchFor === p.id ? 'Suche schließen' : 'Ort suchen'; b2.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); searchFor = searchFor === p.id ? null : p.id; searchHits = null; render(); }); row.querySelector('.meta').append(' · ', b2);
+        if (searchFor === p.id) { const box = document.createElement('div'); box.className = 'psearch'; box.innerHTML = `<input placeholder="Ortsname (liegt an der Route)"><button>Suchen</button><div class="hits"></div>`;
+          const inp = box.querySelector('input'), hitsEl = box.querySelector('.hits'); const run = async () => { hitsEl.innerHTML = '<span class="muted">suche in den Kartenkacheln …</span>'; const hs = await searchPlace(inp.value); searchHits = hs;
+            hitsEl.innerHTML = hs.length ? '' : '<span class="muted">nichts gefunden – nur Orte nahe der Route; sonst „Ort setzen“</span>';
+            for (const h of hs) { const d = document.createElement('a'); d.href = '#'; d.textContent = `${h.name} (${CLS_DE[h.cls] || h.cls}, ${(h.d / 1000).toFixed(1)} km von der Route)`; d.addEventListener('click', e => { e.preventDefault(); [p.lat, p.lon] = nearestOnRoute(h.lat, h.lon); p.place = h.name; searchFor = null; searchHits = null; say(`Aufnahmeort von Foto ${p.num}: ${h.name}`, 'ok'); render(); }); hitsEl.appendChild(d); } };
+          box.querySelector('button').addEventListener('click', e => { e.stopPropagation(); run(); }); inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run(); } }); inp.addEventListener('click', e => e.stopPropagation()); inp.addEventListener('pointerdown', e => e.stopPropagation());
+          row.appendChild(box); setTimeout(() => inp.focus(), 0); } }
       row.querySelector('input').addEventListener('change', e => { p.caption = e.target.value; render(); });
       row.querySelector('button').addEventListener('click', () => { state.photos = state.photos.filter(x => x.id !== p.id); render(); });
       $('#photos').appendChild(row);
@@ -557,7 +589,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     updateAlignButtons(); renderPins(); renderPlaces(); renderProfile();
   }
   // Foto ohne GPS (oder falscher Ort): Position per Klick auf die Karte setzen; rastet auf den nächsten Routenpunkt ein, wenn der näher als 2 km liegt
-  let setPosFor = null;
+  let setPosFor = null, searchFor = null, searchHits = null;
+  const CLS_DE = { city: 'Stadt', town: 'Stadt', village: 'Dorf', hamlet: 'Weiler', suburb: 'Ortsteil', neighbourhood: 'Viertel', island: 'Insel', locality: 'Ort' };
   function startSetPos(p) { if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: Aufnahmeort mit dem Fadenkreuz auf der Karte anklicken – rastet auf die Route ein (Esc = abbrechen).`); render(); }
   function nearestOnRoute(lat, lon) { let best = null, bd = Infinity; for (const st of state.stages) for (let i = 0; i < st.points.length; i += 3) { const q = st.points[i]; const d = hav([lat, lon], [q[0], q[1]]); if (d < bd) { bd = d; best = q; } } return best && bd < 2000 ? [best[0], best[1]] : [lat, lon]; }
   function mapClickSetPos(e) { if (!setPosFor) return; const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
