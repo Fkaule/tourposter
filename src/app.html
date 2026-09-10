@@ -438,17 +438,22 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     return { type: 'FeatureCollection', features: f };
   }
   function calmMap() { try { for (const l of map.getStyle().layers || []) if (/poi|housenum|transit|aeroway_label|airport/i.test(l.id) && l.type === 'symbol') map.setLayoutProperty(l.id, 'visibility', 'none'); } catch (e) {} }
-  // Titelblock als Kollisionsfläche: ein transparentes Icon in Größe des Blocks; MapLibre blendet Beschriftungen aus, die damit kollidieren
+  // Kollisionsflächen: Titelblock, Ortsnamen (Start/Ziel/Übernachtung) und Nummern-Pins als unsichtbare Symbole –
+  // MapLibre blendet Kartenbeschriftungen aus, die damit kollidieren (z. B. „Halle (Saale)“ der Karte neben unserem Ziel-Label)
   function titleBlocker() {
-    if (!map || !map.isStyleLoaded()) return; const t = $('#title'), st = $('#stats'); if (!t) return;
-    const x0 = t.offsetLeft - 12, y0 = t.offsetTop - 8, x1 = Math.max(t.offsetLeft + t.offsetWidth, st ? st.offsetLeft + st.offsetWidth : 0) + 12, y1 = (st && st.offsetHeight ? st.offsetTop + st.offsetHeight : t.offsetTop + t.offsetHeight) + 8;
-    const w = Math.max(1, Math.round(x1 - x0)), h = Math.max(1, Math.round(y1 - y0)); const key = w + 'x' + h;
-    if (map.__blockKey !== key || !map.hasImage('title-block')) { try { if (map.hasImage('title-block')) map.removeImage('title-block'); map.addImage('title-block', { width: w, height: h, data: new Uint8Array(w * h * 4) }); map.__blockKey = key; } catch (e) {} }
-    const c = map.unproject([(x0 + x1) / 2, (y0 + y1) / 2]); const data = { type: 'Feature', geometry: { type: 'Point', coordinates: [c.lng, c.lat] } };
-    const sig = key + '|' + c.lng.toFixed(6) + ',' + c.lat.toFixed(6); if (map.__blockSig === sig && map.getSource('title-block')) return; map.__blockSig = sig;
+    if (!map || !map.isStyleLoaded()) return;
+    const rects = []; const t = $('#title'), st = $('#stats');
+    if (t && t.offsetWidth) { const x0 = t.offsetLeft - 12, y0 = t.offsetTop - 8, x1 = Math.max(t.offsetLeft + t.offsetWidth, st ? st.offsetLeft + st.offsetWidth : 0) + 12, y1 = (st && st.offsetHeight ? st.offsetTop + st.offsetHeight : t.offsetTop + t.offsetHeight) + 8; rects.push([x0, y0, x1, y1]); }
+    placesEl.querySelectorAll('.place').forEach(el => { if (el.offsetWidth) rects.push([el.offsetLeft - 6, el.offsetTop - 4, el.offsetLeft + el.offsetWidth + 6, el.offsetTop + el.offsetHeight + 4]); });
+    pinsEl.querySelectorAll('.pin').forEach(el => { const w = el.offsetWidth || 26, h = el.offsetHeight || 26, cx = parseFloat(el.style.left), cy = parseFloat(el.style.top); rects.push([cx - w / 2 - 4, cy - h / 2 - 4, cx + w / 2 + 4, cy + h / 2 + 4]); });
+    const feats = []; const sizes = new Set();
+    for (const [x0, y0, x1, y1] of rects) { const w = Math.max(4, Math.round((x1 - x0) / 4) * 4), h = Math.max(4, Math.round((y1 - y0) / 4) * 4); const img = `blk-${w}x${h}`; sizes.add(img);
+      const c = map.unproject([(x0 + x1) / 2, (y0 + y1) / 2]); feats.push({ type: 'Feature', properties: { img }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } }); }
+    for (const img of sizes) if (!map.hasImage(img)) { const [w, h] = img.slice(4).split('x').map(Number); try { map.addImage(img, { width: w, height: h, data: new Uint8Array(w * h * 4) }); } catch (e) {} }
+    const data = { type: 'FeatureCollection', features: feats }; const sig = JSON.stringify(feats);
+    if (map.__blockSig === sig && map.getSource('title-block')) return; map.__blockSig = sig;
     if (map.getSource('title-block')) map.getSource('title-block').setData(data);
-    else { map.addSource('title-block', { type: 'geojson', data }); map.addLayer({ id: 'title-block', type: 'symbol', source: 'title-block', layout: { 'icon-image': 'title-block', 'icon-allow-overlap': true, 'icon-ignore-placement': false, 'icon-pitch-alignment': 'viewport', 'icon-rotation-alignment': 'viewport' } }); }
-    if (map.getLayer('title-block')) { try { map.setLayoutProperty('title-block', 'icon-image', 'title-block'); } catch (e) {} }
+    else { map.addSource('title-block', { type: 'geojson', data }); map.addLayer({ id: 'title-block', type: 'symbol', source: 'title-block', layout: { 'icon-image': ['get', 'img'], 'icon-allow-overlap': true, 'icon-ignore-placement': false, 'icon-pitch-alignment': 'viewport', 'icon-rotation-alignment': 'viewport' } }); }
   }
   function addRouteLayers() {
     calmMap(); titleBlocker();
