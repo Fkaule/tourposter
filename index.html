@@ -130,6 +130,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #map.locked { pointer-events:none; }
 #stage.mapmode #overlay { pointer-events:none; }
 #overlay { position:absolute; inset:0; }
+#rtop { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
 #vig { position:absolute; left:0; top:0; width:100%; height:var(--vigH,480px); background:linear-gradient(rgba(var(--pvig),var(--pvigA,.9)) 0%, rgba(var(--pvig),calc(var(--pvigA,.9) * .8)) 45%, rgba(var(--pvig),0) 100%); pointer-events:none; }
 #bandfade { position:absolute; left:0; bottom:var(--bandH,100px); width:100%; height:46px; background:linear-gradient(rgba(var(--pvig),0), rgba(var(--pvig),calc(var(--pvigA,.9) * .75))); pointer-events:none; }
 #title { position:absolute; left:56px; top:52px; }
@@ -328,6 +329,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <div class="grid2" style="margin-top:8px">
         <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div>
       </div>
+      <label class="f">Abdeckung hinter dem Titel <span id="vigaval">automatisch</span></label>
+      <input type="range" id="viga" min="0" max="100" step="5" value="90" style="width:100%" title="Wie stark der Verlauf oben die Karte abdeckt – kleiner Wert zeigt Route und Umgebung, größerer macht den Titel ruhiger. Doppelklick = zurück auf den Stil-Wert">
+      <label class="switch" style="margin-top:6px"><input type="checkbox" id="routetop"><span class="kn"></span><span>Route über dem Verlauf<small>Route bleibt auch im abgedunkelten Bereich oben sichtbar</small></span></label>
       <label class="switch" style="margin-top:8px"><input type="checkbox" id="showband" checked><span class="kn"></span><span>Höhenprofil<small>Höhe automatisch nach Bergigkeit, per Ziehen der Oberkante änderbar</small></span></label>
       <label class="switch" style="margin-top:6px"><input type="checkbox" id="showpeaks" checked><span class="kn"></span><span>Gipfel &amp; Pässe im Profil<small>Namen und Höhen aus den Kartendaten, wenn die Route darüber führt</small></span></label>
       <label class="switch" style="margin-top:6px"><input type="checkbox" id="peakmap"><span class="kn"></span><span>Gipfel auch auf der Karte<small>Dreieck mit Name und Höhe an der Route</small></span></label>
@@ -358,6 +362,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <div id="map" class="locked"></div>
       <div id="overlay">
         <div id="vig"></div>
+        <svg id="rtop"></svg>
         <div id="title"><div class="date" contenteditable="true" spellcheck="false">DATUM</div><div class="h" contenteditable="true" spellcheck="false">Titel</div><div class="sub" contenteditable="true" spellcheck="false">Untertitel</div></div>
         <div id="stats"></div>
         <div id="places"></div>
@@ -402,7 +407,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="14" y="10" width="40" height="30" rx="4" class="ph"/><rect x="18" y="14" width="32" height="22" class="dash"/><circle cx="62" cy="40" r="7" class="ring"/><path d="M62 35v10M57 40h10" class="ar"/></svg><b>Ausschnitt</b>Doppelklick aufs Foto: ziehen verschiebt das Bild im Rahmen, Mausrad/Slider zoomt. Esc beendet.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="10" y="12" width="26" height="20" rx="3" class="ph sel"/><rect x="44" y="18" width="26" height="20" rx="3" class="ph sel"/><text x="40" y="52" class="t">Shift + Klick</text></svg><b>Mehrfachauswahl</b>Shift-Klick wählt mehrere Fotos, die dann zusammen verschoben und ausgerichtet werden.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><circle cx="18" cy="16" r="9" class="ico lock"/><rect x="14" y="15.5" width="8" height="6" rx="1" fill="#1c1a12"/><path d="M15.5 15.5v-2a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="#1c1a12" stroke-width="1.4"/><circle cx="40" cy="16" r="9" class="ico star"/><path d="M40 10l1.8 3.8 4.2.5-3.1 2.9.8 4.1-3.7-2-3.7 2 .8-4.1-3.1-2.9 4.2-.5z" fill="#1c1a12"/><circle cx="62" cy="16" r="9" class="ico gps"/><path d="M62 10a4 4 0 0 0-4 4c0 3 4 7 4 7s4-4 4-7a4 4 0 0 0-4-4z" fill="#fff"/><text x="40" y="46" class="t">Schloss · Stern · Ort</text></svg><b>Nummer &amp; Icons</b>Klick auf die Nummer = Highlight ★ (größer im Auto-Layout). Beim Überfahren: Schloss = fixiert (Automatik lässt es in Ruhe), Pin/Lupe = Aufnahmeort setzen oder suchen – setzen geht per Klick auf die Karte oder ins Höhenprofil.</div>
-          <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 40c10-20 20 10 30-6s20-14 34 2" class="route"/><rect x="26" y="6" width="28" height="12" rx="6" class="btn"/><text x="40" y="15" class="tb">Karte</text></svg><b>Karte</b>Button „Karte“ oben rechts, dann verschieben/zoomen (Maus, Finger oder Slider). „Auf Route einpassen“ setzt zurück.</div>
+          <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 40c10-20 20 10 30-6s20-14 34 2" class="route"/><rect x="26" y="6" width="28" height="12" rx="6" class="btn"/><text x="40" y="15" class="tb">Karte</text></svg><b>Karte</b>Button „Karte“ oben rechts, dann verschieben/zoomen (Maus, Finger oder Slider). „Auf Route einpassen“ setzt zurück. Liegt die Route hinter dem Titel, hilft im Poster-Block der Regler „Abdeckung hinter dem Titel“ oder der Schalter „Route über dem Verlauf“.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 30c14-10 30-12 64-8" class="route"/><text x="30" y="20" class="tl">Ortsname</text><circle cx="52" cy="26" r="2.5" fill="#fff"/><path d="M52 26L46 21" class="dash2"/></svg><b>Ortsnamen</b>Start, Ziel, Übernachtungen: ziehen = verschieben, Doppelklick = Text ändern, Entf = ausblenden.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Höhe richtet sich nach der Bergigkeit der Tour; Oberkante ziehen = Höhe, Doppelklick = zurück auf Automatik. Fotos erscheinen als nummerierte Punkte. Beim Ort setzen kann man statt auf die Karte auch ins Profil klicken – nahe Gipfel rasten ein.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><text x="10" y="24" class="th">Titel</text><rect x="8" y="8" width="44" height="22" class="dash"/><text x="10" y="42" class="t2">Untertitel · 209 km</text></svg><b>Texte</b>Titel, Untertitel und Kennzahlen direkt im Poster anklicken und tippen (Enter = neue Zeile).</div>
@@ -460,9 +465,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // Farbabstimmung: Sättigung dämpfen + Tönung in Themenfarbe (soft-light) + etwas Kontrast, Stärke 0–100 %
   function gradeVals() { const g = (state.grade ?? 60) / 100; return { sat: 1 - (1 - (T.sat ?? .8)) * g, tint: T.tint || '#000', ta: (T.tintA ?? .3) * g, con: 1 + .06 * g }; }
   function applyGrade() { const v = gradeVals(); const st = stage.style; st.setProperty('--gsat', v.sat); st.setProperty('--gtint', v.tint); st.setProperty('--gta', v.ta); st.setProperty('--gcon', v.con); $('#gradeval').textContent = (state.grade ?? 60) + ' %'; }
+  const vigA = () => state.vigA ?? (T.vigA ?? .9);
   function applyTheme(name) {
     const prev = T; T = THEMES[name] || THEMES.nacht; state.theme = name; $('#theme').value = name;
-    const st = stage.style; st.setProperty('--pa', T.accent); st.setProperty('--pvigA', T.vigA ?? .9); applyGrade(); st.setProperty('--pbg', T.bg); st.setProperty('--pvig', T.vig); st.setProperty('--ptext', T.text); st.setProperty('--pcap', T.cap); st.setProperty('--psub', T.sub); st.setProperty('--pmuted', T.muted); st.setProperty('--pband', T.band); st.setProperty('--pline', T.line); st.setProperty('--phalo', T.halo); st.setProperty('--ppill', T.pill);
+    if ($('#vigaval')) setTimeout(vigLabel, 0);
+    const st = stage.style; st.setProperty('--pa', T.accent); st.setProperty('--pvigA', vigA()); applyGrade(); st.setProperty('--pbg', T.bg); st.setProperty('--pvig', T.vig); st.setProperty('--ptext', T.text); st.setProperty('--pcap', T.cap); st.setProperty('--psub', T.sub); st.setProperty('--pmuted', T.muted); st.setProperty('--pband', T.band); st.setProperty('--pline', T.line); st.setProperty('--phalo', T.halo); st.setProperty('--ppill', T.pill);
     if (map && prev.map !== T.map) { fallback = false; map.setStyle(T.map); map.once('styledata', () => setTimeout(addRouteLayers, 300)); }
     else if (map && map.getSource && map.getSource('route')) addRouteLayers();
     render();
@@ -771,6 +778,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const sp = sportOf(); if (!state.bandEdited && !sp.band && state.showBand) { state.showBand = false; $('#showband').checked = false; }
     else if (!state.bandEdited && sp.band && !state.showBand) { state.showBand = true; $('#showband').checked = true; }
     state.titleEdited = state.sublineEdited = state.statsEdited = false; autoTexts(); render(); scheduleAuto('sport'); });
+  function vigLabel() { $('#vigaval').textContent = state.vigA != null ? Math.round(state.vigA * 100) + ' %' : `Stil-Wert (${Math.round((T.vigA ?? .9) * 100)} %)`;
+    $('#viga').value = Math.round(vigA() * 100); }
+  $('#viga').addEventListener('input', e => { state.vigA = +e.target.value / 100; stage.style.setProperty('--pvigA', vigA()); vigLabel(); autosave(); });
+  $('#viga').addEventListener('dblclick', () => { state.vigA = null; stage.style.setProperty('--pvigA', vigA()); vigLabel(); autosave(); });
+  $('#routetop').addEventListener('change', e => { state.routeTop = e.target.checked; renderRouteTop(); autosave(); });
   $('#terrain').addEventListener('change', e => { state.terrain = e.target.checked; terrainLayer();
     if (state.terrain) say('Geländeschummerung an – Höhenkacheln kommen von AWS Terrain Tiles (zweiter Server neben der Karte).', 'ok'); });
   $('#peakmap').addEventListener('change', e => { state.showPeakMap = e.target.checked; if (state.showPeakMap && !state.peaks?.length) findPeaks(); else { peakLayer(); render(); } });
@@ -1210,10 +1222,22 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); say(''); render(); } });
   function renderPins() {
-    pinsEl.innerHTML = ''; if (!map) return;
+    pinsEl.innerHTML = ''; if (!map) { renderRouteTop(); return; }
     const groups = [];
     for (const p of state.photos.filter(p => p.lat != null)) { const g = groups.find(g => hav([g.lat, g.lon], [p.lat, p.lon]) < 3000); if (g) g.nums.push(p.num); else groups.push({ lat: p.lat, lon: p.lon, nums: [p.num] }); }
+    renderRouteTop();
     for (const g of groups) { const pt = map.project([g.lon, g.lat]); const d = document.createElement('div'); d.className = 'pin'; d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg; d.style.color = T.pinFg; d.textContent = g.nums.sort((a, b) => a - b).join(' · '); pinsEl.appendChild(d); }
+  }
+  // Route über dem Titelverlauf: nur der Teil, der im abgedunkelten Bereich liegt – sonst verschwindet sie dort
+  function renderRouteTop() {
+    const el = $('#rtop'); if (!el) return;
+    el.setAttribute('viewBox', `0 0 ${CW} ${CH}`);
+    if (!map || !state.routeTop || !state.stages.length) { el.innerHTML = ''; return; }
+    const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const lim = vigH + 10;
+    let d = '', open = false;
+    for (const st of state.stages) { for (const p of st.points) { const q = map.project([p[1], p[0]]);
+      if (q.y < lim && q.x > -50 && q.x < CW + 50) { d += (open ? 'L' : 'M') + q.x.toFixed(1) + ',' + q.y.toFixed(1) + ' '; open = true; } else open = false; } open = false; }
+    el.innerHTML = d ? `<path d="${d}" fill="none" stroke="${T.halo}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><path d="${d}" fill="none" stroke="${T.accent}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : '';
   }
   function profileData() {
     const xs = [], ys = [], bounds = []; let off = 0;
@@ -1534,8 +1558,18 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       finally { map.setPixelRatio(old); }
     }
     // Vignette
-    const vA = T.vigA ?? .9; const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const vg = g.createLinearGradient(0, 0, 0, P(vigH)); vg.addColorStop(0, `rgba(${T.vig},${vA})`); vg.addColorStop(.45, `rgba(${T.vig},${vA * .8})`); vg.addColorStop(1, `rgba(${T.vig},0)`); g.fillStyle = vg; g.fillRect(0, 0, W, P(vigH));
+    const vA = vigA(); const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const vg = g.createLinearGradient(0, 0, 0, P(vigH)); vg.addColorStop(0, `rgba(${T.vig},${vA})`); vg.addColorStop(.45, `rgba(${T.vig},${vA * .8})`); vg.addColorStop(1, `rgba(${T.vig},0)`); g.fillStyle = vg; g.fillRect(0, 0, W, P(vigH));
     if (BH()) { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
+    // Route über dem Verlauf (optional): nach der Vignette erneut zeichnen, damit sie oben sichtbar bleibt
+    if (map && state.routeTop && state.stages.length) {
+      const lim = vigH + 10; const seg = [];
+      let cur = null;
+      for (const st of state.stages) { for (const p of st.points) { const q = map.project([p[1], p[0]]);
+        if (q.y < lim && q.x > -50 && q.x < CW + 50) { (cur = cur || (seg.push([]), seg.at(-1))).push([P(q.x), P(q.y)]); } else cur = null; } cur = null; }
+      for (const pass of [[T.halo, 9, .9], [T.accent, 5, 1]]) { g.strokeStyle = pass[0]; g.lineWidth = P(pass[1]); g.globalAlpha = pass[2]; g.lineCap = 'round'; g.lineJoin = 'round';
+        for (const s of seg) { if (s.length < 2) continue; g.beginPath(); g.moveTo(s[0][0], s[0][1]); for (let i = 1; i < s.length; i++) g.lineTo(s[i][0], s[i][1]); g.stroke(); } }
+      g.globalAlpha = 1;
+    }
     // Titelblock
     const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(57), P(28), P(2));
     // Halo in Posterfarbe hinter allen Titeltexten (weicher Schatten + dünne Kontur) – lesbar auch über Kartenbeschriftung
@@ -1636,7 +1670,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       render(); say(`Projekt „${f.name}“ geladen – ${n} Foto(s) in Originalgröße.`, 'ok'); } catch (e) { say('Projekt nicht lesbar: ' + e.message, 'err'); } }
   $('#ldzip input').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadZipFile(f); });
   function restore(obj) {
-    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.peakThr = obj.peakThr ?? null; state.terrain = !!obj.terrain; $('#terrain').checked = state.terrain; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.peakThr = obj.peakThr ?? null; state.terrain = !!obj.terrain; $('#terrain').checked = state.terrain; state.vigA = obj.vigA ?? null; state.routeTop = !!obj.routeTop; $('#routetop').checked = state.routeTop; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
     applyFrame(); render();
   }
