@@ -5,3 +5,4 @@ import { jsPDF } from 'jspdf';
 import { VectorTile } from '@mapbox/vector-tile';
 import Pbf from 'pbf';
 window.FitParser = FitParser; window.exifr = exifr; window.maplibregl = maplibregl; window.jsPDF = jsPDF; window.VectorTile = VectorTile; window.Pbf = Pbf;
+import JSZip from 'jszip'; window.JSZip = JSZip;

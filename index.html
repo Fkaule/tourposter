@@ -312,8 +312,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <h2><span class="no">4</span>Export</h2>
       <button class="btn primary" id="expng">PNG herunterladen <small>in gewählter Größe</small></button>
       <button class="btn" id="expdf">PDF <small>für den Druck</small></button>
+      <label class="f">Projekt (Tour + Layout + Fotos in Originalgröße)</label>
+      <div class="btnrow"><button class="btn" id="exzip">Projekt sichern <small>.zip</small></button><label class="btn ghost" id="ldzip" style="cursor:pointer">Projekt laden<input type="file" accept=".zip,application/zip" style="display:none"></label></div>
       <label class="f">Layout</label>
-      <div class="btnrow"><button class="btn" id="save">Speichern <small>Browser</small></button><button class="btn ghost" id="exjson">JSON sichern</button><label class="btn ghost" id="ldjson" style="cursor:pointer">JSON laden<input type="file" accept=".json,application/json" style="display:none"></label></div>
+      <div class="btnrow"><button class="btn" id="save" title="Layout und Fotos werden ohnehin laufend im Browser gespeichert – hier ausdrücklich">Speichern <small>Browser</small></button><button class="btn ghost" id="exjson">JSON sichern</button><label class="btn ghost" id="ldjson" style="cursor:pointer">JSON laden<input type="file" accept=".json,application/json" style="display:none"></label></div>
       <button class="link" id="reset">Alles zurücksetzen</button> <button class="link" id="helpbtn2">Hilfe / Bedienung</button>
       <div class="hint">Es werden keine Daten hochgeladen – nur die Kartenkacheln kommen aus dem Netz (OpenFreeMap sieht die Region, sonst nichts).</div>
     </div>
@@ -356,7 +358,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 </div>
 
 <script>window.__errs = []; window.addEventListener('error', e => { window.__errs.push((e.message || 'Fehler') + (e.lineno ? ' (Zeile ' + e.lineno + ')' : '')); });</script>
-<script src="vendor.js?v=83634027" onerror="window.__vendorFail=true"></script>
+<script src="vendor.js?v=c5bf172d" onerror="window.__vendorFail=true"></script>
 <script id="heifsrc" type="text/plain" data-src="heif.js?v=9d884f56"></script>
 <script>if (typeof FitParser === 'undefined' || typeof maplibregl === 'undefined') { window.__errs.unshift('Bibliotheks-Skript wurde nicht ausgeführt (' + (window.__vendorFail ? 'Ladefehler' : 'kein Ladefehler gemeldet') + ', ' + location.protocol + ')'); document.addEventListener('DOMContentLoaded', () => { const s = document.getElementById('status'); s.className = 'err'; s.textContent = 'Bibliotheken konnten nicht starten: ' + (window.__errs[0] || 'unbekannt') + ' – Browser: ' + navigator.userAgent; }); }</script>
 <script>
@@ -661,12 +663,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       if (/\.json$/i.test(f.name)) { await loadJsonFile(f); continue; }
       if (!f.type.startsWith('image/') && !/\.(heic|heif)$/i.test(f.name)) continue;
       const known = state.photos.find(p => p.name === f.name && !originals.has(p.id));
-      if (known) { try { f = await decodable(f); } catch (e) { say(`${f.name}: ${e.message}`, 'err'); continue; } originals.set(known.id, f); known.url = URL.createObjectURL(f); known.thumb = await thumb(known.url); continue; }   // Original zu geladenem Layout nachreichen
+      if (known) { try { f = await decodable(f); } catch (e) { say(`${f.name}: ${e.message}`, 'err'); continue; } originals.set(known.id, f); idb.put(known.id, f).catch(() => {}); known.url = URL.createObjectURL(f); known.thumb = await thumb(known.url); continue; }   // Original zu geladenem Layout nachreichen
       const id = Math.random().toString(36).slice(2, 9); let lat = null, lon = null, date = null;
       try { const g = await exifr.gps(f); if (g && g.latitude != null) { lat = g.latitude; lon = g.longitude; } } catch (e) {}
       try { const ex = await exifr.parse(f, { pick: ['DateTimeOriginal', 'CreateDate'] }); const d = ex?.DateTimeOriginal || ex?.CreateDate; if (d) date = new Date(d).toISOString(); } catch (e) {}
       try { f = await decodable(f); } catch (e) { say(`${f.name}: ${e.message}`, 'err'); continue; }
-      const url = URL.createObjectURL(f); originals.set(id, f);
+      const url = URL.createObjectURL(f); originals.set(id, f); idb.put(id, f).catch(() => {});
       const dims = await new Promise(r => { const im = new Image(); im.onload = () => r([im.naturalWidth, im.naturalHeight]); im.onerror = () => r([3, 4]); im.src = url; });
       const slots = state.format === 'landscape' ? SLOTS_L : SLOTS_P;
       const used = state.photos.map(p => p.x + ',' + p.y); const slot = slots.find(s => !used.includes(s[0] + ',' + s[1])) || [400, 600, 232, 310];
@@ -807,8 +809,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     el.addEventListener('blur', done, { once: true }); el.addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.key === 'Enter' || ev.key === 'Escape') { ev.preventDefault(); el.blur(); } });
   }
   // ------------------------------------------------------------ Rendern
+  let autosaveT = null;
+  function autosave() { clearTimeout(autosaveT); autosaveT = setTimeout(() => { try { if (state.stages.length || state.photos.length) localStorage.setItem(KEY, JSON.stringify(serial())); } catch (e) {} }, 1500); }
   function render() {
-    renumber();
+    renumber(); autosave();
     // Fokus im Bildunterschrift-Feld über den Neuaufbau retten
     const act = document.activeElement, focusRow = act && act.tagName === 'INPUT' && act.closest('.row.photo'); const focusId = focusRow ? focusRow.dataset.id : null, focusSel = focusRow ? act.selectionStart : 0;
     $('#title .date').textContent = state.date || ''; $('#title .h').textContent = state.title || ''; $('#title .sub').textContent = state.subline || '';
@@ -1174,7 +1178,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     input.addEventListener('change', () => { const fs = [...input.files]; input.value = ''; fn(fs); });
   }
   stage.addEventListener('dragover', e => e.preventDefault());
-  stage.addEventListener('drop', e => { e.preventDefault(); const fs = [...e.dataTransfer.files]; const ph = fs.filter(f => f.type.startsWith('image/') || /\.(heic|heif|json)$/i.test(f.name)), tr = fs.filter(f => /\.(fit|gpx|tcx)$/i.test(f.name)); if (ph.length) addPhotos(ph); if (tr.length) addTourFiles(tr); });
+  stage.addEventListener('drop', e => { e.preventDefault(); const fs = [...e.dataTransfer.files]; const ph = fs.filter(f => f.type.startsWith('image/') || /\.(heic|heif|json)$/i.test(f.name)), tr = fs.filter(f => /\.(fit|gpx|tcx)$/i.test(f.name)), zp = fs.filter(f => /\.zip$/i.test(f.name)); if (ph.length) addPhotos(ph); if (tr.length) addTourFiles(tr); for (const f of zp) loadZipFile(f); });
 
   // ------------------------------------------------------------ Export (300 dpi)
   async function fontsReady() { try { await document.fonts.load('900 80px Montserrat'); await document.fonts.load('400 16px Montserrat'); } catch (e) {} }
@@ -1276,6 +1280,28 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   $('#save').addEventListener('click', async () => { try { localStorage.setItem(KEY, JSON.stringify(serial())); say('Speichert …'); const n = await saveOriginals(); const miss = missingOriginals().length;
     say(n < 0 ? 'Layout gespeichert, Fotos konnten nicht im Browser abgelegt werden (Speicher gesperrt?) – Originale beim nächsten Mal wieder hinzufügen.' : `Layout und ${n} Foto(s) in Originalgröße im Browser gespeichert${miss ? ` – ${miss} Foto(s) fehlen als Original (nur Vorschau).` : '.'}`, miss || n < 0 ? 'warn' : 'ok'); } catch (e) { say('Speichern fehlgeschlagen: ' + e.message, 'err'); } });
   $('#exjson').addEventListener('click', () => download(new Blob([JSON.stringify(serial(), null, 1)], { type: 'application/json' }), fname() + '.json'));
+  // Projekt-ZIP: project.json (Tour, Layout, Texte) + photos/<id>_<name> in Originalgröße
+  $('#exzip').addEventListener('click', async () => { try { if (typeof JSZip === 'undefined') throw new Error('ZIP-Bibliothek fehlt'); say('Packt Projekt …'); const z = new JSZip(); const obj = serial(); z.file('project.json', JSON.stringify(obj, null, 1));
+      let n = 0; for (const p of state.photos) { const f = originals.get(p.id) || await idb.get(p.id).catch(() => null); if (f) { z.file(`photos/${p.id}_${p.name}`, f); n++; } }
+      const blob = await z.generateAsync({ type: 'blob', compression: 'STORE' }); download(blob, fname() + '.tourposter.zip'); say(`Projekt gesichert (${n} Foto(s) in Originalgröße, ${(blob.size / 1048576).toFixed(1)} MB).`, 'ok'); } catch (e) { say('Sichern fehlgeschlagen: ' + e.message, 'err'); } });
+  // Schneller ZIP-Leser für unkomprimierte Einträge (unsere eigenen Projekte): Zentralverzeichnis lesen, Dateien per File.slice ohne Kopieren – JSZip nur als Fallback
+  async function zipEntries(f) {
+    const tail = new DataView(await f.slice(Math.max(0, f.size - 66000), f.size).arrayBuffer()); let eocd = -1;
+    for (let i = tail.byteLength - 22; i >= 0; i--) if (tail.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    if (eocd < 0) throw new Error('kein ZIP'); const cdSize = tail.getUint32(eocd + 12, true), cdOff = tail.getUint32(eocd + 16, true);
+    const cd = new DataView(await f.slice(cdOff, cdOff + cdSize).arrayBuffer()); const dec = new TextDecoder(); const out = new Map(); let p = 0;
+    while (p + 46 <= cd.byteLength && cd.getUint32(p, true) === 0x02014b50) { const method = cd.getUint16(p + 10, true), csize = cd.getUint32(p + 20, true), nl = cd.getUint16(p + 28, true), el = cd.getUint16(p + 30, true), cl = cd.getUint16(p + 32, true), off = cd.getUint32(p + 42, true);
+      const name = dec.decode(new Uint8Array(cd.buffer, p + 46, nl)); out.set(name, { method, csize, off }); p += 46 + nl + el + cl; }
+    return { async blob(name) { const e = out.get(name); if (!e) return null; if (e.method !== 0) return null; const lh = new DataView(await f.slice(e.off, e.off + 30).arrayBuffer()); const start = e.off + 30 + lh.getUint16(26, true) + lh.getUint16(28, true); return f.slice(start, start + e.csize); }, names: [...out.keys()] };
+  }
+  async function loadZipFile(f) { try { say('Lädt Projekt …'); let names, getBlob;
+      try { const z = await zipEntries(f); names = z.names; getBlob = z.blob; } catch (e) { if (typeof JSZip === 'undefined') throw e; const z = await JSZip.loadAsync(f); names = Object.keys(z.files); getBlob = async n => { const e = z.file(n); return e ? e.async('blob') : null; }; }
+      if (!names.includes('project.json')) throw new Error('project.json fehlt – kein Tourposter-Projekt');
+      let pjBlob = await getBlob('project.json'); if (!pjBlob) { const z = await JSZip.loadAsync(f); pjBlob = await z.file('project.json').async('blob'); }
+      restore(JSON.parse(await pjBlob.text())); afterTourChange(); let n = 0;
+      for (const p of state.photos) { const nm = names.find(x => x.startsWith('photos/' + p.id + '_')); if (!nm) continue; say(`Lädt Projekt … Foto ${p.num}`); let blob = await getBlob(nm); if (!blob) { const z = await JSZip.loadAsync(f); blob = await z.file(nm).async('blob'); } const file = new File([blob], p.name, { type: 'image/jpeg' }); originals.set(p.id, file); p.url = URL.createObjectURL(file); p.thumb = await thumb(p.url); idb.put(p.id, file).catch(() => {}); n++; }
+      render(); say(`Projekt „${f.name}“ geladen – ${n} Foto(s) in Originalgröße.`, 'ok'); } catch (e) { say('Projekt nicht lesbar: ' + e.message, 'err'); } }
+  $('#ldzip input').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadZipFile(f); });
   function restore(obj) {
     Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
@@ -1284,7 +1310,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   async function loadJsonFile(f) { try { restore(JSON.parse(await f.text())); afterTourChange(); say(`Layout „${f.name}“ geladen – Fotos in Originalgröße bitte erneut hinzufügen (werden anhand des Dateinamens zugeordnet).`, 'ok'); } catch (err) { say('JSON nicht lesbar: ' + err.message, 'err'); } }
   $('#ldjson input').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadJsonFile(f); });
   // JSON-Sicherung per Drop auf die Tour-Zone
-  dropfit.addEventListener('drop', e => { for (const f of e.dataTransfer.files) if (/\.json$/i.test(f.name)) loadJsonFile(f); });
+  dropfit.addEventListener('drop', e => { for (const f of e.dataTransfer.files) { if (/\.json$/i.test(f.name)) loadJsonFile(f); if (/\.zip$/i.test(f.name)) loadZipFile(f); } });
 
   // ------------------------------------------------------------ Start
   setFormat('portrait'); applyTheme('retro'); initMap(); applyFrame();

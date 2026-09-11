@@ -2,7 +2,7 @@
 
 Radtour-Poster (A4 bis 70 × 100 cm, 300 dpi) aus FIT/GPX/TCX-Dateien und Fotos – **komplett im Browser**. Es gibt keinen Server: Tourdaten und Fotos verlassen den Rechner nicht. Einzige Netzwerkzugriffe sind die Kartenkacheln (OpenFreeMap, sieht nur die Region) und die Schrift Montserrat (Google Fonts).
 
-**Live:** `https://<user>.github.io/tourposter/` (GitHub Pages, siehe unten) – oder lokal `npm run build` ausführen: erzeugt `Tourposter.html`, eine Datei mit allem drin, die per Doppelklick offline läuft (nicht im Repo, damit das Pages-Deployment klein bleibt).
+**Live:** https://tourposter.online (GitHub Pages mit eigener Domain, siehe unten) – oder lokal `npm run build` ausführen: erzeugt `Tourposter.html`, eine Datei mit allem drin, die per Doppelklick offline läuft (nicht im Repo, damit das Pages-Deployment klein bleibt).
 
 ## Funktionen
 
@@ -16,7 +16,7 @@ Radtour-Poster (A4 bis 70 × 100 cm, 300 dpi) aus FIT/GPX/TCX-Dateien und Fotos 
 - Höhenprofil mit Etappengrenzen und km-Marken; Höhe automatisch nach Bergigkeit (Hm/km und höchster Punkt: flach ≈ 110–135 px, Mittelgebirge ≈ 180, Alpen ≈ 230), per Ziehen der Oberkante überschreibbar, abschaltbar. Markante Anstiege werden mit Gipfelname und Höhe im Profil markiert: lokale Maxima des Profils mit 1D-Prominenz ≥ max(150 m, 20 % der Höhenspanne der Tour), dazu der nächste benannte Gipfel aus den Kacheln (Layer `mountain_peak`, ≤ 350 m; sonst der höchste innerhalb 1 km, z. B. Kulpenberg für den Kyffhäuser). Unbedeutende Kuppen bleiben unbeschriftet; max. 6, abschaltbar. Der Verlauf oben lässt die Karte durchscheinen; damit keine Kartenbeschriftung hinter Titel und Kennzahlen steht, liegen über Titelblock, den eigenen Ortsnamen (Start/Ziel/Übernachtung) und den Nummern-Pins unsichtbare Symbole (transparente Icons in Elementgröße, `icon-allow-overlap`), die MapLibre in die Kollisionsprüfung einbezieht – kollidierende Kartenbeschriftungen (z. B. „Halle (Saale)“ neben dem eigenen Ziel-Label) blendet die Karte selbst aus. Kennzahlen stehen direkt unter dem Untertitel. Standardstil Retro.
 - Fotos mit Passepartout (Regler 0–14, Einheit relativ zur Postergröße; Posterfarbe mit Haarlinie, kantige Ecken) – Standard 9. Gesamtgröße aller Fotos per Regler „Fotos“ in der Kartenleiste (50–160 %): fixierte Fotos skalieren um ihre Mitte, die übrigen werden neu gelegt – bei Platzmangel zoomt die Karte bis 3× heraus, bevor verkleinert wird.
 - Farbabstimmung der Fotos (Regler 0–100 %): Sättigung gedämpft, Tönung in der Themenfarbe (soft-light) und ein Hauch Kontrast – am Bildschirm per CSS-Filter, im Export per Canvas-Composite (saturation/soft-light/overlay), damit die Fotos zum Poster passen statt bunt herauszufallen. POI-Beschriftungen der Karte sind ausgeblendet, Vignette oben und ein Fade über dem Höhenprofil halten Titel/Untertitel und Profil auch auf den hellen Stilen lesbar.
-- Export PNG und PDF in der gewählten Papiergröße (300 dpi; 70 × 100 cm ergibt ~100 Megapixel, das dauert einen Moment). Layout im Browser speichern – die Fotos werden dabei in Originalgröße in der Browser-Datenbank (IndexedDB) abgelegt und beim nächsten Öffnen wiederhergestellt. JSON-Sicherung enthält nur 360-px-Vorschauen (Fotos danach wieder hinzufügen, Zuordnung per Dateiname). Der Export warnt, wenn Originale fehlen.
+- Export PNG und PDF in der gewählten Papiergröße (300 dpi; 70 × 100 cm ergibt ~100 Megapixel, das dauert einen Moment). Layout und Fotos werden laufend im Browser gespeichert (localStorage + IndexedDB in Originalgröße) und beim nächsten Öffnen wiederhergestellt – kein erneutes Hochladen. „Projekt sichern“ schreibt eine .zip mit Tour, Layout und allen Originalen (unkomprimiert, eigener Zero-Copy-Leser beim Laden); JSON allein enthält nur 360-px-Vorschauen. Der Export warnt, wenn Originale fehlen.
 
 ## Entwicklung
 
@@ -29,7 +29,7 @@ Bei jeder Änderung an der Bedienung auch das Hilfe-Overlay in `src/app.html` (`
 
 ## GitHub Pages
 
-Repo-Einstellungen → Pages → Source „Deploy from a branch“, Branch `main`, Ordner `/ (root)`. Danach ist `index.html` unter `https://<user>.github.io/<repo>/` erreichbar. `.nojekyll` sorgt dafür, dass Pages die Dateien unverändert ausliefert. Die Bibliotheken liegen als eigene Dateien (`vendor.js`, `heif.js`) neben der kleinen `index.html` – eine einzelne 5-MB-HTML-Datei hatte das Pages-Deployment zum Hängen gebracht.
+Repo-Einstellungen → Pages → Source „Deploy from a branch“, Branch `main`, Ordner `/ (root)`. Eigene Domain: Datei `CNAME` im Root enthält `tourposter.online`; bei Strato A-Records auf 185.199.108.153 / 109.153 / 110.153 / 111.153 und CNAME `www` → `fkaule.github.io`; in den Pages-Einstellungen die Domain eintragen und „Enforce HTTPS“ aktivieren. Danach ist `index.html` unter `https://<user>.github.io/<repo>/` erreichbar. `.nojekyll` sorgt dafür, dass Pages die Dateien unverändert ausliefert. Die Bibliotheken liegen als eigene Dateien (`vendor.js`, `heif.js`) neben der kleinen `index.html` – eine einzelne 5-MB-HTML-Datei hatte das Pages-Deployment zum Hängen gebracht.
 
 ## Lizenz
 
