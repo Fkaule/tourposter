@@ -520,6 +520,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const pts = state.stages.flatMap(s => s.points); if (!pts.length) return;
     const b = new maplibregl.LngLatBounds(); pts.forEach(p => b.extend([p[1], p[0]]));
     map.fitBounds(b, { padding: { top: 360, bottom: 40 + BH(), left: 80, right: 80 }, duration: 0 });
+    state.fitZoom = map.getZoom();   // Bezugsgröße: so weit darf die Automatik höchstens herauszoomen (siehe autoLayout)
   }
   $('#mapbtn').addEventListener('click', () => { const on = $('#map').classList.toggle('locked'); $('#mapbtn').classList.toggle('on', !on); stage.classList.toggle('mapmode', !on); });
 
@@ -1396,13 +1397,20 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       };
       // Grundgröße: mit der Fotoanzahl kleiner; passt nicht alles, stufenweise verkleinern, zuletzt Karte herauszoomen (Route kleiner)
       let base = baseSize(); const want = order.length; let got = 0, zoomed = 0, usedScale = 1;
-      // Erst in voller Größe versuchen – bei Platzmangel zuerst die Karte herauszoomen (bis 3×), erst dann die Fotos verkleinern
-      let fits = false;
-      for (let z = 0; z < 4; z++) { got = attempt(base, true); if (got === want) { attempt(base, false); fits = true; break; } if (only || !opts.allowZoom || z === 3) break; map.zoomTo(map.getZoom() - 0.35, { duration: 0 }); zoomed++; renderPins(); renderPlaces(); }
+      // Reihenfolge: volle Größe -> leicht verkleinern -> Karte begrenzt herauszoomen -> weiter verkleinern.
+      // Die Karte darf nie mehr als 0,6 Zoomstufen unter „Auf Route einpassen“ liegen, sonst schrumpft die Route mit jeder
+      // Fotovergrößerung weiter zusammen. Ist die Grenze erreicht, werden stattdessen die Fotos kleiner gerechnet.
+      const zMin = (state.fitZoom ?? map.getZoom()) - 0.6; let fits = false, zLimit = false;
+      got = attempt(base, true); if (got === want) { attempt(base, false); fits = true; }
+      if (!fits) for (let sc = .9; sc >= .8; sc -= .1) { got = attempt(base * sc, true); if (got === want) { attempt(base * sc, false); usedScale = sc; fits = true; break; } }
+      if (!fits && !only && opts.allowZoom) for (let z = 0; z < 2; z++) {
+        if (map.getZoom() - 0.3 < zMin) { zLimit = true; break; }
+        map.zoomTo(map.getZoom() - 0.3, { duration: 0 }); zoomed++; renderPins(); renderPlaces();
+        got = attempt(base, true); if (got === want) { attempt(base, false); usedScale = 1; fits = true; break; } }
       if (!fits) for (let sc = .9; sc >= .5; sc -= .1) { got = attempt(base * sc, true); if (got === want) { attempt(base * sc, false); usedScale = sc; fits = true; break; } }
       if (got < want) { for (let sc = 1; sc >= .5; sc -= .1) if (attempt(base * sc, true) === got) { attempt(base * sc, false); break; } }   // so viele wie möglich
       if (!only && !opts.quiet) selected = new Set(); render();
-      if (opts.quiet) { if (got < want) say(`${want - got} Foto(s) fanden keinen freien Platz – Karte herauszoomen, Profil kleiner ziehen oder Fotos fixieren/verkleinern.`, 'warn'); else if (usedScale >= .999 && !zoomed) { if (/^Fotos passen/.test(statusEl.textContent)) say(''); } else if (usedScale < .999) say(`Fotos passen bei ${Math.round(state.photoScale * 100)} % nicht alle – auf ${Math.round(usedScale * state.photoScale * 100)} % verkleinert${zoomed ? `, Karte ${zoomed}× herausgezoomt` : ''}.`, 'warn'); return; }
+      if (opts.quiet) { if (got < want) say(`${want - got} Foto(s) fanden keinen freien Platz – Karte herauszoomen, Profil kleiner ziehen oder Fotos fixieren/verkleinern.`, 'warn'); else if (usedScale >= .999 && !zoomed) { if (/^Fotos passen/.test(statusEl.textContent)) say(''); } else if (usedScale < .999) say(`Fotos passen bei ${Math.round(state.photoScale * 100)} % nicht alle – auf ${Math.round(usedScale * state.photoScale * 100)} % verkleinert${zLimit ? ' (Karte bleibt auf Routengröße)' : zoomed ? `, Karte ${zoomed}× herausgezoomt` : ''}.`, 'warn'); return; }
       say(got === want ? `${want} Fotos um die Route angeordnet${zoomed ? `, Karte ${zoomed}× herausgezoomt` : ''}${state.photos.length - want ? ` (${state.photos.length - want} fixierte unverändert)` : ''} – Feinschliff per Ziehen; von Hand bewegte Fotos gelten als fixiert.` : `${got} von ${want} Fotos frei platziert – die übrigen passten nicht ohne Überdeckung.`, got === want ? 'ok' : 'warn');
     } finally { layouting = false; }
   }
