@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tourposter</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f6efe3'/%3E%3Cpath d='M6 24c4-3 5-11 9-11s3 9 7 6 3-9 4-11' fill='none' stroke='%23b8402c' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='6' cy='24' r='2.4' fill='%232b2118'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap">
 <style>
@@ -15,9 +16,9 @@ body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 Montserr
 aside { background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; overflow:auto; scrollbar-width:thin; scrollbar-color:#2a3d50 transparent; }
 aside .steps { padding:10px 12px 12px; display:flex; flex-direction:column; gap:10px; }
 aside header { padding:14px 16px 10px; display:flex; align-items:center; gap:10px; position:sticky; top:0; background:var(--panel); z-index:3; border-bottom:1px solid var(--line); }
-aside header .logo { width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg, var(--accent), #ffb347); display:grid; place-items:center; color:#fff; flex:none; }
-aside h1 { margin:0; font-size:15px; font-weight:800; letter-spacing:-.01em; line-height:1.15; }
-aside h1 small { display:block; font-weight:500; color:var(--muted); font-size:10px; letter-spacing:.14em; margin-top:2px; }
+aside header .logo { width:32px; height:32px; flex:none; display:grid; place-items:center; }
+aside header .logo svg { display:block; }
+aside h1 { margin:0; font-size:21px; font-weight:900; letter-spacing:-.035em; line-height:1; }
 .step { background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:12px 14px 14px; }
 .step h2 { margin:0 0 10px; font-size:12px; letter-spacing:.04em; color:var(--text); font-weight:700; display:flex; align-items:center; gap:8px; }
 .step h2 .no { width:20px; height:20px; border-radius:7px; background:var(--panel2); color:var(--muted); font-size:11px; display:grid; place-items:center; font-weight:800; }
@@ -256,7 +257,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 <body>
 <div id="app">
   <aside>
-    <header><div class="logo"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 18l5-9 4 6 3-4 4 7z" fill="currentColor"/><circle cx="17" cy="6" r="2.2" fill="currentColor"/></svg></div><h1>Tourposter <small>ALLE DATEN BLEIBEN AUF DEINEM RECHNER</small></h1></header>
+    <header><div class="logo"><svg viewBox="0 0 32 32" width="32" height="32"><rect x="1.5" y="1.5" width="29" height="29" rx="5.5" fill="#f6efe3" stroke="#d8ccb8"/><path d="M6 24c4-3 5-11 9-11s3 9 7 6 3-9 4-11" fill="none" stroke="#b8402c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="24" r="2.2" fill="#2b2118"/><circle cx="26" cy="8" r="2.2" fill="#f6efe3" stroke="#2b2118" stroke-width="1.6"/></svg></div><h1>Tourposter</h1></header>
     <nav id="tabs"><button data-t="tour" class="on">Tour</button><button data-t="fotos">Fotos</button><button data-t="poster">Poster</button><button data-t="export">Export</button></nav>
     <div class="steps">
     <div class="step on" data-t="tour">
