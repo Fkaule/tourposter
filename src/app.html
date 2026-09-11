@@ -177,14 +177,15 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .tile .hud { position:absolute; left:12px; top:12px; display:flex; align-items:center; gap:6px; }
 .tile .num { position:relative; cursor:pointer; min-width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); padding:0 calc(8px * var(--ts, 1)); box-sizing:border-box; border-radius:calc(13px * var(--ts, 1)); background:var(--ppill); color:#fff; font:700 13px/26px Montserrat, Arial, sans-serif; font-size:calc(13px * var(--ts, 1)); line-height:calc(26px * var(--ts, 1)); text-align:center; }
 .tile .c { position:absolute; left:0; right:0; bottom:0; padding:calc(26px * max(1, var(--ts, 1))) 14px 12px; background:linear-gradient(to top, rgba(6,12,18,.85), rgba(6,12,18,0)); color:#e6edf3; font:500 12px/1.2 Montserrat, Arial, sans-serif; font-size:calc(12px * var(--ts, 1)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.tile .rs { position:absolute; width:18px; height:18px; background:rgba(255,255,255,.85); border:2px solid #0d1a26; border-radius:4px; opacity:0; transition:opacity .12s; }
+.tile .rs { position:absolute; width:11px; height:11px; background:rgba(255,255,255,.92); border:1.5px solid #0d1a26; border-radius:3px; box-shadow:0 1px 3px rgba(0,0,0,.35); opacity:0; transition:opacity .12s; }
 .tile:hover .rs, .tile.sel .rs { opacity:1; }
-.tile .rs.nw { left:-6px; top:-6px; cursor:nwse-resize; } .tile .rs.ne { right:-6px; top:-6px; cursor:nesw-resize; }
-.tile .rs.sw { left:-6px; bottom:-6px; cursor:nesw-resize; } .tile .rs.se { right:-6px; bottom:-6px; cursor:nwse-resize; }
+.tile .rs.nw { left:-5px; top:-5px; cursor:nwse-resize; } .tile .rs.ne { right:-5px; top:-5px; cursor:nesw-resize; }
+.tile .rs.sw { left:-5px; bottom:-5px; cursor:nesw-resize; } .tile .rs.se { right:-5px; bottom:-5px; cursor:nwse-resize; }
 /* Kantengriffe: nur Breite bzw. nur Höhe ändern */
-.tile .rs.n, .tile .rs.s { left:50%; margin-left:-14px; width:28px; height:8px; border-radius:4px; }
-.tile .rs.e, .tile .rs.w { top:50%; margin-top:-14px; width:8px; height:28px; border-radius:4px; }
-.tile .rs.n { top:-5px; cursor:ns-resize; } .tile .rs.s { bottom:-5px; cursor:ns-resize; } .tile .rs.e { right:-5px; cursor:ew-resize; } .tile .rs.w { left:-5px; cursor:ew-resize; }
+.tile .rs.n, .tile .rs.s { left:50%; margin-left:-11px; width:22px; height:5px; border-radius:3px; }
+.tile .rs.e, .tile .rs.w { top:50%; margin-top:-11px; width:5px; height:22px; border-radius:3px; }
+.tile .rs.n { top:-3px; cursor:ns-resize; } .tile .rs.s { bottom:-3px; cursor:ns-resize; } .tile .rs.e { right:-3px; cursor:ew-resize; } .tile .rs.w { left:-3px; cursor:ew-resize; }
+.tile .rs::after { content:''; position:absolute; inset:-7px; }   /* unsichtbare Grifffläche: klein dargestellt, trotzdem gut treffbar */
 .tile { overflow:visible; }
 .tile .clip { position:absolute; inset:0; border-radius:var(--fr,2px); overflow:hidden; }
 .tile.same { box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 2px var(--accent) !important; }
@@ -499,7 +500,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const prev = T; T = THEMES[name] || THEMES.nacht; state.theme = name; $('#theme').value = name;
     if ($('#vigaval')) setTimeout(vigLabel, 0);
     const st = stage.style; st.setProperty('--pa', T.accent); st.setProperty('--pvigA', vigA()); applyGrade(); st.setProperty('--pbg', T.bg); st.setProperty('--pvig', T.vig); st.setProperty('--ptext', T.text); st.setProperty('--pcap', T.cap); st.setProperty('--psub', T.sub); st.setProperty('--pmuted', T.muted); st.setProperty('--pband', T.band); st.setProperty('--pline', T.line); st.setProperty('--phalo', T.halo); st.setProperty('--ppill', T.pill);
-    if (map && prev.map !== T.map) { fallback = false; map.setStyle(T.map); map.once('styledata', () => setTimeout(addRouteLayers, 300)); }
+    if (map && prev.map !== T.map) { fallback = false; map.setStyle(T.map); map.once('styledata', () => setTimeout(() => { addRouteLayers(); terrainLayer(); peakLayer(); }, 300)); }
     else if (map && map.getSource && map.getSource('route')) addRouteLayers();
     render();
   }
@@ -584,7 +585,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   let demWarned = false;
   const DEM_TILES = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
   function terrainLayer() {
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
+    if (!map.isStyleLoaded()) { map.once('idle', terrainLayer); return; }   // nach einem Stilwechsel ist der Stil kurz nicht bereit
     if (!state.terrain) { if (map.getLayer('hillshade')) map.removeLayer('hillshade'); if (map.getSource('dem')) map.removeSource('dem'); return; }
     const rel = state.relief ?? .6;
     if (!map.getSource('dem')) map.addSource('dem', { type: 'raster-dem', tiles: [DEM_TILES], encoding: 'terrarium', tileSize: 256, maxzoom: 13,
@@ -611,7 +613,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const hasGlyphs = () => { try { return !!map.getStyle().glyphs; } catch (e) { return false; } };
   const styleFont = () => { try { const l = map.getStyle().layers.find(l => l.type === 'symbol' && l.layout && l.layout['text-font']); return l ? l.layout['text-font'] : ['Noto Sans Regular']; } catch (e) { return ['Noto Sans Regular']; } };
   function peakLayer() {
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
+    if (!map.isStyleLoaded()) { map.once('idle', peakLayer); return; }
     peakIcon();
     if (!map.getSource('peaks')) map.addSource('peaks', { type: 'geojson', data: peaksGeo() });
     else map.getSource('peaks').setData(peaksGeo());
