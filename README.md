@@ -34,7 +34,7 @@ Repo-Einstellungen → Pages → Source „Deploy from a branch“, Branch `main
 ## Kommerzieller Betrieb – Vorbereitung
 
 - `impressum.html` und `datenschutz.html` sind Vorlagen mit Platzhaltern in eckigen Klammern (Verantwortlicher, USt, Druckpartner, Hoster). **Vor Veröffentlichung ausfüllen**; Links stehen im Export-Block der App.
-- „Poster drucken lassen“ (Export-Block) öffnet den Bestelldialog. Preise, Partner, Hinweistext und der spätere Bestell-Endpunkt stehen zentral in `ORDER` in `src/app.html`. Solange `endpoint` leer ist, läuft die Bestellung per E-Mail (Nutzer erzeugt die Druck-PDF und hängt sie an).
+- Bestelldialog ist vorbereitet, der Button „Poster drucken lassen“ aber noch nicht eingeblendet (Zeile mit `id="order"` im Export-Block wieder einfügen, sobald der Druckpartner steht). Preise, Partner, Hinweistext und der spätere Bestell-Endpunkt stehen zentral in `ORDER` in `src/app.html`. Solange `endpoint` leer ist, läuft die Bestellung per E-Mail (Nutzer erzeugt die Druck-PDF und hängt sie an).
 - Nächste Schritte je nach Modell: (a) Händler verkauft, Provision – Bestellweg = Upload an einen kleinen Server (z. B. Cloudflare Worker + R2), der Datei + Bestelldaten an den Händler mailt; (b) eigener Verkauf – zusätzlich Zahlungsanbieter (Stripe Checkout), AGB, Rechnungen, Gewerbe.
 - Druckdaten: PDF in sRGB ohne Beschnittzugabe; Posterdrucker skalieren „randlos“ üblicherweise um 1–2 %. Falls der Partner 3 mm Beschnitt verlangt, wird ein Export mit Anschnitt ergänzt.
 - Hosting bei privatem Repo: GitHub Pages braucht dann GitHub Pro – oder Umzug auf Cloudflare Pages (kostenlos, privates Repo, eigene Domain, HTTPS automatisch). Vor dem Umstellen auf privat zuerst das Hosting klären, sonst geht die Seite offline.
