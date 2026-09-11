@@ -200,6 +200,14 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #hint span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 #helpbtn { pointer-events:auto; width:26px; height:26px; border-radius:13px; border:1px solid var(--line); background:var(--panel2); color:var(--text); font:800 13px Montserrat, Arial, sans-serif; cursor:pointer; flex:none; }
 #helpbtn:hover { border-color:var(--accent); color:var(--accent); }
+#wall { position:fixed; inset:0; background:rgba(4,10,16,.82); z-index:50; display:grid; place-items:center; padding:12px; }
+#wall[hidden] { display:none; }
+.wallbox { background:var(--panel); border:1px solid var(--line); border-radius:16px; width:min(1200px, 100%); max-height:96vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 30px 80px rgba(0,0,0,.6); }
+.wallopts { display:flex; gap:12px; align-items:center; font-size:11px; color:var(--muted); flex-wrap:wrap; }
+.wallopts select { width:auto; padding:5px 8px; font-size:11px; margin-left:4px; }
+#wallscene { flex:1; min-height:0; background:#0c1620; display:grid; place-items:center; padding:10px; }
+#wallscene svg { width:100%; height:auto; max-height:80vh; display:block; border-radius:8px; }
+@media (max-width:900px) { .wallopts { gap:6px; } .wallopts label { font-size:10px; } }
 #orderdlg { position:fixed; inset:0; background:rgba(4,10,16,.7); z-index:50; display:grid; place-items:center; padding:16px; backdrop-filter:blur(3px); }
 #orderdlg[hidden] { display:none; }
 .obody { padding:14px 18px 18px; font-size:13px; line-height:1.5; } .obody .muted { color:var(--muted); font-size:12px; } .obody a { color:var(--accent); }
@@ -316,6 +324,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       </div>
       <label class="switch" style="margin-top:8px"><input type="checkbox" id="showband" checked><span class="kn"></span><span>Höhenprofil<small>Höhe automatisch nach Bergigkeit, per Ziehen der Oberkante änderbar</small></span></label>
       <label class="switch" style="margin-top:6px"><input type="checkbox" id="showpeaks" checked><span class="kn"></span><span>Gipfel &amp; Pässe im Profil<small>Namen und Höhen aus den Kartendaten, wenn die Route darüber führt</small></span></label>
+      <button class="btn" id="wallbtn" style="margin-top:12px" title="Maßstabsgetreue Vorschau im Wohnzimmer – zum Einschätzen von Größe und Wirkung">An der Wand ansehen <small>Größenvorschau</small></button>
       <label class="f">Farbabstimmung der Fotos <span id="gradeval">60 %</span></label>
       <input type="range" id="grade" min="0" max="100" step="5" value="60" style="width:100%" title="Fotos an die Farbstimmung des Posters angleichen: Sättigung dämpfen, Tönung in der Themenfarbe">
       <div class="hint">Titel, Untertitel und Kennzahlen direkt im Poster antippen und schreiben. Höhenprofil: Oberkante ziehen.</div>
@@ -351,6 +360,18 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     </div></div>
     <div id="maptools"><button id="mapbtn"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><div id="pscalebox" title="Alle Fotos gemeinsam größer/kleiner (fixierte behalten ihre Position)"><span class="w">FOTOS</span><span class="s">📷</span> <input type="range" id="pscale" min="50" max="160" step="5" value="100"> <span id="pscaleval">100 %</span></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
     <div id="hint"><span>Ziehen = verschieben · Ecken/Kanten = Größe · Doppelklick = Ausschnitt · Entf = entfernen</span><button id="helpbtn" title="Hilfe">?</button></div>
+    <div id="wall" hidden>
+      <div class="wallbox">
+        <div class="hhead"><b>An der Wand</b><div class="wallopts">
+          <label>Größe <select id="wallsize"></select></label>
+          <label>Rahmen <select id="wallframe"><option value="none">ohne</option><option value="black" selected>schwarz, schmal</option><option value="oak">Eiche</option><option value="white">weiß</option></select></label>
+          <label>Wand <select id="wallcol"><option value="#efe9df">warmweiß</option><option value="#d9d5cf">hellgrau</option><option value="#c9cdbf">salbei</option><option value="#3f4a45">dunkelgrün</option><option value="#b9a99a">terrakotta hell</option></select></label>
+          <button class="btn ghost" id="walluse" style="width:auto;margin:0;padding:6px 10px;font-size:11px">Größe übernehmen</button>
+        </div><button id="wallclose">×</button></div>
+        <div id="wallscene"></div>
+        <div class="hfoot" id="wallinfo"></div>
+      </div>
+    </div>
     <div id="orderdlg" hidden>
       <div class="hbox" style="max-width:560px">
         <div class="hhead"><b>Poster drucken lassen</b><button id="orderclose">×</button></div>
@@ -524,6 +545,89 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     $('#ordermail').href = `mailto:${ORDER.email}?subject=${subj}&body=${body}`; $('#orderdlg').hidden = false; }
   if ($('#order')) $('#order').addEventListener('click', openOrder);   // Button derzeit ausgeblendet – Druckservice folgt $('#orderclose').addEventListener('click', () => { $('#orderdlg').hidden = true; }); $('#orderdlg').addEventListener('click', e => { if (e.target.id === 'orderdlg') $('#orderdlg').hidden = true; });
   $('#orderpdf').addEventListener('click', () => { $('#orderdlg').hidden = true; $('#expdf').click(); });
+  // ---------- Wandvorschau: maßstabsgetreues Wohnzimmer (cm) mit Stahlrennrad, Poster in echter Größe
+  const WALL = { w: 480, h: 265, floor: 70 };   // Wandbreite, Raumhöhe, sichtbare Bodentiefe (cm)
+  let wallImg = null, wallSizeSel = null;
+  function bikeSvg(x, y, scale, col) {   // klassisches Stahlrennrad, Hinterachse bei (x,y), Maße in cm, Blick von links (Kettenblatt sichtbar)
+    const P = (px, py) => `${(x + px * scale).toFixed(1)},${(y - py * scale).toFixed(1)}`;   // py nach oben
+    const R = 34 * scale, RA = P(0, 0), FA = P(100, 0), BB = P(41, -7), ST = P(24, 47), HT = P(84, 50), HB = P(89, 37), SP = P(21, 57);
+    const tube = (a, b, w = 2.6) => `<line x1="${a.split(',')[0]}" y1="${a.split(',')[1]}" x2="${b.split(',')[0]}" y2="${b.split(',')[1]}" stroke="${col}" stroke-width="${w * scale}" stroke-linecap="round"/>`;
+    const wheel = c => { const [cx, cy] = c.split(',').map(Number); let sp = ''; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; sp += `<line x1="${cx}" y1="${cy}" x2="${(cx + Math.cos(a) * R * .92).toFixed(1)}" y2="${(cy + Math.sin(a) * R * .92).toFixed(1)}" stroke="#9aa3ab" stroke-width="${.35 * scale}"/>`; }
+      return `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#1d2226" stroke-width="${2.6 * scale}"/><circle cx="${cx}" cy="${cy}" r="${R * .92}" fill="none" stroke="#c9ced3" stroke-width="${1.6 * scale}"/>${sp}<circle cx="${cx}" cy="${cy}" r="${3 * scale}" fill="#c9ced3" stroke="#6b757e" stroke-width="${.6 * scale}"/>`; };
+    const [bx, by] = BB.split(',').map(Number); const [hx, hy] = HT.split(',').map(Number); const [sx, sy] = SP.split(',').map(Number); const [fx, fy] = FA.split(',').map(Number); const [hbx, hby] = HB.split(',').map(Number);
+    return `<g>${wheel(RA)}${wheel(FA)}
+      ${tube(BB, ST)}${tube(ST, HT)}${tube(BB, HB)}${tube(HT, HB, 3.2)}${tube(BB, RA, 1.8)}${tube(ST, RA, 1.8)}
+      <path d="M${hbx},${hby} Q${(hbx + (fx - hbx) * .3).toFixed(1)},${(hby + (fy - hby) * .8).toFixed(1)} ${fx},${fy}" fill="none" stroke="#c9ced3" stroke-width="${2 * scale}" stroke-linecap="round"/>
+      ${tube(ST, SP, 1.6)}<path d="M${(sx - 13 * scale).toFixed(1)},${(sy - 1 * scale).toFixed(1)} c4,-3 9,-3.5 14,-3.5 l11,1.5 c-1,2.5 -6,4 -12,4 l-9,0 c-3,0 -4,-1 -4,-2z" fill="#2b2118"/>
+      <line x1="${hx}" y1="${hy}" x2="${(hx + 9 * scale).toFixed(1)}" y2="${(hy - 2 * scale).toFixed(1)}" stroke="#c9ced3" stroke-width="${1.8 * scale}" stroke-linecap="round"/>
+      <path d="M${(hx + 9 * scale).toFixed(1)},${(hy - 2 * scale).toFixed(1)} l9,0 c7,0 9,5 8,10 c-1,6 -6,8 -11,7" fill="none" stroke="#c9ced3" stroke-width="${1.8 * scale}" stroke-linecap="round"/><path d="M${(hx + 9 * scale).toFixed(1)},${(hy - 2 * scale).toFixed(1)} l9,0" stroke="#2b2118" stroke-width="${2.6 * scale}" stroke-linecap="round"/>
+      <circle cx="${bx}" cy="${by}" r="${10 * scale}" fill="none" stroke="#3a4148" stroke-width="${1.4 * scale}"/><circle cx="${bx}" cy="${by}" r="${1.6 * scale}" fill="#3a4148"/>
+      <line x1="${bx}" y1="${by}" x2="${(bx + 12 * scale).toFixed(1)}" y2="${(by + 12 * scale).toFixed(1)}" stroke="#3a4148" stroke-width="${1.8 * scale}" stroke-linecap="round"/><rect x="${(bx + 10 * scale).toFixed(1)}" y="${(by + 11 * scale).toFixed(1)}" width="${6 * scale}" height="${2.2 * scale}" fill="#3a4148"/>
+    </g>`;
+  }
+  function wallScene(pw, ph, frame, wallc, img) {
+    const W = WALL.w, H = WALL.h, F = WALL.floor, VH = H + F; const light = wallc === '#3f4a45' ? '#59665f' : '#fff';
+    const fr = { none: [0, 'none'], black: [2, '#1a1a1a'], oak: [3.5, '#b48a55'], white: [3, '#f2f0ea'] }[frame] || [0, 'none'];
+    const px = 420 - pw / 2, py = 150 - ph / 2;   // Poster rechts neben dem Sofa, Mitte bei x=412 cm, Augenhöhe 150 cm
+    const floorC = '#c8a374', plank = 12; let planks = '';
+    for (let i = -20; i < W + 40; i += plank) planks += `<path d="M${i},${H} L${i - 24},${VH}" stroke="#a9875c" stroke-width=".6" opacity=".7"/>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${VH}" style="background:#0c1620">
+      <defs>
+        <linearGradient id="wl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".07"/></linearGradient>
+        <linearGradient id="fl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".25"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+        <filter id="sh" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="1.5" dy="3" stdDeviation="2.2" flood-color="#000" flood-opacity=".35"/></filter>
+        <filter id="sh2" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="1" dy="2" stdDeviation="1.4" flood-color="#000" flood-opacity=".3"/></filter>
+        <linearGradient id="win" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe3ef"/><stop offset="1" stop-color="#eaf2f6"/></linearGradient>
+        <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity=".03"/><stop offset="1" stop-color="#fff" stop-opacity=".12"/></linearGradient>
+      </defs>
+      <clipPath id="cp"><rect width="${W}" height="${VH}"/></clipPath><g clip-path="url(#cp)">
+      <rect width="${W}" height="${H}" fill="${wallc}"/><rect width="${W}" height="${H}" fill="url(#wl)"/>
+      <rect y="${H}" width="${W}" height="${F}" fill="${floorC}"/>${planks}<rect y="${H}" width="${W}" height="${F}" fill="url(#fl)"/>
+      <rect y="${H - 8}" width="${W}" height="8" fill="${wallc === '#3f4a45' ? '#2e3733' : '#f4f1ea'}" stroke="#0000001a" stroke-width=".4"/>
+      <!-- Fenster links -->
+      <g filter="url(#sh2)"><rect x="18" y="52" width="92" height="150" rx="1.5" fill="#f4f1ea"/><rect x="24" y="58" width="80" height="138" fill="url(#win)"/><rect x="63" y="58" width="2.5" height="138" fill="#f4f1ea"/><rect x="24" y="126" width="80" height="2.5" fill="#f4f1ea"/></g>
+      <rect x="10" y="202" width="108" height="4" fill="#e8e4dc"/>
+      <path d="M118,52 L118,202 L136,${H} L136,${H}" fill="#fff" opacity=".08"/>
+      <!-- Sofa -->
+      <g filter="url(#sh)" transform="translate(-22,0)">
+        <rect x="150" y="${H - 90}" width="222" height="52" rx="6" fill="#8a9a8f"/>
+        <rect x="140" y="${H - 66}" width="20" height="60" rx="5" fill="#7f8f84"/><rect x="362" y="${H - 66}" width="20" height="60" rx="5" fill="#7f8f84"/>
+        <rect x="158" y="${H - 52}" width="103" height="26" rx="4" fill="#9aa99e"/><rect x="263" y="${H - 52}" width="103" height="26" rx="4" fill="#9aa99e"/>
+        <rect x="148" y="${H - 26}" width="226" height="18" rx="3" fill="#7f8f84"/>
+        <rect x="156" y="${H - 8}" width="6" height="8" fill="#5b4a3a"/><rect x="360" y="${H - 8}" width="6" height="8" fill="#5b4a3a"/>
+        <rect x="176" y="${H - 84}" width="34" height="34" rx="4" fill="#d9cbb5" transform="rotate(-6 193 ${H - 67})"/><rect x="318" y="${H - 84}" width="34" height="34" rx="4" fill="#b8402c" opacity=".85" transform="rotate(5 335 ${H - 67})"/>
+      </g>
+      <!-- Teppich -->
+      <path d="M120,${H + 14} L440,${H + 14} L470,${H + 58} L90,${H + 58}z" fill="#d8ccb8" opacity=".55"/>
+      <!-- Rad über dem Sofa: Hinterachse bei (176, 152) -> 170 cm lang, Wandhaken -->
+      <g transform="translate(-22,0)"><rect x="229" y="84" width="3" height="20" rx="1" fill="#6b757e"/><rect x="226" y="82" width="9" height="3" rx="1" fill="#6b757e"/>
+      <g filter="url(#sh)">${bikeSvg(176, 152, 1, '#2f4a3f')}</g></g>
+      <!-- Poster -->
+      <g filter="url(#sh)">
+        ${fr[0] ? `<rect x="${px - fr[0]}" y="${py - fr[0]}" width="${pw + 2 * fr[0]}" height="${ph + 2 * fr[0]}" fill="${fr[1]}"/>` : ''}
+        ${img ? `<image href="${img}" x="${px}" y="${py}" width="${pw}" height="${ph}" preserveAspectRatio="none"/>` : `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="#f6efe3"/>`}
+        ${fr[0] ? `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="url(#glass)"/>` : ''}
+      </g>
+      <!-- Maßlinie -->
+      <g stroke="${wallc === '#3f4a45' ? '#dfe5e0' : '#5a4a3a'}" stroke-width=".5" opacity=".7"><line x1="${px}" y1="${py + ph + 10}" x2="${px + pw}" y2="${py + ph + 10}"/><line x1="${px}" y1="${py + ph + 7}" x2="${px}" y2="${py + ph + 13}"/><line x1="${px + pw}" y1="${py + ph + 7}" x2="${px + pw}" y2="${py + ph + 13}"/></g>
+      <text x="${px + pw / 2}" y="${py + ph + 19}" font-family="Montserrat, Arial" font-size="6" font-weight="600" text-anchor="middle" fill="${wallc === '#3f4a45' ? '#dfe5e0' : '#5a4a3a'}">${Math.round(pw)} × ${Math.round(ph)} cm</text>
+      <!-- Pflanze rechts -->
+      <g filter="url(#sh2)" transform="translate(64,0)"><rect x="392" y="${H - 34}" width="22" height="34" rx="3" fill="#b8a99a"/>
+        <path d="M403,${H - 34} c-14,-18 -10,-40 2,-48 c12,8 14,30 -2,48z" fill="#5d7a5c"/><path d="M403,${H - 34} c-20,-6 -30,-24 -22,-36 c14,2 22,20 22,36z" fill="#6e8c6c"/><path d="M403,${H - 34} c20,-6 30,-24 22,-36 c-14,2 -22,20 -22,36z" fill="#517050"/></g>
+      </g></svg>`;
+  }
+  async function openWall() {
+    if (!wallSizeSel) { wallSizeSel = $('#wallsize'); for (const [k, p] of Object.entries(PAPER)) if (!p[3]?.px) wallSizeSel.insertAdjacentHTML('beforeend', `<option value="${k}">${p[2] === 'DIN' ? k + ' · ' : ''}${p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm'}</option>`); }
+    wallSizeSel.value = PAPER[state.paper]?.[3]?.px ? 'A2' : state.paper; $('#wall').hidden = false; $('#wallscene').innerHTML = wallScene(50, 70, $('#wallframe').value, $('#wallcol').value, null); $('#wallinfo').textContent = 'Poster wird gerendert …';
+    try { const c = await renderPrint(900 / 1123); wallImg = c.toDataURL('image/jpeg', .85); } catch (e) { wallImg = null; }
+    drawWall();
+  }
+  function drawWall() { const k = wallSizeSel.value, p = PAPER[k]; if (!p) return; const land = state.format === 'landscape'; const pw = (land ? p[1] : p[0]) / 10, ph = (land ? p[0] : p[1]) / 10;
+    $('#wallscene').innerHTML = wallScene(pw, ph, $('#wallframe').value, $('#wallcol').value, wallImg);
+    $('#wallinfo').textContent = `Maßstabsgetreu: Wand 4,8 m breit, Raumhöhe 2,65 m, Sofa 2,2 m, Rennrad 1,7 m. Poster ${pw} × ${ph} cm, Mitte auf 1,50 m Höhe.${k !== state.paper ? ' „Größe übernehmen“ setzt die Papiergröße im Poster-Block.' : ''}`; }
+  $('#wallbtn').addEventListener('click', openWall); $('#wallclose').addEventListener('click', () => { $('#wall').hidden = true; }); $('#wall').addEventListener('click', e => { if (e.target.id === 'wall') $('#wall').hidden = true; });
+  ['wallsize', 'wallframe', 'wallcol'].forEach(id => $('#' + id).addEventListener('change', drawWall));
+  $('#walluse').addEventListener('click', () => { const k = wallSizeSel.value; if (PAPER[k] && k !== state.paper) { state.paper = k; $('#paper').value = k; setFormat(state.format); drawWall(); } });
   $('#helpbtn').addEventListener('click', () => { $('#help').hidden = false; }); $('#helpbtn2').addEventListener('click', () => { $('#help').hidden = false; }); $('#helpclose').addEventListener('click', () => { $('#help').hidden = true; }); $('#help').addEventListener('click', e => { if (e.target.id === 'help') $('#help').hidden = true; });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#help').hidden) $('#help').hidden = true; if (e.key === '?' && !e.target.isContentEditable && e.target.tagName !== 'INPUT') $('#help').hidden = !$('#help').hidden; });
   $('#grade').addEventListener('input', e => { state.grade = +e.target.value; applyGrade(); });
@@ -1219,9 +1323,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   async function fontsReady() { try { await document.fonts.load('900 80px Montserrat'); await document.fonts.load('400 16px Montserrat'); } catch (e) {} }
   function F(w, px, small = true) { return `${w} ${Math.round(px * S * (small ? TS() : TT()))}px Montserrat, Arial, sans-serif`; }
   const P = v => v * S;
-  async function renderPrint() {
+  async function renderPrint(scaleOverride) {
     await fontsReady();
-    S = paperPx(state.paper)[0] / 1123;
+    S = scaleOverride || paperPx(state.paper)[0] / 1123;
     const W = Math.round(CW * S), H = Math.round(CH * S);
     const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
     g.fillStyle = T.bg; g.fillRect(0, 0, W, H);
