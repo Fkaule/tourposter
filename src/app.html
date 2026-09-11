@@ -325,13 +325,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <option value="hell">Hell – helle Karte, Rot</option>
         <option value="retro">Retro – bunte Karte, Ziegel</option>
       </select>
-      <label class="switch" style="margin-top:8px"><input type="checkbox" id="terrain"><span class="kn"></span><span>Geländeschummerung<small>Berge plastisch – Höhendaten von AWS Terrain Tiles, wird beim Einschalten nachgeladen</small></span></label>
+      <label class="switch" style="margin-top:8px"><input type="checkbox" id="terrain" checked><span class="kn"></span><span>Geländeschummerung<small>Berge plastisch – Höhendaten von AWS Terrain Tiles, dafür lädt die Karte von einem zweiten Dienst</small></span></label>
       <div class="grid2" style="margin-top:8px">
         <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div>
       </div>
       <label class="f">Abdeckung hinter dem Titel <span id="vigaval">automatisch</span></label>
       <input type="range" id="viga" min="0" max="100" step="5" value="90" style="width:100%" title="Wie stark der Verlauf oben die Karte abdeckt – kleiner Wert zeigt Route und Umgebung, größerer macht den Titel ruhiger. Doppelklick = zurück auf den Stil-Wert">
-      <label class="switch" style="margin-top:6px"><input type="checkbox" id="routetop"><span class="kn"></span><span>Route über dem Verlauf<small>Route bleibt auch im abgedunkelten Bereich oben sichtbar</small></span></label>
       <label class="switch" style="margin-top:8px"><input type="checkbox" id="showband" checked><span class="kn"></span><span>Höhenprofil<small>Höhe automatisch nach Bergigkeit, per Ziehen der Oberkante änderbar</small></span></label>
       <label class="switch" style="margin-top:6px"><input type="checkbox" id="showpeaks" checked><span class="kn"></span><span>Gipfel &amp; Pässe im Profil<small>Namen und Höhen aus den Kartendaten, wenn die Route darüber führt</small></span></label>
       <label class="switch" style="margin-top:6px"><input type="checkbox" id="peakmap"><span class="kn"></span><span>Gipfel auch auf der Karte<small>Dreieck mit Name und Höhe an der Route</small></span></label>
@@ -407,7 +406,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="14" y="10" width="40" height="30" rx="4" class="ph"/><rect x="18" y="14" width="32" height="22" class="dash"/><circle cx="62" cy="40" r="7" class="ring"/><path d="M62 35v10M57 40h10" class="ar"/></svg><b>Ausschnitt</b>Doppelklick aufs Foto: ziehen verschiebt das Bild im Rahmen, Mausrad/Slider zoomt. Esc beendet.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="10" y="12" width="26" height="20" rx="3" class="ph sel"/><rect x="44" y="18" width="26" height="20" rx="3" class="ph sel"/><text x="40" y="52" class="t">Shift + Klick</text></svg><b>Mehrfachauswahl</b>Shift-Klick wählt mehrere Fotos, die dann zusammen verschoben und ausgerichtet werden.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><circle cx="18" cy="16" r="9" class="ico lock"/><rect x="14" y="15.5" width="8" height="6" rx="1" fill="#1c1a12"/><path d="M15.5 15.5v-2a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="#1c1a12" stroke-width="1.4"/><circle cx="40" cy="16" r="9" class="ico star"/><path d="M40 10l1.8 3.8 4.2.5-3.1 2.9.8 4.1-3.7-2-3.7 2 .8-4.1-3.1-2.9 4.2-.5z" fill="#1c1a12"/><circle cx="62" cy="16" r="9" class="ico gps"/><path d="M62 10a4 4 0 0 0-4 4c0 3 4 7 4 7s4-4 4-7a4 4 0 0 0-4-4z" fill="#fff"/><text x="40" y="46" class="t">Schloss · Stern · Ort</text></svg><b>Nummer &amp; Icons</b>Klick auf die Nummer = Highlight ★ (größer im Auto-Layout). Beim Überfahren: Schloss = fixiert (Automatik lässt es in Ruhe), Pin/Lupe = Aufnahmeort setzen oder suchen – setzen geht per Klick auf die Karte oder ins Höhenprofil.</div>
-          <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 40c10-20 20 10 30-6s20-14 34 2" class="route"/><rect x="26" y="6" width="28" height="12" rx="6" class="btn"/><text x="40" y="15" class="tb">Karte</text></svg><b>Karte</b>Button „Karte“ oben rechts, dann verschieben/zoomen (Maus, Finger oder Slider). „Auf Route einpassen“ setzt zurück. Liegt die Route hinter dem Titel, hilft im Poster-Block der Regler „Abdeckung hinter dem Titel“ oder der Schalter „Route über dem Verlauf“.</div>
+          <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 40c10-20 20 10 30-6s20-14 34 2" class="route"/><rect x="26" y="6" width="28" height="12" rx="6" class="btn"/><text x="40" y="15" class="tb">Karte</text></svg><b>Karte</b>Button „Karte“ oben rechts, dann verschieben/zoomen (Maus, Finger oder Slider). „Auf Route einpassen“ setzt zurück. Die Route bleibt auch hinter dem Titel sichtbar; wie stark die Umgebung dort abgedunkelt wird, regelt „Abdeckung hinter dem Titel“ im Poster-Block.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 30c14-10 30-12 64-8" class="route"/><text x="30" y="20" class="tl">Ortsname</text><circle cx="52" cy="26" r="2.5" fill="#fff"/><path d="M52 26L46 21" class="dash2"/></svg><b>Ortsnamen</b>Start, Ziel, Übernachtungen: ziehen = verschieben, Doppelklick = Text ändern, Entf = ausblenden.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Höhe richtet sich nach der Bergigkeit der Tour; Oberkante ziehen = Höhe, Doppelklick = zurück auf Automatik. Fotos erscheinen als nummerierte Punkte. Beim Ort setzen kann man statt auf die Karte auch ins Profil klicken – nahe Gipfel rasten ein.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><text x="10" y="24" class="th">Titel</text><rect x="8" y="8" width="44" height="22" class="dash"/><text x="10" y="42" class="t2">Untertitel · 209 km</text></svg><b>Texte</b>Titel, Untertitel und Kennzahlen direkt im Poster anklicken und tippen (Enter = neue Zeile).</div>
@@ -447,7 +446,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${{ DIN: 'DIN', Poster: 'Posterdruck (cm)', Screen: 'Bildschirm / Handy (px)' }[grp]}"></optgroup>`); }
       sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${p[3]?.label || (grp === 'DIN' ? k + ' · ' : '') + (p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm')}</option>`); } }
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
-  const state = { format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 60, photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const state = { terrain: true, format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 60, photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; setFormat(state.format); });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
@@ -497,9 +496,21 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function routeGeo() {
     return { type: 'FeatureCollection', features: state.stages.map(s => ({ type: 'Feature', properties: { name: s.name }, geometry: { type: 'LineString', coordinates: s.points.map(p => [p[1], p[0]]) } })) };
   }
+  // Übernachtung: liegt zwischen dem Ende der einen und dem Start der nächsten Etappe. Sind beide nah beieinander
+  // (Aufzeichnung am Quartier gestoppt und wieder gestartet), ist der Mittelpunkt der richtige Ort – sonst sitzt der
+  // Punkt am Ende eines kleinen Abstechers und wirkt neben der Route.
+  function nightPos(i) {
+    const A = state.stages[i].points, B = state.stages[i + 1]?.points;
+    const a = A.at(-1); if (!B) return [a[0], a[1]];
+    // Stelle suchen, an der sich Etappenende und Etappenstart am nächsten kommen – dort liegt das Quartier,
+    // und dort liegt auch die Linie, statt am Ende eines kleinen Abstechers
+    const tailA = A.slice(-150), headB = B.slice(0, 150); let bd = Infinity, bp = null;
+    for (const p of tailA) for (const q of headB) { const d = hav([p[0], p[1]], [q[0], q[1]]); if (d < bd) { bd = d; bp = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]; } }
+    return bd < 3000 && bp ? bp : [a[0], a[1]];
+  }
   function nightsGeo() {
     const f = [];
-    state.stages.forEach((s, i) => { if (i < state.stages.length - 1) { const p = s.points[s.points.length - 1]; f.push({ type: 'Feature', properties: { kind: 'night' }, geometry: { type: 'Point', coordinates: [p[1], p[0]] } }); } });
+    state.stages.forEach((s, i) => { if (i < state.stages.length - 1) { const p = nightPos(i); f.push({ type: 'Feature', properties: { kind: 'night' }, geometry: { type: 'Point', coordinates: [p[1], p[0]] } }); } });
     if (state.stages.length) { const a = state.stages[0].points[0], b = state.stages.at(-1).points.at(-1); for (const p of [a, b]) f.push({ type: 'Feature', properties: { kind: 'end' }, geometry: { type: 'Point', coordinates: [p[1], p[0]] } }); }
     return { type: 'FeatureCollection', features: f };
   }
@@ -529,8 +540,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     map.addLayer({ id: 'route-halo', type: 'line', source: 'route', paint: { 'line-color': T.halo, 'line-width': 9 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
     map.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': T.accent, 'line-width': 5 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
     map.addLayer({ id: 'pts-end', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'end'], paint: { 'circle-radius': 7, 'circle-color': T.bg, 'circle-stroke-color': T.accent, 'circle-stroke-width': 3 } });
-    map.addLayer({ id: 'pts-night', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'night'], paint: { 'circle-radius': 8, 'circle-color': T.accent, 'circle-stroke-color': T.halo, 'circle-stroke-width': 2.5 } });
-    map.addLayer({ id: 'pts-night2', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'night'], paint: { 'circle-radius': 2.5, 'circle-color': '#fff' } });
+    map.addLayer({ id: 'pts-night', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'night'], paint: { 'circle-radius': 9.5, 'circle-color': T.accent, 'circle-stroke-color': T.halo, 'circle-stroke-width': 3.5 } });
+    map.addLayer({ id: 'pts-night2', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'night'], paint: { 'circle-radius': 3.4, 'circle-color': '#fff' } });
     terrainLayer(); peakLayer();
   }
   // Geländeschummerung aus freien Höhenkacheln (AWS Open Data, terrarium-Kodierung) – nur wenn eingeschaltet
@@ -782,7 +793,6 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     $('#viga').value = Math.round(vigA() * 100); }
   $('#viga').addEventListener('input', e => { state.vigA = +e.target.value / 100; stage.style.setProperty('--pvigA', vigA()); vigLabel(); autosave(); });
   $('#viga').addEventListener('dblclick', () => { state.vigA = null; stage.style.setProperty('--pvigA', vigA()); vigLabel(); autosave(); });
-  $('#routetop').addEventListener('change', e => { state.routeTop = e.target.checked; renderRouteTop(); autosave(); });
   $('#terrain').addEventListener('change', e => { state.terrain = e.target.checked; terrainLayer();
     if (state.terrain) say('Geländeschummerung an – Höhenkacheln kommen von AWS Terrain Tiles (zweiter Server neben der Karte).', 'ok'); });
   $('#peakmap').addEventListener('change', e => { state.showPeakMap = e.target.checked; if (state.showPeakMap && !state.peaks?.length) findPeaks(); else { peakLayer(); render(); } });
@@ -873,7 +883,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function afterTourChange() {
     const sp = sportOf(); if (!state.bandEdited) { state.showBand = sp.band; $('#showband').checked = sp.band; }   // Kanu: Höhenprofil ist ohne Aussage
     findPeaks();
-    buildPlaces(); autoTexts(); if (map && map.loaded()) { addRouteLayers(); fitRoute(); } render();
+    buildPlaces(); autoTexts();
+    if (map) { if (map.loaded()) { addRouteLayers(); fitRoute(); } else map.once('idle', () => { addRouteLayers(); fitRoute(); render(); }); }
+    render();
     const km = state.stages.reduce((s, x) => s + x.distance, 0) / 1000;
     $('#mapinfo').textContent = state.stages.length ? `${state.stages.length} Etappe(n) · ${km.toFixed(0)} km · ${nf(state.stages.reduce((s, x) => s + x.gain, 0))} Hm` : '';
   }
@@ -1014,7 +1026,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const ck = p => p.lat.toFixed(4) + ',' + p.lon.toFixed(4); const old = new Map(state.places.map(p => [ck(p), p])); const out = [];
     state.stages.forEach((s, i) => {
       if (i === 0) out.push({ key: 'start', kind: 'start', lat: s.points[0][0], lon: s.points[0][1] });
-      const e = s.points.at(-1); out.push(i < state.stages.length - 1 ? { key: 'night' + i, kind: 'night', lat: e[0], lon: e[1] } : { key: 'end', kind: 'end', lat: e[0], lon: e[1] });
+      const e = s.points.at(-1), n = i < state.stages.length - 1 ? nightPos(i) : null;
+      out.push(n ? { key: 'night' + i, kind: 'night', lat: n[0], lon: n[1] } : { key: 'end', kind: 'end', lat: e[0], lon: e[1] });
     });
     state.places = out.map(p => { const o = old.get(ck(p)); return Object.assign({ text: '', dx: 12, dy: -16, edited: false }, o ? { text: o.text, dx: o.dx, dy: o.dy, edited: o.edited, detailTried: o.detailTried } : {}, p); });
   }
@@ -1228,11 +1241,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     renderRouteTop();
     for (const g of groups) { const pt = map.project([g.lon, g.lat]); const d = document.createElement('div'); d.className = 'pin'; d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg; d.style.color = T.pinFg; d.textContent = g.nums.sort((a, b) => a - b).join(' · '); pinsEl.appendChild(d); }
   }
-  // Route über dem Titelverlauf: nur der Teil, der im abgedunkelten Bereich liegt – sonst verschwindet sie dort
+  // Route über dem Titelverlauf: immer aktiv, aber nur der Teil, der im abgedunkelten Bereich liegt – sonst verschwindet sie dort
   function renderRouteTop() {
     const el = $('#rtop'); if (!el) return;
     el.setAttribute('viewBox', `0 0 ${CW} ${CH}`);
-    if (!map || !state.routeTop || !state.stages.length) { el.innerHTML = ''; return; }
+    if (!map || !state.stages.length) { el.innerHTML = ''; return; }
     const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const lim = vigH + 10;
     let d = '', open = false;
     for (const st of state.stages) { for (const p of st.points) { const q = map.project([p[1], p[0]]);
@@ -1560,8 +1573,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     // Vignette
     const vA = vigA(); const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const vg = g.createLinearGradient(0, 0, 0, P(vigH)); vg.addColorStop(0, `rgba(${T.vig},${vA})`); vg.addColorStop(.45, `rgba(${T.vig},${vA * .8})`); vg.addColorStop(1, `rgba(${T.vig},0)`); g.fillStyle = vg; g.fillRect(0, 0, W, P(vigH));
     if (BH()) { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
-    // Route über dem Verlauf (optional): nach der Vignette erneut zeichnen, damit sie oben sichtbar bleibt
-    if (map && state.routeTop && state.stages.length) {
+    // Route über dem Verlauf: nach der Vignette erneut zeichnen, damit sie oben sichtbar bleibt
+    if (map && state.stages.length) {
       const lim = vigH + 10; const seg = [];
       let cur = null;
       for (const st of state.stages) { for (const p of st.points) { const q = map.project([p[1], p[0]]);
@@ -1670,7 +1683,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       render(); say(`Projekt „${f.name}“ geladen – ${n} Foto(s) in Originalgröße.`, 'ok'); } catch (e) { say('Projekt nicht lesbar: ' + e.message, 'err'); } }
   $('#ldzip input').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadZipFile(f); });
   function restore(obj) {
-    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.peakThr = obj.peakThr ?? null; state.terrain = !!obj.terrain; $('#terrain').checked = state.terrain; state.vigA = obj.vigA ?? null; state.routeTop = !!obj.routeTop; $('#routetop').checked = state.routeTop; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.peakThr = obj.peakThr ?? null; state.terrain = obj.terrain !== false; $('#terrain').checked = state.terrain; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
     applyFrame(); render();
   }
