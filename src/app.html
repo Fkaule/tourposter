@@ -810,7 +810,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // ---------- Feedback: Formular ohne Login, Versand über Web3Forms (api.web3forms.com).
   // Access Key hier eintragen (kostenlos auf web3forms.com anfordern, geht an die dort hinterlegte Mailadresse).
   // Solange er leer ist, fällt der Dialog auf einen mailto-Link zurück.
-  const FEEDBACK = { key: '', mail: 'info@tourposter.online', endpoint: 'https://api.web3forms.com/submit' };
+  const FEEDBACK = { key: '4c21a66c-e142-410d-8e23-0e13b6fb9d17', mail: 'info@tourposter.online', endpoint: 'https://api.web3forms.com/submit' };
   function techInfo() {
     const ua = navigator.userAgent, br = /Firefox\/[\d.]+/.exec(ua)?.[0] || /Edg\/[\d.]+/.exec(ua)?.[0] || /Chrome\/[\d.]+/.exec(ua)?.[0] || /Version\/[\d.]+ Safari/.exec(ua)?.[0] || ua.slice(0, 60);
     return [`Browser: ${br}`, `Plattform: ${navigator.platform || '–'}`, `Fenster: ${innerWidth}×${innerHeight}`,
