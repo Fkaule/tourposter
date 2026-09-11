@@ -85,6 +85,8 @@ aside h1 { margin:0; font-size:21px; font-weight:900; letter-spacing:-.035em; li
 .row button:hover { color:var(--accent); }
 .btn { width:100%; box-sizing:border-box; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font:600 13px Montserrat, Arial, sans-serif; cursor:pointer; text-align:left; margin-top:6px; display:flex; justify-content:space-between; align-items:center; transition:border-color .15s, background .15s; }
 .btn:hover { border-color:#3a5068; }
+.btn.danger { color:#e06a52; border-color:rgba(224,106,82,.45); background:transparent; }
+.btn.danger:hover { background:#c0392b; border-color:#c0392b; color:#fff; }
 .btn.fb { margin-top:14px; border-color:var(--accent); color:var(--accent); background:transparent; }
 .btn.fb:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
 .btn.fb small { color:inherit; opacity:.75; }
@@ -161,7 +163,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .place:hover, .place.sel { outline:1.5px dashed var(--accent); }
 .place[contenteditable="true"] { outline:2px solid var(--accent); cursor:text; }
 .pin { position:absolute; transform:translate(-50%,-50%); min-width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); padding:0 calc(8px * var(--ts, 1)); box-sizing:border-box; border-radius:calc(13px * var(--ts, 1)); background:#fff; color:#0d1a26; box-shadow:0 4px 12px rgba(0,0,0,.5); font:700 13px/26px Montserrat, Arial, sans-serif; font-size:calc(13px * var(--ts, 1)); line-height:calc(26px * var(--ts, 1)); text-align:center; white-space:nowrap; pointer-events:none; }
-.tile { position:absolute; border-radius:var(--fr,2px); overflow:hidden; box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); cursor:grab; touch-action:none; }
+.tile { position:absolute; border-radius:var(--fr,0px); overflow:hidden; box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); cursor:grab; touch-action:none; }
 #stage.mat .tile { box-shadow:0 0 0 var(--mat) var(--pbg), 0 0 0 var(--mat1) var(--pline), 0 24px 48px rgba(0,0,0,.45); }
 #stage.fray:not(.mat) .tile { box-shadow:none; filter:drop-shadow(0 18px 24px rgba(0,0,0,.5)); }
 #stage.marks .tile::before, #stage.marks .tile::after { content:''; position:absolute; width:12px; height:12px; border:1.5px solid var(--pa); pointer-events:none; z-index:2; }
@@ -187,7 +189,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .tile .rs.n { top:-3px; cursor:ns-resize; } .tile .rs.s { bottom:-3px; cursor:ns-resize; } .tile .rs.e { right:-3px; cursor:ew-resize; } .tile .rs.w { left:-3px; cursor:ew-resize; }
 .tile .rs::after { content:''; position:absolute; inset:-7px; }   /* unsichtbare Grifffläche: klein dargestellt, trotzdem gut treffbar */
 .tile { overflow:visible; }
-.tile .clip { position:absolute; inset:0; border-radius:var(--fr,2px); overflow:hidden; }
+.tile .clip { position:absolute; inset:0; border-radius:var(--fr,0px); overflow:hidden; }
 .tile.same { box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 2px var(--accent) !important; }
 .tile.same::after { content:"gleiche Größe"; position:absolute; left:50%; top:-22px; transform:translateX(-50%); background:var(--accent); color:#fff; font:700 10px/16px Montserrat, Arial, sans-serif; padding:0 6px; border-radius:8px; white-space:nowrap; }
 .gap { position:absolute; background:rgba(255,90,54,.22); border-left:1px solid var(--accent); border-right:1px solid var(--accent); pointer-events:none; display:grid; place-items:center; color:#fff; font:700 11px Montserrat, Arial, sans-serif; }
@@ -363,7 +365,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <div class="btnrow"><button class="btn" id="exzip">Projekt sichern <small>.zip</small></button><label class="btn ghost" id="ldzip" style="cursor:pointer">Projekt laden<input type="file" accept=".zip,application/zip" style="display:none"></label></div>
       <div class="hint">Die Sitzung wird automatisch im Browser gesichert. Zum Archivieren oder auf einen anderen Rechner mitnehmen: Projekt sichern (.zip).</div>
       <button class="btn fb" id="fbbtn" title="Fehler melden, Idee vorschlagen oder Frage stellen – ohne Anmeldung"><span><svg viewBox="0 0 20 20" width="15" height="15" style="vertical-align:-2px;margin-right:7px"><path d="M3 4.5h14v9H8.5L5 17v-3.5H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Feedback geben</span> <small>Fehler · Idee · Frage</small></button>
-      <button class="link" id="reset">Alles zurücksetzen</button> <button class="link" id="helpbtn2">Hilfe / Bedienung</button>
+      <div class="btnrow" style="margin-top:8px">
+        <button class="btn" id="helpbtn2" title="Kurze Übersicht aller Bedienschritte"><span><svg viewBox="0 0 20 20" width="15" height="15" style="vertical-align:-2px;margin-right:7px"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.6 7.6a2.4 2.4 0 1 1 3 2.3v1.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10.3" cy="14.2" r=".9" fill="currentColor"/></svg>Hilfe</span></button>
+        <button class="btn danger" id="reset" title="Tour, Fotos und alle Einstellungen verwerfen"><span><svg viewBox="0 0 20 20" width="15" height="15" style="vertical-align:-2px;margin-right:7px"><path d="M4 6h12M8 6V4.5h4V6M6 6l.8 9.5h6.4L14 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>Zurücksetzen</span></button>
+      </div>
       <div class="legal"><a href="impressum.html">Impressum</a> · <a href="datenschutz.html">Datenschutz</a> · © Tourposter</div>
       <div class="hint">Es werden keine Daten hochgeladen – nur die Kartenkacheln kommen aus dem Netz (OpenFreeMap sieht die Region, sonst nichts).</div>
     </div>
@@ -862,7 +867,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // Rahmen-Optionen
   const FR = () => state.frame || (state.frame = { corners: 'sharp', mat: 9, marks: false, fray: 0 });
   function applyFrame() { const f = FR(); f.corners = 'sharp'; f.fray = 0; f.marks = false; $('#matsl').value = f.mat; $('#matval').textContent = f.mat ? f.mat : 'aus';
-    const st = stage.style; st.setProperty('--fr', (f.corners === 'sharp' ? 2 : 10) + 'px'); st.setProperty('--mat', f.mat + 'px'); st.setProperty('--mat1', (f.mat + 1) + 'px'); st.setProperty('--mk', (f.mat + 7) + 'px');
+    const st = stage.style; st.setProperty('--fr', (f.corners === 'sharp' ? 0 : 10) + 'px'); st.setProperty('--mat', f.mat + 'px'); st.setProperty('--mat1', (f.mat + 1) + 'px'); st.setProperty('--mk', (f.mat + 7) + 'px');
     stage.classList.toggle('mat', f.mat > 0); stage.classList.toggle('marks', f.mat > 0 && !!f.marks); stage.classList.toggle('fray', f.fray > 0); render(); }
   $('#matsl').addEventListener('input', e => { FR().mat = +e.target.value; applyFrame(); });
   $('#matsl').addEventListener('change', () => scheduleAuto('mat'));
@@ -1208,9 +1213,16 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     return changed;
   }
   const placesEl = $('#places'); let selPlace = null, placeDrag = null, lastPlace = { key: null, t: 0 };
+  // Rundtour: Start und Ziel tragen denselben Ortsnamen -> nur ein Label zeigen (das Ziel entfällt)
+  const sameName = (a, b) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
+  function shownPlaces() {
+    const st = state.places.find(p => p.key === 'start'), en = state.places.find(p => p.key === 'end');
+    const drop = st && en && sameName(st.text, en.text) && !en.edited;
+    return state.places.filter(p => !(drop && p.key === 'end'));
+  }
   function renderPlaces() {
     placesEl.innerHTML = ''; if (!map) return;
-    for (const p of state.places) {
+    for (const p of shownPlaces()) {
       const pt = map.project([p.lon, p.lat]); const el = document.createElement('div'); el.className = 'place ' + p.kind + (selPlace === p.key ? ' sel' : ''); el.dataset.key = p.key;
       el.textContent = p.text || (p.kind === 'night' ? 'Übernachtung' : p.kind === 'start' ? 'Start' : 'Ziel'); el.style.left = pt.x + p.dx + 'px'; el.style.top = pt.y + p.dy + 'px'; if (!p.text) el.style.opacity = .5;
       placesEl.appendChild(el);
@@ -1250,7 +1262,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const el = document.createElement('div'); el.className = 'tile' + (isSel(p.id) ? ' sel' : '') + (cropMode === p.id ? ' crop' : ''); el.dataset.id = p.id;
       Object.assign(el.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px' });
       const clip = document.createElement('div'); clip.className = 'clip'; el.appendChild(clip);
-      if (FR().fray > 0) { const m = 'url("data:image/svg+xml;base64,' + btoa(frayMask(p.w, p.h, FR().fray, FR().corners === 'sharp' ? 2 : 10, seedOf(p.id))) + '")'; clip.style.webkitMaskImage = m; clip.style.maskImage = m; clip.style.webkitMaskSize = '100% 100%'; clip.style.maskSize = '100% 100%'; clip.style.borderRadius = '0'; }
+      if (FR().fray > 0) { const m = 'url("data:image/svg+xml;base64,' + btoa(frayMask(p.w, p.h, FR().fray, FR().corners === 'sharp' ? 0 : 10, seedOf(p.id))) + '")'; clip.style.webkitMaskImage = m; clip.style.maskImage = m; clip.style.webkitMaskSize = '100% 100%'; clip.style.maskSize = '100% 100%'; clip.style.borderRadius = '0'; }
       const img = document.createElement('img'); img.src = p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
       const hud = document.createElement('div'); hud.className = 'hud'; clip.appendChild(hud);
@@ -1409,7 +1421,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     profGeom = { x0, x1, yt, yb, ymax, total, H, fz: +fz(1), eleAt: d => { let i = 0; while (i < xs.length - 1 && xs[i + 1] < d) i++; return ys[i] ?? 0; } };
     svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="${T.accent}" fill-opacity=".37"/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="1.6" stroke-linejoin="round"/>` + b + pk + fo +
       `<text x="${x0}" y="20" fill="${T.muted}" font-size="${fz(11)}" font-weight="700" letter-spacing="2.4" font-family="Montserrat">HÖHENPROFIL</text><text x="${x1}" y="20" fill="${T.muted}" font-size="${fz(11)}" text-anchor="end" font-family="Montserrat">Höchster Punkt ${nf(maxE)} m</text>` +
-      `<text x="${x0}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" font-family="Montserrat">${esc(state.places.find(p => p.key === 'start')?.text || 'Start')}</text><text x="${x1}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" text-anchor="end" font-family="Montserrat">${esc(state.places.find(p => p.key === 'end')?.text || 'Ziel')}</text>`;
+      `<text x="${x0}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" font-family="Montserrat">${esc(state.places.find(p => p.key === 'start')?.text || 'Start')}</text>${(() => { const s = state.places.find(p => p.key === 'start')?.text, e = state.places.find(p => p.key === 'end')?.text;
+        return sameName(s, e) ? '' : `<text x="${x1}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" text-anchor="end" font-family="Montserrat">${esc(e || 'Ziel')}</text>`; })()}`;
   }
   const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
@@ -1735,7 +1748,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const p of state.photos) {
       const src = originals.get(p.id); const im = await loadImg(src ? URL.createObjectURL(src) : p.thumb, !!src);
       const bx = P(p.x), by = P(p.y), bw = P(p.w), bh = P(p.h);
-      const fr = FR(), R = P(fr.corners === 'sharp' ? 2 : 10), mat = P(fr.mat), fray = P(fr.fray);
+      const fr = FR(), R = P(fr.corners === 'sharp' ? 0 : 10), mat = P(fr.mat), fray = P(fr.fray);
       // Schatten (+ Passepartout mit Haarlinie und Eckmarken)
       g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(30); g.shadowOffsetY = P(14); rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, mat ? R * .4 : R); g.fillStyle = '#000'; g.fill(); g.restore();
       if (mat) { rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, R * .4); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(1); g.strokeStyle = T.line; g.stroke();
@@ -1758,7 +1771,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     // Pins
     if (map) for (const d of pinsEl.children) { const px = P(parseFloat(d.style.left)), py = P(parseFloat(d.style.top)); g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(8); g.shadowOffsetY = P(4); pill(g, px, py, d.textContent, T.pinBg, T.pinFg); g.restore(); }
     // Ortsnamen
-    if (map) for (const p of state.places) { if (!p.text) continue; const pt = map.project([p.lon, p.lat]); const x = P(pt.x + p.dx), y = P(pt.y + p.dy); g.font = F(p.kind === 'night' ? 700 : 600, 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = T.halo; g.strokeText(p.text, x, y); g.fillStyle = T.cap; g.fillText(p.text, x, y); g.textBaseline = 'alphabetic'; }
+    if (map) for (const p of shownPlaces()) { if (!p.text) continue; const pt = map.project([p.lon, p.lat]); const x = P(pt.x + p.dx), y = P(pt.y + p.dy); g.font = F(p.kind === 'night' ? 700 : 600, 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = T.halo; g.strokeText(p.text, x, y); g.fillStyle = T.cap; g.fillText(p.text, x, y); g.textBaseline = 'alphabetic'; }
     // Höhenprofil-Band (SVG rastern)
     if (BH()) {
     const band = new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CW} ${BH()}" width="${W}" height="${P(BH())}"><style>text{font-family:Montserrat,Arial,sans-serif}</style>${$('#profile').innerHTML}</svg>`], { type: 'image/svg+xml' });
