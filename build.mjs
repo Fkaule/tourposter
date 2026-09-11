@@ -11,11 +11,14 @@ const js = fs.readFileSync('vendor.js');
 // HEIC-Decoder (libheif, WebAssembly) – wird erst geladen, wenn ein HEIC-Foto kommt
 const heif = fs.readFileSync('node_modules/libheif-js/libheif-wasm/libheif-bundle.js');
 fs.writeFileSync('heif.js', heif);
+// 3D-Wandvorschau (three.js) – wird erst geladen, wenn die Wandvorschau in 3D geöffnet wird
+await build({ entryPoints: ['src/three-entry.js'], bundle: true, minify: true, format: 'iife', target: ['es2020', 'safari15', 'chrome90', 'firefox90'], outfile: 'three.js', logLevel: 'error' });
+const three = fs.readFileSync('three.js');
 const h = b => crypto.createHash('md5').update(b).digest('hex').slice(0, 8);
 const base = app.replace('/*MAPLIBRE_CSS*/', css);
 // Einzeldatei: als data:-URL einbetten (das Bundle enthält "<!--" und "<script", was den HTML-Parser in einem Inline-Script aus dem Tritt bringt)
-const single = base.replace('<script>/*VENDOR_JS*/</script>', `<script src="data:text/javascript;base64,${js.toString('base64')}" onerror="window.__vendorFail=true"></script>`).replace('/*HEIF_B64*/', heif.toString('base64'));
+const single = base.replace('<script>/*VENDOR_JS*/</script>', `<script src="data:text/javascript;base64,${js.toString('base64')}" onerror="window.__vendorFail=true"></script>`).replace('/*HEIF_B64*/', heif.toString('base64')).replace('/*THREE_B64*/', three.toString('base64'));
 fs.writeFileSync('Tourposter.html', single);
-const hosted = base.replace('<script>/*VENDOR_JS*/</script>', `<script src="vendor.js?v=${h(js)}" onerror="window.__vendorFail=true"></script>`).replace('<script id="heifsrc" type="text/plain">/*HEIF_B64*/</script>', `<script id="heifsrc" type="text/plain" data-src="heif.js?v=${h(heif)}"></script>`);
+const hosted = base.replace('<script>/*VENDOR_JS*/</script>', `<script src="vendor.js?v=${h(js)}" onerror="window.__vendorFail=true"></script>`).replace('<script id="heifsrc" type="text/plain">/*HEIF_B64*/</script>', `<script id="heifsrc" type="text/plain" data-src="heif.js?v=${h(heif)}"></script>`).replace('<script id="threesrc" type="text/plain">/*THREE_B64*/</script>', `<script id="threesrc" type="text/plain" data-src="three.js?v=${h(three)}"></script>`);
 fs.writeFileSync('index.html', hosted);
 console.log('index.html', (hosted.length / 1024 | 0), 'KB · vendor.js', (js.length / 1024 | 0), 'KB · heif.js', (heif.length / 1024 | 0), 'KB · Tourposter.html', (single.length / 1024 | 0), 'KB');
