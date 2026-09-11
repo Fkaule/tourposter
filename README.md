@@ -31,6 +31,15 @@ Bei jeder Änderung an der Bedienung auch das Hilfe-Overlay in `src/app.html` (`
 
 Repo-Einstellungen → Pages → Source „Deploy from a branch“, Branch `main`, Ordner `/ (root)`. Eigene Domain: Datei `CNAME` im Root enthält `tourposter.online`; bei Strato A-Records auf 185.199.108.153 / 109.153 / 110.153 / 111.153 und CNAME `www` → `fkaule.github.io`; in den Pages-Einstellungen die Domain eintragen und „Enforce HTTPS“ aktivieren. Danach ist `index.html` unter `https://<user>.github.io/<repo>/` erreichbar. `.nojekyll` sorgt dafür, dass Pages die Dateien unverändert ausliefert. Die Bibliotheken liegen als eigene Dateien (`vendor.js`, `heif.js`) neben der kleinen `index.html` – eine einzelne 5-MB-HTML-Datei hatte das Pages-Deployment zum Hängen gebracht.
 
+## Kommerzieller Betrieb – Vorbereitung
+
+- `impressum.html` und `datenschutz.html` sind Vorlagen mit Platzhaltern in eckigen Klammern (Verantwortlicher, USt, Druckpartner, Hoster). **Vor Veröffentlichung ausfüllen**; Links stehen im Export-Block der App.
+- „Poster drucken lassen“ (Export-Block) öffnet den Bestelldialog. Preise, Partner, Hinweistext und der spätere Bestell-Endpunkt stehen zentral in `ORDER` in `src/app.html`. Solange `endpoint` leer ist, läuft die Bestellung per E-Mail (Nutzer erzeugt die Druck-PDF und hängt sie an).
+- Nächste Schritte je nach Modell: (a) Händler verkauft, Provision – Bestellweg = Upload an einen kleinen Server (z. B. Cloudflare Worker + R2), der Datei + Bestelldaten an den Händler mailt; (b) eigener Verkauf – zusätzlich Zahlungsanbieter (Stripe Checkout), AGB, Rechnungen, Gewerbe.
+- Druckdaten: PDF in sRGB ohne Beschnittzugabe; Posterdrucker skalieren „randlos“ üblicherweise um 1–2 %. Falls der Partner 3 mm Beschnitt verlangt, wird ein Export mit Anschnitt ergänzt.
+- Hosting bei privatem Repo: GitHub Pages braucht dann GitHub Pro – oder Umzug auf Cloudflare Pages (kostenlos, privates Repo, eigene Domain, HTTPS automatisch). Vor dem Umstellen auf privat zuerst das Hosting klären, sonst geht die Seite offline.
+- Keine Cookies, kein Tracking – bleibt so; falls Statistik nötig: cookiefreie Zähler (Plausible/Umami) und Datenschutzerklärung ergänzen.
+
 ## Lizenz
 
-MIT. Karten © OpenFreeMap / OpenMapTiles / OpenStreetMap-Mitwirkende.
+Proprietär – siehe `LICENSE`. Frühere Versionen (bis Commit 36c846c) standen unter MIT; für diese gilt MIT weiter.

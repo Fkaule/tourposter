@@ -1,9 +1,16 @@
-MIT License
+Copyright (c) 2026 Felix Kaule. Alle Rechte vorbehalten. / All rights reserved.
 
-Copyright (c) 2026 Felix Kaule
+Dieser Quellcode ist urheberrechtlich geschützt. Jede Nutzung, Vervielfältigung,
+Veränderung, Veröffentlichung oder kommerzielle Verwertung – ganz oder in Teilen –
+bedarf der vorherigen schriftlichen Zustimmung des Rechteinhabers.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Die Nutzung der unter https://tourposter.online bereitgestellten Anwendung
+ist für private Zwecke gestattet; ein Anspruch auf Verfügbarkeit besteht nicht.
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+Hinweis: Frühere Versionen dieses Repositories (bis Commit 36c846c, September 2026)
+wurden unter der MIT-Lizenz veröffentlicht. Für diese Versionen gilt die MIT-Lizenz
+weiterhin; sie erstreckt sich nicht auf spätere Änderungen.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Enthaltene Bibliotheken unterliegen ihren jeweiligen Lizenzen (siehe package.json):
+fit-file-parser, exifr, maplibre-gl (BSD-3), jspdf, @mapbox/vector-tile, pbf, jszip, libheif-js (LGPL).
+Kartendaten: © OpenStreetMap-Mitwirkende (ODbL), Kacheln: OpenFreeMap.
