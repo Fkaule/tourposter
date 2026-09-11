@@ -1202,21 +1202,48 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const POI_PREF = { peak: .5, volcano: .5, cave_entrance: .5, viewpoint: .55, waterfall: .55, spring: .6, ruins: .6, castle: .6,
     monument: .65, memorial: .65, tower: .7, attraction: .7, alpine_hut: .7, shelter: .8, museum: .8, information: 1.1, picnic_site: 1.1 };
   async function detailPoi(lat, lon, radius = 700) {
-    const tpl = await tileTemplate(); if (!tpl || typeof VectorTile === 'undefined') return null;
-    const tiles = areaTiles(14, [[lat, lon]], radius); let best = null;
+    const tpl = await tileTemplate(); if (!tpl || typeof VectorTile === 'undefined') return [];
+    const tiles = areaTiles(14, [[lat, lon]], radius); const out = new Map();
     await Promise.all(tiles.map(async ([x, y]) => { const vt = await tileFetch(14, x, y); if (!vt) return;
       for (const ln of ['mountain_peak', 'poi', 'water_name', 'park', 'place']) { const layer = vt.layers[ln]; if (!layer) continue;
         for (let i = 0; i < layer.length; i++) { const f = layer.feature(i).toGeoJSON(x, y, 14); const pr = f.properties;
           const name = pr.name || pr['name:de'] || pr['name:latin']; if (!name) continue;
           const c = centroid(f.geometry); if (!c) continue; const d = hav([lat, lon], [c[1], c[0]]); if (d > radius) continue;
           const w = POI_PREF[pr.class] ?? (ln === 'mountain_peak' ? .5 : ln === 'poi' ? 1.4 : 1);
-          const score = d * w; if (!best || score < best.score) best = { score, d, name, cls: pr.class }; } } }));
-    return best;
+          const score = d * w, prev = out.get(name); if (!prev || score < prev.score) out.set(name, { score, d, name, cls: pr.class }); } } }));
+    return [...out.values()].sort((a, b) => a.score - b.score);
   }
   const pendingDetail = new Set();
   function queueDetail(obj, key, done, mode = 'near') {
     if (pendingDetail.has(key) || !map) return; pendingDetail.add(key);
     detailPlace(obj.lat, obj.lon, mode).then(b => { if (b) done(b); else { const n = nearestPlace(obj.lat, obj.lon, 'near') || nearestPlace(obj.lat, obj.lon, 'city'); if (n && n.d < 15000) done({ name: n.name }); else obj.detailFailed = true; } }).catch(() => { obj.detailFailed = true; }).finally(() => pendingDetail.delete(key));
+  }
+  // Ortsnamen der Fotos nacheinander vergeben (nicht parallel): sonst sehen sich die Anfragen gegenseitig nicht
+  // und bei einer kurzen Rundtour bekommen alle Fotos denselben nächstgelegenen Namen.
+  let namingRun = false;
+  async function nameThePhotos() {
+    namingRun = true;
+    try {
+      const km = state.stages.reduce((s, x) => s + x.distance, 0) / 1000;
+      const used = new Set(state.photos.filter(p => p.place).map(p => p.place.toLowerCase()));
+      for (const p of state.photos) {
+        if (p.place || p.lat == null || p.detailTried) continue;
+        p.detailTried = true;
+        const cands = [];
+        const b = await detailPlace(p.lat, p.lon).catch(() => null);
+        // Bei kurzen Touren zuerst die feinen Punkte, sonst zuerst den Ortsnamen
+        const pois = (km < 30 || !b) ? await detailPoi(p.lat, p.lon).catch(() => []) : [];
+        if (km < 30) { cands.push(...pois.map(q => q.name)); if (b) cands.push(b.name); }
+        else { if (b) cands.push(b.name); cands.push(...pois.map(q => q.name)); }
+        let name = cands.find(n => n && !used.has(n.toLowerCase()));
+        if (!name && !cands.length) { const extra = await detailPoi(p.lat, p.lon, 1200).catch(() => []);
+          name = extra.map(q => q.name).find(n => !used.has(n.toLowerCase())); }
+        if (!name) { const n = nearestPlace(p.lat, p.lon, 'near') || nearestPlace(p.lat, p.lon, 'city');
+          if (n && n.d < 15000 && !used.has(n.name.toLowerCase())) name = n.name; }
+        if (!name) name = cands[0] || null;   // lieber doppelt als gar nichts
+        if (name) { used.add(name.toLowerCase()); p.place = name; render(); }
+      }
+    } catch (e) { console.warn('Ortsnamen', e); } finally { namingRun = false; }
   }
   function fillPlaceNames() {
     let changed = false;
@@ -1224,23 +1251,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const p of state.places) if (!p.text && !p.edited && p.detailTried && !pendingDetail.has('pl' + p.key)) { const b = nearestPlace(p.lat, p.lon); if (b && b.d < 12000) { p.text = b.name; changed = true; } }
     // Bildunterschrift: genauer Ort (Dorf/Stadtteil) aus der Detail-Kachel. Bei kurzen Touren oder wenn zwei Fotos
     // denselben Ortsnamen bekämen, stattdessen den nächsten benannten Punkt (Gipfel, Höhle, Aussicht, Gewässer …).
-    const km = state.stages.reduce((s, x) => s + x.distance, 0) / 1000;
-    for (const p of state.photos) if (!p.place && p.lat != null) {
-      if (p.detailTried) continue; p.detailTried = true;
-      const key = 'ph' + p.id; if (pendingDetail.has(key) || !map) continue; pendingDetail.add(key);
-      (async () => {
-        const taken = () => state.photos.filter(q => q.id !== p.id && q.place).map(q => q.place.toLowerCase());
-        let name = null;
-        const b = await detailPlace(p.lat, p.lon).catch(() => null);
-        if (b) name = b.name;
-        if (!name || km < 30 || taken().includes((name || '').toLowerCase())) {
-          const poi = await detailPoi(p.lat, p.lon).catch(() => null);
-          if (poi && !taken().includes(poi.name.toLowerCase())) name = poi.name;
-        }
-        if (!name) { const n = nearestPlace(p.lat, p.lon, 'near') || nearestPlace(p.lat, p.lon, 'city'); if (n && n.d < 15000) name = n.name; }
-        if (name && !p.place) { p.place = name; render(); }
-      })().catch(() => { p.detailFailed = true; }).finally(() => pendingDetail.delete(key));
-    }
+    if (map && !namingRun && state.photos.some(p => !p.place && p.lat != null && !p.detailTried)) nameThePhotos();
     return changed;
   }
   const placesEl = $('#places'); let selPlace = null, placeDrag = null, lastPlace = { key: null, t: 0 };
