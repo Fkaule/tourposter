@@ -1402,7 +1402,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     // Aufnahmeorte der Fotos als nummerierte Punkte auf der Kurve
     let fo = ''; if (state.photos.length && state.showPhotoDots !== false) { const eleAt = d => { let i = 0; while (i < xs.length - 1 && xs[i + 1] < d) i++; return ys[i] ?? 0; };
       for (const p of state.photos) { const d = photoDist(p); if (d == null) continue; const x = X(d), y = Y(Math.min(eleAt(d), ymax));
-        fo += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${fz(7.5)}" fill="${T.pinBg}" stroke="${T.halo}" stroke-width="1.8"/><text x="${x.toFixed(1)}" y="${(y + +fz(3.2)).toFixed(1)}" fill="${T.pinFg}" font-size="${fz(8.5)}" font-weight="700" text-anchor="middle" font-family="Montserrat">${p.num}</text>`; } }
+        fo += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${fz(7.5)}" fill="${T.pinBg}"/><text x="${x.toFixed(1)}" y="${(y + +fz(3.2)).toFixed(1)}" fill="${T.pinFg}" font-size="${fz(8.5)}" font-weight="700" text-anchor="middle" font-family="Montserrat">${p.num}</text>`; } }
     profGeom = { x0, x1, yt, yb, ymax, total, H, fz: +fz(1), eleAt: d => { let i = 0; while (i < xs.length - 1 && xs[i + 1] < d) i++; return ys[i] ?? 0; } };
     svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="${T.accent}" fill-opacity=".37"/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="1.6" stroke-linejoin="round"/>` + b + pk + fo +
       `<text x="${x0}" y="20" fill="${T.muted}" font-size="${fz(11)}" font-weight="700" letter-spacing="2.4" font-family="Montserrat">HÖHENPROFIL</text><text x="${x1}" y="20" fill="${T.muted}" font-size="${fz(11)}" text-anchor="end" font-family="Montserrat">Höchster Punkt ${nf(maxE)} m</text>` +
