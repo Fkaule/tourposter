@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tourposter – Raumfoto kalibrieren</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --line:#2a323c; --text:#e6edf3; --muted:#9aa5b1; --accent:#e0723c; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:13px/1.5 -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+  header { padding:14px 18px; border-bottom:1px solid var(--line); display:flex; gap:14px; align-items:baseline; flex-wrap:wrap; }
+  h1 { font-size:15px; margin:0; font-weight:700; }
+  .muted { color:var(--muted); }
+  main { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:16px; padding:16px; align-items:start; }
+  @media (max-width:900px) { main { grid-template-columns:1fr; } }
+  .stage { position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; min-height:240px; display:grid; place-items:center; }
+  .stage canvas { display:block; max-width:100%; }
+  .drop { padding:60px 20px; text-align:center; color:var(--muted); }
+  aside { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; }
+  label { display:block; margin:10px 0 4px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  input, textarea, select { width:100%; padding:7px 9px; background:#0d1117; border:1px solid var(--line); border-radius:6px; color:var(--text); font:12px/1.4 ui-monospace, Menlo, Consolas, monospace; }
+  textarea { height:150px; resize:vertical; }
+  button { margin-top:10px; width:100%; padding:9px; border-radius:7px; border:1px solid var(--line); background:#1f262e; color:var(--text); font-weight:600; cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#160d07; }
+  button:hover { border-color:var(--accent); }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  ol { padding-left:18px; margin:6px 0 0; color:var(--muted); }
+  ol li { margin:3px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Raumfoto kalibrieren</h1>
+  <span class="muted">Foto hineinziehen · vier Ecken eines Rechtecks an der Wand setzen · Maße eintragen · JSON in <code>ROOMS</code> der App eintragen</span>
+</header>
+<main>
+  <div class="stage" id="stage"><div class="drop" id="drop">Foto hierher ziehen oder <label style="display:inline;text-transform:none;letter-spacing:0;color:var(--accent);cursor:pointer">auswählen<input type="file" accept="image/*" hidden id="file"></label></div></div>
+  <aside>
+    <ol>
+      <li>Foto laden.</li>
+      <li>Die vier Punkte auf die Ecken einer bekannten rechteckigen Fläche an der Wand ziehen (Fenster, Tür, Bild, aufgeklebtes Blatt) – Reihenfolge: oben links, oben rechts, unten rechts, unten links.</li>
+      <li>Deren Breite und Höhe in cm eintragen sowie die Höhe der Unterkante über dem Boden.</li>
+      <li>Testposter prüfen, JSON kopieren.</li>
+    </ol>
+    <label>Name der Szene</label><input id="name" value="Wohnzimmer">
+    <label>ID (Dateiname ohne Endung)</label><input id="id" value="wohnzimmer">
+    <div class="row"><div><label>Breite (cm)</label><input id="cw" type="number" value="100" step="1"></div><div><label>Höhe (cm)</label><input id="ch" type="number" value="140" step="1"></div></div>
+    <div class="row"><div><label>Unterkante über Boden (cm)</label><input id="cb" type="number" value="90" step="1"></div><div><label>Poster-Mitte x (cm)</label><input id="cx" type="number" value="50" step="1"></div></div>
+    <label>Testposter</label>
+    <select id="tp"><option value="42,59.4">A2 · 42 × 59,4 cm</option><option value="29.7,42">A3 · 29,7 × 42 cm</option><option value="50,70">50 × 70 cm</option><option value="70,100">70 × 100 cm</option><option value="59.4,84.1">A1 · 59,4 × 84,1 cm</option></select>
+    <label>Rahmen</label>
+    <select id="tf"><option value="black">schwarz</option><option value="oak">Eiche</option><option value="white">weiß</option><option value="none">ohne</option></select>
+    <label>JSON für ROOMS</label><textarea id="out" readonly></textarea>
+    <button class="primary" id="copy">JSON kopieren</button>
+    <button id="save">Bild speichern</button>
+  </aside>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+// --- gleiche Mathematik wie in der App ---
+function solve8(A, b) { const n = 8;
+  for (let i = 0; i < n; i++) { let p = i; for (let r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[p][i])) p = r;
+    [A[i], A[p]] = [A[p], A[i]]; [b[i], b[p]] = [b[p], b[i]];
+    for (let r = i + 1; r < n; r++) { const f = A[r][i] / A[i][i]; if (!f) continue; for (let c = i; c < n; c++) A[r][c] -= f * A[i][c]; b[r] -= f * b[i]; } }
+  const x = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) { let s = b[i]; for (let c = i + 1; c < n; c++) s -= A[i][c] * x[c]; x[i] = s / A[i][i]; }
+  return x; }
+function homography(src, dst) { const A = [], b = [];
+  for (let i = 0; i < 4; i++) { const [x, y] = src[i], [u, v] = dst[i];
+    A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); b.push(u);
+    A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); b.push(v); }
+  const h = solve8(A, b); h.push(1); return h; }
+const applyH = (h, x, y) => { const d = h[6] * x + h[7] * y + h[8]; return [(h[0] * x + h[1] * y + h[2]) / d, (h[3] * x + h[4] * y + h[5]) / d]; };
+const quadPath = (ctx, q) => { ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]); for (let i = 1; i < 4; i++) ctx.lineTo(q[i][0], q[i][1]); ctx.closePath(); };
+
+let img = null, pts = null, drag = -1;
+const cv = document.createElement('canvas'), ctx = cv.getContext('2d');
+function setImg(im) { img = im; cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+  const w = im.naturalWidth, h = im.naturalHeight;
+  pts = [[w * .35, h * .25], [w * .6, h * .25], [w * .6, h * .62], [w * .35, h * .62]];
+  $('#stage').innerHTML = ''; $('#stage').appendChild(cv); draw(); }
+function scaleF() { return cv.clientWidth / cv.width || 1; }
+function draw() {
+  if (!img) return; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.drawImage(img, 0, 0);
+  const W = +$('#cw').value, H = +$('#ch').value, base = +$('#cb').value, cx = +$('#cx').value;
+  const [pw, ph] = $('#tp').value.split(',').map(Number), frame = $('#tf').value;
+  const h = homography([[0, H], [W, H], [W, 0], [0, 0]], pts);
+  const cyc = 150 - base;
+  const fw = { none: 0, black: 2, oak: 3.5, white: 3 }[frame] || 0, fc = { black: '#1a1a1a', oak: '#b48a55', white: '#f2f0ea' }[frame] || '#fff';
+  const outer = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => applyH(h, cx + sx * (pw / 2 + fw), cyc - sy * (ph / 2 + fw)));
+  const inner = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => applyH(h, cx + sx * pw / 2, cyc - sy * ph / 2));
+  const off = Math.max(2, Math.hypot(cv.width, cv.height) * .004);
+  ctx.save(); ctx.filter = `blur(${(off * 1.6).toFixed(1)}px)`; ctx.globalAlpha = .38; ctx.fillStyle = '#000';
+  quadPath(ctx, outer.map(p => [p[0] + off * .6, p[1] + off * 1.2])); ctx.fill(); ctx.restore();
+  if (fw) { ctx.fillStyle = fc; quadPath(ctx, outer); ctx.fill(); }
+  ctx.fillStyle = '#f4ece0'; quadPath(ctx, inner); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = Math.max(1, off * .2); ctx.stroke();
+  // Kalibrier-Rechteck und Griffe
+  ctx.save(); ctx.strokeStyle = '#e0723c'; ctx.lineWidth = Math.max(1.5, cv.width / 600); ctx.setLineDash([8, 6]); quadPath(ctx, pts); ctx.stroke(); ctx.restore();
+  const r = Math.max(6, cv.width / 160);
+  pts.forEach((p, i) => { ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, 7); ctx.fillStyle = i === drag ? '#fff' : '#e0723c'; ctx.fill(); ctx.strokeStyle = '#160d07'; ctx.lineWidth = 2; ctx.stroke(); });
+  $('#out').value = JSON.stringify({ id: $('#id').value, name: $('#name').value, src: 'rooms/' + $('#id').value + '.jpg',
+    cal: { q: pts.map(p => [Math.round(p[0]), Math.round(p[1])]), w: W, h: H, base, cx } }, null, 1);
+}
+function pos(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * cv.width, (e.clientY - r.top) / r.height * cv.height]; }
+cv.addEventListener('pointerdown', e => { const [x, y] = pos(e); let best = -1, bd = 1e9;
+  pts.forEach((p, i) => { const d = Math.hypot(p[0] - x, p[1] - y); if (d < bd) { bd = d; best = i; } });
+  if (bd < cv.width / 40) { drag = best; cv.setPointerCapture(e.pointerId); draw(); } });
+cv.addEventListener('pointermove', e => { if (drag < 0) return; pts[drag] = pos(e); draw(); });
+cv.addEventListener('pointerup', () => { drag = -1; draw(); });
+for (const id of ['cw', 'ch', 'cb', 'cx', 'tp', 'tf', 'name', 'id']) $('#' + id).addEventListener('input', draw);
+$('#copy').addEventListener('click', () => { navigator.clipboard.writeText($('#out').value); $('#copy').textContent = 'Kopiert'; setTimeout(() => $('#copy').textContent = 'JSON kopieren', 1200); });
+$('#save').addEventListener('click', () => { const a = document.createElement('a'); a.download = ($('#id').value || 'raum') + '_test.jpg'; a.href = cv.toDataURL('image/jpeg', .92); a.click(); });
+function load(f) { const u = URL.createObjectURL(f); const im = new Image(); im.onload = () => { setImg(im); }; im.src = u; }
+$('#file').addEventListener('change', e => { if (e.target.files[0]) load(e.target.files[0]); });
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { e.preventDefault(); const f = [...e.dataTransfer.files].find(f => f.type.startsWith('image/')); if (f) load(f); });
+</script>
+</body>
+</html>
