@@ -2,6 +2,7 @@ node_modules/
 *.fit
 *.gpx
 *.jpg
+!rooms/*.jpg
 *.jpeg
 *.png
 *.pdf

@@ -405,7 +405,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
 <script>window.__errs = []; window.addEventListener('error', e => { window.__errs.push((e.message || 'Fehler') + (e.lineno ? ' (Zeile ' + e.lineno + ')' : '')); });</script>
 <script>/*VENDOR_JS*/</script>
-<script id="roomsdata" type="application/json">[]</script>
+<script id="roomsdata" type="application/json">[{"id": "wohnzimmer", "name": "Wohnzimmer", "src": "rooms/wohnzimmer.jpg", "note": "KI-generiertes Beispielbild", "cal": {"q": [[460.4, 319.9], [1227.6, 319.9], [1227.6, 1087.2], [460.4, 1087.2]], "w": 200, "h": 200, "base": 0, "cx": 113}}]</script>
 <script id="heifsrc" type="text/plain">/*HEIF_B64*/</script>
 <script>if (typeof FitParser === 'undefined' || typeof maplibregl === 'undefined') { window.__errs.unshift('Bibliotheks-Skript wurde nicht ausgeführt (' + (window.__vendorFail ? 'Ladefehler' : 'kein Ladefehler gemeldet') + ', ' + location.protocol + ')'); document.addEventListener('DOMContentLoaded', () => { const s = document.getElementById('status'); s.className = 'err'; s.textContent = 'Bibliotheken konnten nicht starten: ' + (window.__errs[0] || 'unbekannt') + ' – Browser: ' + navigator.userAgent; }); }</script>
 <script>
@@ -722,6 +722,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     // Licht und Schatten des Raums übernehmen
     const sh = shadeLayer(photo, outer);
     if (sh) { ctx.save(); quadPath(ctx, outer); ctx.clip(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = .55; ctx.drawImage(sh.canvas, sh.x0, sh.y0); ctx.restore(); }
+    // Hinweis, dass die Szene ein KI-generiertes Beispielbild ist
+    if (room.note) { const fs = Math.max(11, cv.height * .018); ctx.save(); ctx.font = `600 ${fs}px Montserrat, Arial, sans-serif`;
+      const tw = ctx.measureText(room.note).width; ctx.globalAlpha = .55; ctx.fillStyle = '#000';
+      ctx.fillRect(cv.width - tw - fs * 1.6, cv.height - fs * 2.4, tw + fs * 1.1, fs * 1.7);
+      ctx.globalAlpha = .95; ctx.fillStyle = '#fff'; ctx.fillText(room.note, cv.width - tw - fs * 1.05, cv.height - fs * 1.15); ctx.restore(); }
     // Glasglanz (nur mit Rahmen)
     if (fw) { const g = ctx.createLinearGradient(inner[0][0], inner[0][1], inner[2][0], inner[2][1]);
       g.addColorStop(0, 'rgba(255,255,255,.16)'); g.addColorStop(.45, 'rgba(255,255,255,.02)'); g.addColorStop(1, 'rgba(255,255,255,.09)');
@@ -745,7 +750,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     $('#wallcol').closest('label').style.display = room ? 'none' : '';
     if (!room) { $('#wallscene').innerHTML = wallScene(pw, ph, frame, $('#wallcol').value, wallImg);
       $('#wallinfo').textContent = `Maßstabsgetreu: Wand 4,8 m breit, Raumhöhe 2,65 m, Sofa 2,2 m, Rennrad 1,76 m. Poster ${pw} × ${ph} cm, Mitte auf 1,50 m Höhe.${tail}`; return; }
-    $('#wallinfo').textContent = `${room.name}: Poster ${pw} × ${ph} cm, maßstabsgetreu ins Foto gerechnet, Mitte auf 1,50 m Höhe.${tail}`;
+    $('#wallinfo').textContent = `${room.name}: Poster ${pw} × ${ph} cm, maßstabsgetreu ins Foto gerechnet, Mitte auf 1,50 m Höhe.${room.note ? ' ' + room.note + '.' : ''}${tail}`;
     photoScene(room, pw, ph, frame, wallImg).then(cv => { if (seq !== wallSeq) return; $('#wallscene').innerHTML = ''; $('#wallscene').appendChild(cv); })
       .catch(e => { console.error(e); if (seq !== wallSeq) return; $('#wallroom').value = 'svg'; say('Raumfoto nicht verfügbar – zeige die Illustration.', 'warn'); drawWall(); });
   }
