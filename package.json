@@ -15,8 +15,7 @@
     "jszip": "^3.10.1",
     "libheif-js": "^1.23.2",
     "maplibre-gl": "^4.7.1",
-    "pbf": "^3.3.0",
-    "three": "^0.169.0"
+    "pbf": "^3.3.0"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"
