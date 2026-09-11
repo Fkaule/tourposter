@@ -56,6 +56,8 @@ aside h1 { margin:0; font-size:21px; font-weight:900; letter-spacing:-.035em; li
 #stage.setpos #map { pointer-events:auto; }
 #stage.setpos #map, #stage.setpos #map * { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23000' stroke-width='3.5' opacity='.6'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Cg stroke='%23000' stroke-width='3.5' opacity='.6'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='1.5'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='1.6' fill='%23ff5a36'/%3E%3C/svg%3E") 20 20, crosshair !important; }
 #stage.setpos #tiles, #stage.setpos #pins, #stage.setpos #places { pointer-events:none; }
+#stage.setpos #band { pointer-events:auto; cursor:crosshair; }
+#stage.setpos #band::after { content:'Klick ins Profil: Ort nach Streckenkilometer'; position:absolute; left:50%; top:-22px; transform:translateX(-50%); font:600 10px Montserrat, Arial, sans-serif; letter-spacing:.1em; color:var(--pmuted); pointer-events:none; }
 .tile .geos { display:flex; gap:4px; }
 .tile .num:hover { box-shadow:0 0 0 2px #f2b632; }
 /* Icons nur beim Überfahren; markiertes Foto zeigt sie dezent; fehlender Ort bleibt immer sichtbar (bis gesetzt) */
@@ -284,6 +286,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     <div class="step on" data-t="tour">
       <h2><span class="no">1</span>Tour <span class="sub" id="mapinfo"></span></h2>
       <label class="drop" id="dropfit"><b>FIT / GPX / TCX</b> hierher ziehen oder tippen<br><span style="font-size:11px">mehrere Dateien = Etappen (Übernachtung am Etappenende)</span><input type="file" accept=".fit,.gpx,.tcx,.FIT,.GPX" multiple></label>
+      <label class="f" style="margin-top:10px">Sportart</label>
+      <select id="sport" title="Bestimmt Titelvorschlag, Untertitel und Kennzahlen"><option value="">automatisch (aus der Datei)</option><option value="bike">Rad</option><option value="hike">Wandern</option><option value="canoe">Kanu</option></select>
       <div class="list" id="stages"></div>
     </div>
 
@@ -320,11 +324,15 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <option value="hell">Hell – helle Karte, Rot</option>
         <option value="retro">Retro – bunte Karte, Ziegel</option>
       </select>
+      <label class="switch" style="margin-top:8px"><input type="checkbox" id="terrain"><span class="kn"></span><span>Geländeschummerung<small>Berge plastisch – Höhendaten von AWS Terrain Tiles, wird beim Einschalten nachgeladen</small></span></label>
       <div class="grid2" style="margin-top:8px">
         <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div>
       </div>
       <label class="switch" style="margin-top:8px"><input type="checkbox" id="showband" checked><span class="kn"></span><span>Höhenprofil<small>Höhe automatisch nach Bergigkeit, per Ziehen der Oberkante änderbar</small></span></label>
       <label class="switch" style="margin-top:6px"><input type="checkbox" id="showpeaks" checked><span class="kn"></span><span>Gipfel &amp; Pässe im Profil<small>Namen und Höhen aus den Kartendaten, wenn die Route darüber führt</small></span></label>
+      <label class="switch" style="margin-top:6px"><input type="checkbox" id="peakmap"><span class="kn"></span><span>Gipfel auch auf der Karte<small>Dreieck mit Name und Höhe an der Route</small></span></label>
+      <label class="f">Gipfel ab Prominenz <span id="peakthrval">automatisch</span></label>
+      <input type="range" id="peakthr" min="30" max="600" step="10" value="150" style="width:100%" title="Wie stark ein Anstieg herausragen muss, um als Gipfel zu gelten – kleiner Wert findet mehr. Doppelklick = zurück auf Automatik">
       <button class="btn" id="wallbtn" style="margin-top:12px" title="Maßstabsgetreue Vorschau im Wohnzimmer – zum Einschätzen von Größe und Wirkung">An der Wand ansehen <small>Größenvorschau</small></button>
       <label class="f">Farbabstimmung der Fotos <span id="gradeval">60 %</span></label>
       <input type="range" id="grade" min="0" max="100" step="5" value="60" style="width:100%" title="Fotos an die Farbstimmung des Posters angleichen: Sättigung dämpfen, Tönung in der Themenfarbe">
@@ -363,10 +371,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     <div id="wall" hidden>
       <div class="wallbox">
         <div class="hhead"><b>An der Wand</b><div class="wallopts">
-          <label>Szene <select id="wallroom"><option value="svg">Illustration</option></select></label>
+          <label>Szene <select id="wallroom"></select></label>
           <label>Größe <select id="wallsize"></select></label>
+          <label>Ausrichtung <select id="wallorient"><option value="portrait">Hochkant</option><option value="landscape">Quer</option></select></label>
+          <label>Stil <select id="wallstyle"><option value="nacht">Nacht</option><option value="fjord">Fjord</option><option value="hell">Hell</option><option value="retro">Retro</option></select></label>
           <label>Rahmen <select id="wallframe"><option value="none" selected>ohne</option><option value="black">schwarz, schmal</option><option value="oak">Eiche</option><option value="white">weiß</option></select></label>
-          <label>Wand <select id="wallcol"><option value="#efe9df">warmweiß</option><option value="#d9d5cf">hellgrau</option><option value="#c9cdbf">salbei</option><option value="#3f4a45">dunkelgrün</option><option value="#b9a99a">terrakotta hell</option></select></label>
           <button class="btn ghost" id="walluse" style="width:auto;margin:0;padding:6px 10px;font-size:11px">Größe übernehmen</button>
         </div><button id="wallclose">×</button></div>
         <div id="wallscene"></div>
@@ -392,10 +401,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="16" y="12" width="40" height="28" rx="4" class="ph"/><rect x="12" y="8" width="8" height="8" class="hd"/><rect x="52" y="8" width="8" height="8" class="hd"/><rect x="12" y="36" width="8" height="8" class="hd"/><rect x="52" y="36" width="8" height="8" class="hd"/><rect x="30" y="9" width="12" height="4" class="hd"/><rect x="55" y="20" width="4" height="12" class="hd"/></svg><b>Größe</b>Ecken = proportional, Kantengriffe = nur Breite/Höhe. Shift an der Ecke hält das Seitenverhältnis fest.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="14" y="10" width="40" height="30" rx="4" class="ph"/><rect x="18" y="14" width="32" height="22" class="dash"/><circle cx="62" cy="40" r="7" class="ring"/><path d="M62 35v10M57 40h10" class="ar"/></svg><b>Ausschnitt</b>Doppelklick aufs Foto: ziehen verschiebt das Bild im Rahmen, Mausrad/Slider zoomt. Esc beendet.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="10" y="12" width="26" height="20" rx="3" class="ph sel"/><rect x="44" y="18" width="26" height="20" rx="3" class="ph sel"/><text x="40" y="52" class="t">Shift + Klick</text></svg><b>Mehrfachauswahl</b>Shift-Klick wählt mehrere Fotos, die dann zusammen verschoben und ausgerichtet werden.</div>
-          <div class="hc"><svg viewBox="0 0 80 56"><circle cx="18" cy="16" r="9" class="ico lock"/><rect x="14" y="15.5" width="8" height="6" rx="1" fill="#1c1a12"/><path d="M15.5 15.5v-2a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="#1c1a12" stroke-width="1.4"/><circle cx="40" cy="16" r="9" class="ico star"/><path d="M40 10l1.8 3.8 4.2.5-3.1 2.9.8 4.1-3.7-2-3.7 2 .8-4.1-3.1-2.9 4.2-.5z" fill="#1c1a12"/><circle cx="62" cy="16" r="9" class="ico gps"/><path d="M62 10a4 4 0 0 0-4 4c0 3 4 7 4 7s4-4 4-7a4 4 0 0 0-4-4z" fill="#fff"/><text x="40" y="46" class="t">Schloss · Stern · Ort</text></svg><b>Nummer &amp; Icons</b>Klick auf die Nummer = Highlight ★ (größer im Auto-Layout). Beim Überfahren: Schloss = fixiert (Automatik lässt es in Ruhe), Pin/Lupe = Aufnahmeort setzen oder suchen.</div>
+          <div class="hc"><svg viewBox="0 0 80 56"><circle cx="18" cy="16" r="9" class="ico lock"/><rect x="14" y="15.5" width="8" height="6" rx="1" fill="#1c1a12"/><path d="M15.5 15.5v-2a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="#1c1a12" stroke-width="1.4"/><circle cx="40" cy="16" r="9" class="ico star"/><path d="M40 10l1.8 3.8 4.2.5-3.1 2.9.8 4.1-3.7-2-3.7 2 .8-4.1-3.1-2.9 4.2-.5z" fill="#1c1a12"/><circle cx="62" cy="16" r="9" class="ico gps"/><path d="M62 10a4 4 0 0 0-4 4c0 3 4 7 4 7s4-4 4-7a4 4 0 0 0-4-4z" fill="#fff"/><text x="40" y="46" class="t">Schloss · Stern · Ort</text></svg><b>Nummer &amp; Icons</b>Klick auf die Nummer = Highlight ★ (größer im Auto-Layout). Beim Überfahren: Schloss = fixiert (Automatik lässt es in Ruhe), Pin/Lupe = Aufnahmeort setzen oder suchen – setzen geht per Klick auf die Karte oder ins Höhenprofil.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 40c10-20 20 10 30-6s20-14 34 2" class="route"/><rect x="26" y="6" width="28" height="12" rx="6" class="btn"/><text x="40" y="15" class="tb">Karte</text></svg><b>Karte</b>Button „Karte“ oben rechts, dann verschieben/zoomen (Maus, Finger oder Slider). „Auf Route einpassen“ setzt zurück.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 30c14-10 30-12 64-8" class="route"/><text x="30" y="20" class="tl">Ortsname</text><circle cx="52" cy="26" r="2.5" fill="#fff"/><path d="M52 26L46 21" class="dash2"/></svg><b>Ortsnamen</b>Start, Ziel, Übernachtungen: ziehen = verschieben, Doppelklick = Text ändern, Entf = ausblenden.</div>
-          <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Höhe richtet sich nach der Bergigkeit der Tour; Oberkante ziehen = Höhe, Doppelklick = zurück auf Automatik. Abschalten im Poster-Block.</div>
+          <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Höhe richtet sich nach der Bergigkeit der Tour; Oberkante ziehen = Höhe, Doppelklick = zurück auf Automatik. Fotos erscheinen als nummerierte Punkte. Beim Ort setzen kann man statt auf die Karte auch ins Profil klicken – nahe Gipfel rasten ein.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><text x="10" y="24" class="th">Titel</text><rect x="8" y="8" width="44" height="22" class="dash"/><text x="10" y="42" class="t2">Untertitel · 209 km</text></svg><b>Texte</b>Titel, Untertitel und Kennzahlen direkt im Poster anklicken und tippen (Enter = neue Zeile).</div>
         </div>
         <div class="hfoot">Alles bleibt auf deinem Rechner. Die Sitzung wird automatisch im Browser gesichert – zum Archivieren oder Weitergeben „Projekt sichern (.zip)“.</div>
@@ -458,7 +467,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     else if (map && map.getSource && map.getSource('route')) addRouteLayers();
     render();
   }
-  $('#theme').addEventListener('change', e => applyTheme(e.target.value));
+  $('#theme').addEventListener('change', e => { applyTheme(e.target.value); if (map && map.isStyleLoaded()) { terrainLayer(); peakLayer(); } });
 
   // ------------------------------------------------------------ Karte
   let map = null, fallback = false;
@@ -474,7 +483,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     map.on('sourcedata', e => { if (e.isSourceLoaded && fillPlaceNames()) render(); });
     map.on('error', e => {
       const msg = e?.error?.message || '';
-      if (!fallback && !map.isStyleLoaded() && /fetch|style|network|load/i.test(msg)) { fallback = true; say('Kartenstil nicht erreichbar (offline?) – Route wird ohne Karte gezeigt.', 'err'); map.setStyle({ version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': T.bg } }] }); }
+      if (!fallback && !map.isStyleLoaded() && /fetch|style|network|load/i.test(msg)) { fallback = true; say('Kartenstil nicht erreichbar (offline?) – Route wird ohne Karte gezeigt.', 'err'); map.setStyle({ version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': T.bg } }] }); map.once('styledata', () => setTimeout(addRouteLayers, 200)); }
       else if (/fetch/i.test(msg)) say('Kartenkacheln nicht erreichbar – Internetverbindung?', 'err');
     });
   }
@@ -515,6 +524,42 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     map.addLayer({ id: 'pts-end', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'end'], paint: { 'circle-radius': 7, 'circle-color': T.bg, 'circle-stroke-color': T.accent, 'circle-stroke-width': 3 } });
     map.addLayer({ id: 'pts-night', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'night'], paint: { 'circle-radius': 8, 'circle-color': T.accent, 'circle-stroke-color': T.halo, 'circle-stroke-width': 2.5 } });
     map.addLayer({ id: 'pts-night2', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'night'], paint: { 'circle-radius': 2.5, 'circle-color': '#fff' } });
+    terrainLayer(); peakLayer();
+  }
+  // Geländeschummerung aus freien Höhenkacheln (AWS Open Data, terrarium-Kodierung) – nur wenn eingeschaltet
+  const DEM_TILES = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+  function terrainLayer() {
+    if (!map || !map.isStyleLoaded()) return;
+    if (!state.terrain) { if (map.getLayer('hillshade')) map.removeLayer('hillshade'); if (map.getSource('dem')) map.removeSource('dem'); return; }
+    if (!map.getSource('dem')) map.addSource('dem', { type: 'raster-dem', tiles: [DEM_TILES], encoding: 'terrarium', tileSize: 256, maxzoom: 13,
+      attribution: 'Höhendaten: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">AWS Terrain Tiles</a>' });
+    const paint = { 'hillshade-exaggeration': .45, 'hillshade-shadow-color': T.bg === '#0e1520' || T.dark ? '#000' : '#5b4a37', 'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': T.halo || '#ffffff' };
+    if (!map.getLayer('hillshade')) { const before = map.getLayer('route-halo') ? 'route-halo' : undefined;
+      map.addLayer({ id: 'hillshade', type: 'hillshade', source: 'dem', paint }, before); }
+    else for (const k in paint) map.setPaintProperty('hillshade', k, paint[k]);
+  }
+  // Gipfel auf der Karte: kleines Dreieck mit Name und Höhe (optional, Schalter im Poster-Block)
+  function peaksGeo() { return { type: 'FeatureCollection', features: (state.showPeakMap && state.showPeaks !== false ? state.peaks || [] : []).filter(p => p.lat != null)
+    .map(p => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lon, p.lat] }, properties: { label: `${p.name}\n${nf(p.ele)} m` } })) }; }
+  function peakIcon() {
+    if (map.hasImage('peak-tri')) map.removeImage('peak-tri');
+    const s = 26, c = document.createElement('canvas'); c.width = c.height = s; const x = c.getContext('2d');
+    x.beginPath(); x.moveTo(s / 2, 5); x.lineTo(s - 5, s - 6); x.lineTo(5, s - 6); x.closePath();
+    x.fillStyle = T.cap || '#1c1a12'; x.strokeStyle = T.halo || '#fff'; x.lineWidth = 3; x.stroke(); x.fill();
+    map.addImage('peak-tri', { width: s, height: s, data: x.getImageData(0, 0, s, s).data });
+  }
+  const hasGlyphs = () => { try { return !!map.getStyle().glyphs; } catch (e) { return false; } };
+  const styleFont = () => { try { const l = map.getStyle().layers.find(l => l.type === 'symbol' && l.layout && l.layout['text-font']); return l ? l.layout['text-font'] : ['Noto Sans Regular']; } catch (e) { return ['Noto Sans Regular']; } };
+  function peakLayer() {
+    if (!map || !map.isStyleLoaded()) return;
+    peakIcon();
+    if (!map.getSource('peaks')) map.addSource('peaks', { type: 'geojson', data: peaksGeo() });
+    else map.getSource('peaks').setData(peaksGeo());
+    if (!map.getLayer('peaks')) map.addLayer({ id: 'peaks', type: 'symbol', source: 'peaks',
+      layout: Object.assign({ 'icon-image': 'peak-tri', 'icon-size': .8, 'icon-anchor': 'bottom', 'icon-offset': [0, 4], 'icon-allow-overlap': true },
+        hasGlyphs() ? { 'text-field': ['get', 'label'], 'text-font': styleFont(), 'text-size': 12, 'text-offset': [0, .45], 'text-anchor': 'top', 'text-line-height': 1.15, 'text-allow-overlap': false } : {}),
+      paint: { 'text-color': T.cap || '#1c1a12', 'text-halo-color': T.halo || '#fff', 'text-halo-width': 1.6 } });
+    else { map.setPaintProperty('peaks', 'text-color', T.cap || '#1c1a12'); map.setPaintProperty('peaks', 'text-halo-color', T.halo || '#fff'); }
   }
   function fitRoute() {
     const pts = state.stages.flatMap(s => s.points); if (!pts.length) return;
@@ -548,83 +593,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     $('#ordermail').href = `mailto:${ORDER.email}?subject=${subj}&body=${body}`; $('#orderdlg').hidden = false; }
   if ($('#order')) $('#order').addEventListener('click', openOrder);   // Button derzeit ausgeblendet – Druckservice folgt $('#orderclose').addEventListener('click', () => { $('#orderdlg').hidden = true; }); $('#orderdlg').addEventListener('click', e => { if (e.target.id === 'orderdlg') $('#orderdlg').hidden = true; });
   $('#orderpdf').addEventListener('click', () => { $('#orderdlg').hidden = true; $('#expdf').click(); });
-  // ---------- Wandvorschau: maßstabsgetreues Wohnzimmer (cm) mit Stahlrennrad, Poster in echter Größe
-  const WALL = { w: 480, h: 265, floor: 70 };   // Wandbreite, Raumhöhe, sichtbare Bodentiefe (cm)
-  let wallImg = null, wallSizeSel = null;
-  function bikeSvg(x, y, scale, col) {   // klassisches Stahlrennrad, Hinterachse bei (x,y), Maße in cm; Geometrie: Radstand 108, BB-Tiefe 7, Unterrohr mit 3 cm Reifenfreiheit
-    const pt = (px, py) => [x + px * scale, y - py * scale];   // py nach oben
-    const R = 34 * scale, RA = pt(0, 0), FA = pt(108, 0), BB = pt(41, -7), ST = pt(24, 47), HT = pt(85, 54), HB = pt(90, 40), SP = pt(21, 57);
-    const L = (a, b, w, c = col) => `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${c}" stroke-width="${(w * scale).toFixed(2)}" stroke-linecap="round"/>`;
-    const wheel = c => { let sp = ''; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; sp += `<line x1="${c[0].toFixed(1)}" y1="${c[1].toFixed(1)}" x2="${(c[0] + Math.cos(a) * R * .92).toFixed(1)}" y2="${(c[1] + Math.sin(a) * R * .92).toFixed(1)}" stroke="#9aa3ab" stroke-width="${.35 * scale}"/>`; }
-      return `<circle cx="${c[0]}" cy="${c[1]}" r="${R}" fill="none" stroke="#1d2226" stroke-width="${2.6 * scale}"/><circle cx="${c[0]}" cy="${c[1]}" r="${R * .92}" fill="none" stroke="#c9ced3" stroke-width="${1.6 * scale}"/>${sp}<circle cx="${c[0]}" cy="${c[1]}" r="${3 * scale}" fill="#c9ced3" stroke="#6b757e" stroke-width="${.6 * scale}"/>`; };
-    const [bx, by] = BB, [hx, hy] = HT, [sx, sy] = SP, [fx, fy] = FA, [hbx, hby] = HB, [rx, ry] = RA; const cr = 10 * scale, cg = 4 * scale;
-    // Gabel: gerade in Steuerrohr-Richtung weiter, dann nach vorne gebogen (Vorbiegung)
-    const [fsx, fsy] = pt(96.5, 22), [fcx, fcy] = pt(100.5, 11);
-    // Kette: Tangenten oben/unten zwischen Kettenblatt (BB) und Ritzel (Hinterachse)
-    const chain = `<path d="M${(bx).toFixed(1)},${(by - cr).toFixed(1)} L${(rx).toFixed(1)},${(ry - cg).toFixed(1)} M${(bx).toFixed(1)},${(by + cr).toFixed(1)} L${(rx).toFixed(1)},${(ry + cg).toFixed(1)}" fill="none" stroke="#3a4148" stroke-width="${1.1 * scale}"/><circle cx="${rx}" cy="${ry}" r="${cg}" fill="none" stroke="#3a4148" stroke-width="${1.1 * scale}"/>`;
-    const crank = (dx, dy) => `<line x1="${bx}" y1="${by}" x2="${(bx + dx).toFixed(1)}" y2="${(by + dy).toFixed(1)}" stroke="#3a4148" stroke-width="${1.8 * scale}" stroke-linecap="round"/><rect x="${(bx + dx - 3.5 * scale).toFixed(1)}" y="${(by + dy - 1.2 * scale).toFixed(1)}" width="${7 * scale}" height="${2.4 * scale}" rx="${.6 * scale}" fill="#3a4148"/>`;
-    return `<g>${wheel(RA)}${wheel(FA)}${chain}
-      ${L(BB, ST, 2.6)}${L(ST, HT, 2.6)}${L(BB, HB, 2.8)}${L(HT, HB, 3.2)}${L(BB, RA, 1.8)}${L(ST, RA, 1.8)}
-      <path d="M${hbx.toFixed(1)},${hby.toFixed(1)} L${fsx.toFixed(1)},${fsy.toFixed(1)} Q${fcx.toFixed(1)},${fcy.toFixed(1)} ${fx.toFixed(1)},${fy.toFixed(1)}" fill="none" stroke="#c9ced3" stroke-width="${2 * scale}" stroke-linecap="round"/>
-      ${L(ST, SP, 1.6, '#c9ced3')}
-      <path d="M${(sx - 13 * scale).toFixed(1)},${(sy - 1.5 * scale).toFixed(1)} h${(25 * scale).toFixed(1)} c${(2 * scale).toFixed(1)},0 ${(3 * scale).toFixed(1)},${(1 * scale).toFixed(1)} ${(3 * scale).toFixed(1)},${(2 * scale).toFixed(1)} c0,${(1 * scale).toFixed(1)} -${(1 * scale).toFixed(1)},${(1.8 * scale).toFixed(1)} -${(3 * scale).toFixed(1)},${(1.8 * scale).toFixed(1)} h-${(20 * scale).toFixed(1)} c-${(3 * scale).toFixed(1)},0 -${(5 * scale).toFixed(1)},-${(1.5 * scale).toFixed(1)} -${(5 * scale).toFixed(1)},-${(3.8 * scale).toFixed(1)}z" fill="#2b2118"/>
-      <line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${(hx + 9 * scale).toFixed(1)}" y2="${(hy - 2 * scale).toFixed(1)}" stroke="#c9ced3" stroke-width="${1.8 * scale}" stroke-linecap="round"/>
-      <path d="M${(hx + 9 * scale).toFixed(1)},${(hy - 2 * scale).toFixed(1)} l${(9 * scale).toFixed(1)},0 c${(7 * scale).toFixed(1)},0 ${(9 * scale).toFixed(1)},${(5 * scale).toFixed(1)} ${(8 * scale).toFixed(1)},${(10 * scale).toFixed(1)} c-${(1 * scale).toFixed(1)},${(6 * scale).toFixed(1)} -${(6 * scale).toFixed(1)},${(8 * scale).toFixed(1)} -${(11 * scale).toFixed(1)},${(7 * scale).toFixed(1)}" fill="none" stroke="#c9ced3" stroke-width="${1.8 * scale}" stroke-linecap="round"/><path d="M${(hx + 9 * scale).toFixed(1)},${(hy - 2 * scale).toFixed(1)} l${(9 * scale).toFixed(1)},0" stroke="#2b2118" stroke-width="${2.6 * scale}" stroke-linecap="round"/>
-      <circle cx="${bx}" cy="${by}" r="${cr}" fill="none" stroke="#3a4148" stroke-width="${1.4 * scale}"/>
-      ${crank(11 * scale, 12 * scale)}${crank(-11 * scale, -12 * scale)}<circle cx="${bx}" cy="${by}" r="${1.8 * scale}" fill="#3a4148"/>
-    </g>`;
-  }
-  function wallScene(pw, ph, frame, wallc, img) {
-    const W = WALL.w, H = WALL.h, F = WALL.floor, VH = H + F; const light = wallc === '#3f4a45' ? '#59665f' : '#fff';
-    const fr = { none: [0, 'none'], black: [2, '#1a1a1a'], oak: [3.5, '#b48a55'], white: [3, '#f2f0ea'] }[frame] || [0, 'none'];
-    const px = 420 - pw / 2, py = 150 - ph / 2;   // Poster rechts neben dem Sofa, Mitte bei x=412 cm, Augenhöhe 150 cm
-    const floorC = '#c8a374', plank = 12; let planks = '';
-    for (let i = -20; i < W + 40; i += plank) planks += `<path d="M${i},${H} L${i - 24},${VH}" stroke="#a9875c" stroke-width=".6" opacity=".7"/>`;
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${VH}" style="background:#0c1620">
-      <defs>
-        <linearGradient id="wl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".07"/></linearGradient>
-        <linearGradient id="fl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".25"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
-        <filter id="sh" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="1.5" dy="3" stdDeviation="2.2" flood-color="#000" flood-opacity=".35"/></filter>
-        <filter id="sh2" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="1" dy="2" stdDeviation="1.4" flood-color="#000" flood-opacity=".3"/></filter>
-        <linearGradient id="win" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe3ef"/><stop offset="1" stop-color="#eaf2f6"/></linearGradient>
-        <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity=".03"/><stop offset="1" stop-color="#fff" stop-opacity=".12"/></linearGradient>
-      </defs>
-      <clipPath id="cp"><rect width="${W}" height="${VH}"/></clipPath><g clip-path="url(#cp)">
-      <rect width="${W}" height="${H}" fill="${wallc}"/><rect width="${W}" height="${H}" fill="url(#wl)"/>
-      <rect y="${H}" width="${W}" height="${F}" fill="${floorC}"/>${planks}<rect y="${H}" width="${W}" height="${F}" fill="url(#fl)"/>
-      <rect y="${H - 8}" width="${W}" height="8" fill="${wallc === '#3f4a45' ? '#2e3733' : '#f4f1ea'}" stroke="#0000001a" stroke-width=".4"/>
-      <!-- Fenster links -->
-      <g filter="url(#sh2)"><rect x="18" y="52" width="92" height="150" rx="1.5" fill="#f4f1ea"/><rect x="24" y="58" width="80" height="138" fill="url(#win)"/><rect x="63" y="58" width="2.5" height="138" fill="#f4f1ea"/><rect x="24" y="126" width="80" height="2.5" fill="#f4f1ea"/></g>
-      <rect x="10" y="202" width="108" height="4" fill="#e8e4dc"/>
-      <path d="M118,52 L118,202 L136,${H} L136,${H}" fill="#fff" opacity=".08"/>
-      <!-- Sofa -->
-      <g filter="url(#sh)" transform="translate(-22,0)">
-        <rect x="150" y="${H - 90}" width="222" height="52" rx="6" fill="#8a9a8f"/>
-        <rect x="140" y="${H - 66}" width="20" height="60" rx="5" fill="#7f8f84"/><rect x="362" y="${H - 66}" width="20" height="60" rx="5" fill="#7f8f84"/>
-        <rect x="158" y="${H - 52}" width="103" height="26" rx="4" fill="#9aa99e"/><rect x="263" y="${H - 52}" width="103" height="26" rx="4" fill="#9aa99e"/>
-        <rect x="148" y="${H - 26}" width="226" height="18" rx="3" fill="#7f8f84"/>
-        <rect x="156" y="${H - 8}" width="6" height="8" fill="#5b4a3a"/><rect x="360" y="${H - 8}" width="6" height="8" fill="#5b4a3a"/>
-        <rect x="176" y="${H - 84}" width="34" height="34" rx="4" fill="#d9cbb5" transform="rotate(-6 193 ${H - 67})"/><rect x="318" y="${H - 84}" width="34" height="34" rx="4" fill="#b8402c" opacity=".85" transform="rotate(5 335 ${H - 67})"/>
-      </g>
-      <!-- Teppich -->
-      <path d="M120,${H + 14} L440,${H + 14} L470,${H + 58} L90,${H + 58}z" fill="#d8ccb8" opacity=".55"/>
-      <!-- Rad über dem Sofa: Hinterachse bei (184, 130) -> 176 cm lang, Wandhaken -->
-      <g transform="translate(-22,0)"><rect x="237" y="60" width="3" height="20" rx="1" fill="#6b757e"/><rect x="234" y="58" width="9" height="3" rx="1" fill="#6b757e"/>
-      <g filter="url(#sh)">${bikeSvg(184, 130, 1, '#2f4a3f')}</g></g>
-      <!-- Poster -->
-      <g filter="url(#sh)">
-        ${fr[0] ? `<rect x="${px - fr[0]}" y="${py - fr[0]}" width="${pw + 2 * fr[0]}" height="${ph + 2 * fr[0]}" fill="${fr[1]}"/>` : ''}
-        ${img ? `<image href="${img}" x="${px}" y="${py}" width="${pw}" height="${ph}" preserveAspectRatio="none"/>` : `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="#f6efe3"/>`}
-        ${fr[0] ? `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" fill="url(#glass)"/>` : ''}
-      </g>
-      <!-- Maßlinie -->
-      <g stroke="${wallc === '#3f4a45' ? '#dfe5e0' : '#5a4a3a'}" stroke-width=".5" opacity=".7"><line x1="${px}" y1="${py + ph + 10}" x2="${px + pw}" y2="${py + ph + 10}"/><line x1="${px}" y1="${py + ph + 7}" x2="${px}" y2="${py + ph + 13}"/><line x1="${px + pw}" y1="${py + ph + 7}" x2="${px + pw}" y2="${py + ph + 13}"/></g>
-      <text x="${px + pw / 2}" y="${py + ph + 19}" font-family="Montserrat, Arial" font-size="6" font-weight="600" text-anchor="middle" fill="${wallc === '#3f4a45' ? '#dfe5e0' : '#5a4a3a'}">${Math.round(pw)} × ${Math.round(ph)} cm</text>
-      <!-- Pflanze rechts -->
-      <g filter="url(#sh2)" transform="translate(64,0)"><rect x="392" y="${H - 34}" width="22" height="34" rx="3" fill="#b8a99a"/>
-        <path d="M403,${H - 34} c-14,-18 -10,-40 2,-48 c12,8 14,30 -2,48z" fill="#5d7a5c"/><path d="M403,${H - 34} c-20,-6 -30,-24 -22,-36 c14,2 22,20 22,36z" fill="#6e8c6c"/><path d="M403,${H - 34} c20,-6 30,-24 22,-36 c-14,2 -22,20 -22,36z" fill="#517050"/></g>
-      </g></svg>`;
-  }
+  // ---------- Wandvorschau: Poster maßstabsgetreu in ein Raumfoto gerechnet
+  let wallImg = null, wallSizeSel = null, wallSeq = 0, wallBusy = 0;
   // ---------- Raumfoto-Wandvorschau: das gerenderte Poster perspektivisch ins Foto rechnen
   // Je Foto eine Kalibrierung: vier Bildpunkte eines Rechtecks an der Wand (oben links, oben rechts,
   // unten rechts, unten links), dessen Maße in cm und die Höhe seiner Unterkante über dem Boden.
@@ -763,25 +733,29 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   async function openWall() {
     if (!wallSizeSel) { wallSizeSel = $('#wallsize'); for (const [k, p] of Object.entries(PAPER)) if (!p[3]?.px) wallSizeSel.insertAdjacentHTML('beforeend', `<option value="${k}">${p[2] === 'DIN' ? k + ' · ' : ''}${p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm'}</option>`); }
     for (const r of ROOMS) if (!$('#wallroom').querySelector(`option[value="${r.id}"]`)) $('#wallroom').insertAdjacentHTML('beforeend', `<option value="${r.id}">${r.name}</option>`);
-    if (ROOMS.length && $('#wallroom').value === 'svg' && !wallSeq) $('#wallroom').value = ROOMS[0].id;
-    $('#wallroom').closest('label').style.display = ROOMS.length ? '' : 'none';
-    wallSizeSel.value = PAPER[state.paper]?.[3]?.px ? 'A2' : state.paper; $('#wall').hidden = false; $('#wallscene').innerHTML = wallScene(50, 70, $('#wallframe').value, $('#wallcol').value, null); $('#wallinfo').textContent = 'Poster wird gerendert …';
-    try { const c = await renderPrint(900 / 1123); wallImg = c.toDataURL('image/jpeg', .85); } catch (e) { wallImg = null; }
-    drawWall();
+    $('#wallroom').closest('label').style.display = ROOMS.length > 1 ? '' : 'none';
+    wallSizeSel.value = PAPER[state.paper]?.[3]?.px ? 'A2' : state.paper;
+    $('#wallorient').value = state.format === 'landscape' ? 'landscape' : 'portrait';
+    $('#wallstyle').value = state.theme || 'retro';
+    $('#wall').hidden = false; $('#wallscene').innerHTML = ''; $('#wallinfo').textContent = 'Poster wird gerendert …';
+    await renderWallPoster(); drawWall();
   }
-  let wallSeq = 0;
-  function drawWall() { const k = wallSizeSel.value, p = PAPER[k]; if (!p) return; const land = state.format === 'landscape'; const pw = (land ? p[1] : p[0]) / 10, ph = (land ? p[0] : p[1]) / 10;
+  async function renderWallPoster() { const my = ++wallBusy; try { const c = await renderPrint(900 / 1123); if (my === wallBusy) wallImg = c.toDataURL('image/jpeg', .85); } catch (e) { wallImg = null; } }
+  function drawWall() {
+    const k = wallSizeSel.value, p = PAPER[k]; if (!p) return;
+    const land = state.format === 'landscape', pw = (land ? p[1] : p[0]) / 10, ph = (land ? p[0] : p[1]) / 10;
     const frame = $('#wallframe').value, tail = k !== state.paper ? ' „Größe übernehmen“ setzt die Papiergröße im Poster-Block.' : '';
-    const rid = $('#wallroom').value, room = ROOMS.find(r => r.id === rid); const seq = ++wallSeq;
-    $('#wallcol').closest('label').style.display = room ? 'none' : '';
-    if (!room) { $('#wallscene').innerHTML = wallScene(pw, ph, frame, $('#wallcol').value, wallImg);
-      $('#wallinfo').textContent = `Maßstabsgetreu: Wand 4,8 m breit, Raumhöhe 2,65 m, Sofa 2,2 m, Rennrad 1,76 m. Poster ${pw} × ${ph} cm, Mitte auf 1,50 m Höhe.${tail}`; return; }
+    const room = ROOMS.find(r => r.id === $('#wallroom').value) || ROOMS[0]; const seq = ++wallSeq;
+    if (!room) { $('#wallscene').innerHTML = '<div style="padding:40px;color:var(--muted);font-size:13px">Keine Szene hinterlegt – Raumfoto in rooms/ ablegen und mit calib.html einmessen.</div>'; $('#wallinfo').textContent = ''; return; }
     $('#wallinfo').textContent = `${room.name}: Poster ${pw} × ${ph} cm, maßstabsgetreu ins Foto gerechnet, Mitte auf 1,50 m Höhe.${room.note ? ' ' + room.note + '.' : ''}${tail}`;
     photoScene(room, pw, ph, frame, wallImg).then(cv => { if (seq !== wallSeq) return; $('#wallscene').innerHTML = ''; $('#wallscene').appendChild(cv); })
-      .catch(e => { console.error(e); if (seq !== wallSeq) return; $('#wallroom').value = 'svg'; say('Raumfoto nicht verfügbar – zeige die Illustration.', 'warn'); drawWall(); });
+      .catch(e => { console.error(e); if (seq !== wallSeq) return; $('#wallscene').innerHTML = ''; say('Raumfoto nicht verfügbar: ' + e.message, 'warn'); });
   }
   $('#wallbtn').addEventListener('click', openWall); $('#wallclose').addEventListener('click', () => { $('#wall').hidden = true; }); $('#wall').addEventListener('click', e => { if (e.target.id === 'wall') $('#wall').hidden = true; });
-  ['wallsize', 'wallframe', 'wallcol', 'wallroom'].forEach(id => $('#' + id).addEventListener('change', drawWall));
+  ['wallsize', 'wallframe', 'wallroom'].forEach(id => $('#' + id).addEventListener('change', drawWall));
+  // Stil und Ausrichtung wirken direkt auf das Poster – die Vorschau zeigt danach das neu gerenderte Blatt
+  $('#wallstyle').addEventListener('change', async e => { applyTheme(e.target.value); $('#theme').value = e.target.value; $('#wallinfo').textContent = 'Poster wird neu gerendert …'; await new Promise(r => setTimeout(r, 400)); await renderWallPoster(); drawWall(); });
+  $('#wallorient').addEventListener('change', async e => { setFormat(e.target.value); $('#format').value = e.target.value; $('#wallinfo').textContent = 'Poster wird neu gerendert …'; await new Promise(r => setTimeout(r, 500)); await renderWallPoster(); drawWall(); });
   $('#walluse').addEventListener('click', () => { const k = wallSizeSel.value; if (PAPER[k] && k !== state.paper) { state.paper = k; $('#paper').value = k; setFormat(state.format); drawWall(); } });
   $('#helpbtn').addEventListener('click', () => { $('#help').hidden = false; }); $('#helpbtn2').addEventListener('click', () => { $('#help').hidden = false; }); $('#helpclose').addEventListener('click', () => { $('#help').hidden = true; }); $('#help').addEventListener('click', e => { if (e.target.id === 'help') $('#help').hidden = true; });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#help').hidden) $('#help').hidden = true; if (e.key === '?' && !e.target.isContentEditable && e.target.tagName !== 'INPUT') $('#help').hidden = !$('#help').hidden; });
@@ -793,8 +767,20 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     stage.classList.toggle('mat', f.mat > 0); stage.classList.toggle('marks', f.mat > 0 && !!f.marks); stage.classList.toggle('fray', f.fray > 0); render(); }
   $('#matsl').addEventListener('input', e => { FR().mat = +e.target.value; applyFrame(); });
   $('#matsl').addEventListener('change', () => scheduleAuto('mat'));
+  $('#sport').addEventListener('change', e => { state.sport = e.target.value || null;
+    const sp = sportOf(); if (!state.bandEdited && !sp.band && state.showBand) { state.showBand = false; $('#showband').checked = false; }
+    else if (!state.bandEdited && sp.band && !state.showBand) { state.showBand = true; $('#showband').checked = true; }
+    state.titleEdited = state.sublineEdited = state.statsEdited = false; autoTexts(); render(); scheduleAuto('sport'); });
+  $('#terrain').addEventListener('change', e => { state.terrain = e.target.checked; terrainLayer();
+    if (state.terrain) say('Geländeschummerung an – Höhenkacheln kommen von AWS Terrain Tiles (zweiter Server neben der Karte).', 'ok'); });
+  $('#peakmap').addEventListener('change', e => { state.showPeakMap = e.target.checked; if (state.showPeakMap && !state.peaks?.length) findPeaks(); else { peakLayer(); render(); } });
+  function peakThrLabel() { $('#peakthrval').textContent = state.peakThr != null ? state.peakThr + ' m' : `automatisch${state.peakAuto ? ' (' + state.peakAuto + ' m)' : ''}`;
+    if (state.peakThr == null && state.peakAuto) $('#peakthr').value = Math.min(600, Math.max(30, state.peakAuto)); }
+  $('#peakthr').addEventListener('input', e => { state.peakThr = +e.target.value; peakThrLabel(); clearTimeout(peakT); peakT = setTimeout(findPeaks, 250); });
+  $('#peakthr').addEventListener('dblclick', () => { state.peakThr = null; peakThrLabel(); findPeaks(); });
+  let peakT = 0;
   $('#showpeaks').addEventListener('change', e => { state.showPeaks = e.target.checked; if (state.showPeaks && !state.peaks?.length) findPeaks(); else render(); });
-  $('#showband').addEventListener('change', e => { state.showBand = e.target.checked; clampPhotos(); render(); scheduleAuto('band'); });
+  $('#showband').addEventListener('change', e => { state.showBand = e.target.checked; state.bandEdited = true; clampPhotos(); render(); scheduleAuto('band'); });
   // 8. Gesamtgröße der Fotos: Automatik → Grundgröße skaliert; sonst alle Fotos um ihre Mitte skalieren
   let lastScale = 1;
   $('#pscale').addEventListener('input', e => { const v = +e.target.value / 100; $('#pscaleval').textContent = e.target.value + ' %'; state.photoScale = v;
@@ -827,6 +813,14 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     state.stages.sort((a, b) => (a.start || 0) - (b.start || 0));
     afterTourChange(); if (window.innerWidth <= 900 && state.stages.length) showTab('fotos');
   }
+  // Distanz entlang der gesamten Tour (über alle Etappen) <-> Punkt auf der Route
+  function routePts() { const pts = []; let off = 0; for (const st of state.stages) { for (const p of st.points) pts.push([p[0], p[1], p[2] ?? 0, off + p[3]]); off += st.points.at(-1)[3]; } return pts; }
+  function routeAtDist(d) { const pts = routePts(); if (!pts.length) return null; let best = pts[0];
+    for (const p of pts) { if (p[3] <= d) best = p; else break; } return best; }
+  function photoDist(p) { if (p.lat == null) return null; const pts = routePts(); let bd = Infinity, bp = null;
+    for (const q of pts) { const dx = (q[0] - p.lat) * 111000, dy = (q[1] - p.lon) * 111000 * Math.cos(p.lat * d2r); const d = Math.hypot(dx, dy); if (d < bd) { bd = d; bp = q; } }
+    return bp && bd < 5000 ? bp[3] : null; }
+
   // Markante Anstiege der Route: lokale Maxima des geglätteten Profils mit 1D-Prominenz (Höhe über dem höheren der beiden Sattelpunkte bis zum nächsthöheren Punkt)
   function prominentMaxima() {
     const pts = []; let off = 0; for (const st of state.stages) { for (const p of st.points) pts.push([p[0], p[1], p[2] ?? 0, off + p[3]]); off += st.points.at(-1)[3]; }
@@ -835,18 +829,19 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const step = Math.max(1, Math.ceil(pts.length / 1500)); const sm = [], idx = [];
     for (let i = 0; i < pts.length; i += step) { let s = 0, c = 0; for (let k = i; k < Math.min(pts.length, i + step); k++) { s += pts[k][2]; c++; } sm.push(s / c); idx.push(Math.min(pts.length - 1, i + (step >> 1))); }
     let minE = Infinity, maxE = -Infinity; for (const v of sm) { if (v < minE) minE = v; if (v > maxE) maxE = v; }
-    const thr = Math.max(150, .2 * (maxE - minE));   // mindestens 150 m bzw. 20 % der Höhenspanne der Tour
+    const auto = Math.max(150, .2 * (maxE - minE));   // Automatik: mindestens 150 m bzw. 20 % der Höhenspanne der Tour
+    const thr = state.peakThr ?? auto; state.peakAuto = Math.round(auto);
     const out = [];
     for (let i = 1; i < sm.length - 1; i++) { if (!(sm[i] >= sm[i - 1] && sm[i] > sm[i + 1])) continue;
       let l = i, mL = sm[i]; while (l > 0 && sm[l] <= sm[i]) { if (sm[l] < mL) mL = sm[l]; l--; } if (l === 0) { mL = Infinity; for (let k = 0; k < i; k++) if (sm[k] < mL) mL = sm[k]; }
       let r = i, mR = sm[i]; while (r < sm.length - 1 && sm[r] <= sm[i]) { if (sm[r] < mR) mR = sm[r]; r++; } if (r === sm.length - 1) { mR = Infinity; for (let k = i; k < sm.length; k++) if (sm[k] < mR) mR = sm[k]; }
       const prom = sm[i] - Math.max(mL, mR); if (prom >= thr) { const j = idx[i]; out.push({ i: j, lat: pts[j][0], lon: pts[j][1], ele: sm[i], dist: pts[j][3], prom }); } }
-    return { list: out.sort((a, b) => b.prom - a.prom).slice(0, 6), total: off };
+    return { list: out.sort((a, b) => b.prom - a.prom).slice(0, state.peakThr != null ? 12 : 6), total: off };
   }
   // Gipfel/Pässe an der Route (Kartenkacheln, Layer mountain_peak): nur für markante Anstiege, Name + offizielle Höhe fürs Höhenprofil
   let peakSeq = 0;
   async function findPeaks() {
-    const my = ++peakSeq; state.peaks = []; if (!map || !state.stages.length || state.showPeaks === false) { render(); return; }
+    const my = ++peakSeq; state.peaks = []; if (!map || !state.stages.length || state.showPeaks === false) { peakLayer(); render(); return; }
     try {
       const { list: tops, total } = prominentMaxima(); if (!tops.length) { render(); return; }
       const tpl = await tileTemplate(); if (!tpl || typeof VectorTile === 'undefined') return;
@@ -859,16 +854,29 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         const near = cands.map(c => ({ ...c, d: hav([t.lat, t.lon], [c.lat, c.lon]) })).filter(c => c.d <= 1000).sort((a, b) => a.d - b.d);
         const pick = near.find(c => c.d <= 350) || near.sort((a, b) => b.ele - a.ele)[0]; if (!pick) continue;
         if (sel.some(q => q.name === pick.name || Math.abs(q.dist - t.dist) < total * .05)) continue;
-        sel.push({ name: pick.name, ele: pick.ele, cls: pick.cls, d: pick.d, dist: t.dist, routeEle: t.ele, prom: t.prom }); }
-      state.peaks = sel.sort((a, b) => a.dist - b.dist); render();
+        sel.push({ name: pick.name, ele: pick.ele, cls: pick.cls, d: pick.d, lat: pick.lat, lon: pick.lon, dist: t.dist, routeEle: t.ele, prom: t.prom }); }
+      state.peaks = sel.sort((a, b) => a.dist - b.dist); peakLayer(); peakThrLabel(); render();
     } catch (e) { console.warn('Gipfel', e); }
   }
   function afterTourChange() {
+    const sp = sportOf(); if (!state.bandEdited) { state.showBand = sp.band; $('#showband').checked = sp.band; }   // Kanu: Höhenprofil ist ohne Aussage
     findPeaks();
     buildPlaces(); autoTexts(); if (map && map.loaded()) { addRouteLayers(); fitRoute(); } render();
     const km = state.stages.reduce((s, x) => s + x.distance, 0) / 1000;
     $('#mapinfo').textContent = state.stages.length ? `${state.stages.length} Etappe(n) · ${km.toFixed(0)} km · ${nf(state.stages.reduce((s, x) => s + x.gain, 0))} Hm` : '';
   }
+  // ---------- Sportart: bestimmt Texte und Kennzahlen. Aus der FIT-Datei erkannt, im Tour-Block umschaltbar.
+  const SPORTS = {
+    bike:  { label: 'Radtour',  title: 'Meine\nRadtour',  one: 'Eine Tagestour mit dem Rad.',   many: n => `${n} Etappen mit dem Rad.`,    timeLabel: 'FAHRZEIT',   band: true },
+    hike:  { label: 'Wanderung', title: 'Meine\nWanderung', one: 'Eine Tageswanderung.',          many: n => `${n} Etappen zu Fuß.`,        timeLabel: 'GEHZEIT',    band: true },
+    canoe: { label: 'Kanutour', title: 'Meine\nKanutour', one: 'Eine Tagestour auf dem Wasser.', many: n => `${n} Etappen auf dem Wasser.`, timeLabel: 'PADDELZEIT', band: false }
+  };
+  const SPORT_OF = (sport, sub) => { const s = String(sport || '').toLowerCase() + ' ' + String(sub || '').toLowerCase();
+    if (/paddl|kayak|canoe|rowing|row|sail|surf/.test(s)) return 'canoe';
+    if (/hik|walk|run|trail|mountaineer|snowshoe/.test(s)) return 'hike';
+    if (/cycl|bik|ride/.test(s)) return 'bike'; return null; };
+  const sportOf = () => SPORTS[state.sport] || SPORTS[state.stages.find(s => s.sport)?.sport] || SPORTS.bike;
+  const hhmm = sec => { if (!(sec > 0)) return null; const h = Math.floor(sec / 3600), m = Math.round(sec % 3600 / 60); return h ? `${h}:${String(m % 60).padStart(2, '0')} h` : `${m} min`; };
   function parseFit(buf) {
     return new Promise((res, rej) => {
       new FitParser({ force: true, speedUnit: 'km/h', lengthUnit: 'm', temperatureUnit: 'celsius', elapsedRecordField: true, mode: 'list' }).parse(buf, (err, data) => {
@@ -876,7 +884,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         const recs = (data.records || []).filter(r => r.position_lat != null && r.position_long != null);
         const pts = recs.map(r => [r.position_lat, r.position_long, r.altitude ?? r.enhanced_altitude ?? null, r.distance ?? null]);
         const ses = (data.sessions || [])[0] || {};
-        res(finishStage(pts, { gain: ses.total_ascent, distance: ses.total_distance, time: ses.total_timer_time, start: recs[0]?.timestamp ? +new Date(recs[0].timestamp) : null, end: recs.at(-1)?.timestamp ? +new Date(recs.at(-1).timestamp) : null }));
+        res(finishStage(pts, { sport: SPORT_OF(ses.sport, ses.sub_sport), gain: ses.total_ascent, distance: ses.total_distance, time: ses.total_timer_time, start: recs[0]?.timestamp ? +new Date(recs[0].timestamp) : null, end: recs.at(-1)?.timestamp ? +new Date(recs.at(-1).timestamp) : null }));
       });
     });
   }
@@ -905,7 +913,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (gain == null && ele.length) { const sm = smooth(pts.map(p => p[2] ?? 0), 5); gain = 0; for (let i = 1; i < sm.length; i++) if (sm[i] > sm[i - 1]) gain += sm[i] - sm[i - 1]; }
     // auf ~600 Punkte ausdünnen (Karte + Profil)
     const step = Math.max(1, Math.floor(pts.length / 600)); const thin = pts.filter((_, i) => i % step === 0 || i === pts.length - 1);
-    return { name: meta.name, points: thin, distance: meta.distance ?? d, gain: gain ?? 0, time: meta.time, start: meta.start, end: meta.end, hasEle: ele.length > 0 };
+    return { name: meta.name, points: thin, distance: meta.distance ?? d, gain: gain ?? 0, time: meta.time, start: meta.start, end: meta.end, hasEle: ele.length > 0, sport: meta.sport || null };
   }
   const smooth = (a, k) => a.map((_, i) => { let s = 0, n = 0; for (let j = i - k; j <= i + k; j++) if (a[j] != null) { s += a[j]; n++; } return n ? s / n : 0; });
 
@@ -917,10 +925,18 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const st = state.stages; if (!st.length) return;
     const a = st[0].start ? new Date(st[0].start) : null, b = st.at(-1).end ? new Date(st.at(-1).end) : null;
     if (a && !state.dateEdited) state.date = (b && b.toDateString() !== a.toDateString()) ? `${a.getDate()}. – ${b.getDate()}. ${MON[b.getMonth()]} ${b.getFullYear()}` : `${a.getDate()}. ${MON[a.getMonth()]} ${a.getFullYear()}`;
-    if (!state.titleEdited) state.title = st.length === 1 ? (st[0].name || 'Meine Tour') : 'Meine\nRadtour';
-    if (!state.sublineEdited) state.subline = st.length > 1 ? `${st.length} Etappen mit dem Rad.` : 'Eine Tagestour mit dem Rad.';
+    const sp = sportOf();
+    if (!state.titleEdited) state.title = st.length === 1 ? (st[0].name || 'Meine Tour') : sp.title;
+    if (!state.sublineEdited) state.subline = st.length > 1 ? sp.many(st.length) : sp.one;
     const km = st.reduce((s, x) => s + x.distance, 0) / 1000, hm = st.reduce((s, x) => s + x.gain, 0);
-    if (!state.statsEdited) state.stats = [[nf(km), 'KILOMETER'], [nf(hm), 'HÖHENMETER'], ...(st.length > 1 ? [[String(st.length), 'ETAPPEN']] : [])];
+    const secs = st.reduce((s, x) => s + (x.time || (x.start && x.end ? (x.end - x.start) / 1000 : 0)), 0), dur = hhmm(secs);
+    if (!state.statsEdited) {
+      const out = [[nf(km), 'KILOMETER']];
+      if (sp.band) out.push([nf(hm), 'HÖHENMETER']);            // beim Kanu sind Höhenmeter ohne Aussage
+      if (st.length > 1) out.push([String(st.length), 'ETAPPEN']);
+      else if (dur) out.push([dur, sp.timeLabel]);               // Eintagestour: Gehzeit / Paddelzeit / Fahrzeit
+      state.stats = out;
+    }
   }
   for (const [f, sel] of [['date', '#title .date'], ['title', '#title .h'], ['subline', '#title .sub']]) {
     const el = $(sel);
@@ -1173,10 +1189,25 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   let hitMarker = null;
   function previewHit(h) { if (hitMarker) { hitMarker.remove(); hitMarker = null; } if (!h || !map) return; const el = document.createElement('div'); el.className = 'hitmark'; el.title = h.name; hitMarker = new maplibregl.Marker({ element: el }).setLngLat([h.lon, h.lat]).addTo(map); }
   const CLS_DE = { city: 'Stadt', town: 'Stadt', village: 'Dorf', hamlet: 'Weiler', suburb: 'Ortsteil', neighbourhood: 'Viertel', island: 'Insel', locality: 'Ort', peak: 'Gipfel', volcano: 'Berg', mountain_peak: 'Gipfel', water_name: 'Gewässer', lake: 'See', river: 'Fluss', park: 'Park', nature_reserve: 'Schutzgebiet', national_park: 'Nationalpark', museum: 'Museum', attraction: 'Sehenswürdigkeit', viewpoint: 'Aussichtspunkt', castle: 'Burg/Schloss', monument: 'Denkmal', memorial: 'Denkmal', ruins: 'Ruine', lighthouse: 'Leuchtturm', station: 'Bahnhof', railway: 'Bahn', hotel: 'Hotel', hostel: 'Hostel', guest_house: 'Pension', camp_site: 'Campingplatz', restaurant: 'Restaurant', cafe: 'Café', bakery: 'Bäckerei', alpine_hut: 'Hütte', shelter: 'Schutzhütte', bus_stop: 'Haltestelle', ferry_terminal: 'Fähre', tower: 'Turm', church: 'Kirche', place_of_worship: 'Kirche', bicycle: 'Fahrrad', information: 'Info', dam: 'Staumauer', bridge: 'Brücke', transportation_name: 'Straße/Weg' };
-  function startSetPos(p) { if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: Aufnahmeort mit dem Fadenkreuz auf der Karte anklicken – rastet auf die Route ein (Esc = abbrechen).`); render(); }
+  function startSetPos(p) { if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: Aufnahmeort auf der Karte anklicken – oder ins Höhenprofil klicken, dort rasten Gipfel ein (Esc = abbrechen).`); render(); }
   function nearestOnRoute(lat, lon) { let best = null, bd = Infinity; for (const st of state.stages) for (let i = 0; i < st.points.length; i += 3) { const q = st.points[i]; const d = hav([lat, lon], [q[0], q[1]]); if (d < bd) { bd = d; best = q; } } return best && bd < 2000 ? [best[0], best[1]] : [lat, lon]; }
   function mapClickSetPos(e) { if (!setPosFor) return; const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
     [p.lat, p.lon] = nearestOnRoute(e.lngLat.lat, e.lngLat.lng); p.place = ''; p.detailTried = false; fillPlaceNames(); say(`Aufnahmeort von Foto ${p.num} gesetzt.`, 'ok'); render(); if (autoOn()) autoLayout(null, { quiet: true }); }
+  // Aufnahmeort auch über das Höhenprofil setzen: Klick = Streckenkilometer; liegt ein Gipfel nah, rastet er darauf ein
+  $('#band').addEventListener('click', e => {
+    if (!setPosFor || !state.stages.length) return;
+    const p = state.photos.find(x => x.id === setPosFor); if (!p) return;
+    const r = $('#band').getBoundingClientRect(); const vx = (e.clientX - r.left) / r.width * CW;
+    const x0 = 84, x1 = CW - 56, total = routePts().at(-1)?.[3] || 0;
+    const d = Math.max(0, Math.min(total, (vx - x0) / (x1 - x0) * total));
+    const near = (state.showPeaks !== false ? state.peaks || [] : []).filter(q => q.lat != null).map(q => ({ q, dd: Math.abs(q.dist - d) })).sort((a, b) => a.dd - b.dd)[0];
+    setPosFor = null; stage.classList.remove('setpos');
+    if (near && near.dd < total * .02) { p.lat = near.q.lat; p.lon = near.q.lon; p.place = near.q.name; p.detailTried = true;
+      say(`Aufnahmeort von Foto ${p.num}: ${near.q.name} (${nf(near.q.ele)} m).`, 'ok'); }
+    else { const pt = routeAtDist(d); if (!pt) return; p.lat = pt[0]; p.lon = pt[1]; p.place = ''; p.detailTried = false; fillPlaceNames();
+      say(`Aufnahmeort von Foto ${p.num} auf Kilometer ${(d / 1000).toFixed(1)} gesetzt.`, 'ok'); }
+    render(); if (autoOn()) autoLayout(null, { quiet: true });
+  });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); say(''); render(); } });
   function renderPins() {
     pinsEl.innerHTML = ''; if (!map) return;
@@ -1208,7 +1239,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     let pk = ''; if (state.showPeaks !== false && state.peaks?.length) { const lab = []; for (const q of state.peaks) { const x = X(q.dist), y = Y(Math.min(q.routeEle, ymax)); const txt = `${q.name} ${nf(Math.round(q.ele))} m`; const tw = txt.length * fz(10) * .55; let tx = x, anchor = 'middle'; if (tx - tw / 2 < x0 + 4) { tx = x + 5; anchor = 'start'; } else if (tx + tw / 2 > x1 - 4) { tx = x - 5; anchor = 'end'; }
         let ty = y - 10; while (lab.some(l => Math.abs(l.x - tx) < tw && Math.abs(l.y - ty) < 12)) ty -= 12; ty = Math.max(yt - 2, ty); lab.push({ x: tx, y: ty });
         pk += `<path d="M${x - 3.6},${y + 1} L${x},${y - 5} L${x + 3.6},${y + 1} Z" fill="${T.cap}" stroke="${T.halo}" stroke-width=".8"/><text x="${tx}" y="${ty}" fill="${T.cap}" font-size="${fz(10)}" font-weight="600" text-anchor="${anchor}" font-family="Montserrat" stroke="${T.halo}" stroke-width="2.5" paint-order="stroke" stroke-linejoin="round">${esc(txt)}</text>`; } }
-    svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="${T.accent}" fill-opacity=".37"/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="1.6" stroke-linejoin="round"/>` + b + pk +
+    // Aufnahmeorte der Fotos als nummerierte Punkte auf der Kurve
+    let fo = ''; if (state.photos.length) { const eleAt = d => { let i = 0; while (i < xs.length - 1 && xs[i + 1] < d) i++; return ys[i] ?? 0; };
+      for (const p of state.photos) { const d = photoDist(p); if (d == null) continue; const x = X(d), y = Y(Math.min(eleAt(d), ymax));
+        fo += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${fz(7)}" fill="${T.accent}" stroke="${T.halo}" stroke-width="1.6"/><text x="${x.toFixed(1)}" y="${(y + +fz(3.2)).toFixed(1)}" fill="${T.pinBg || '#fff'}" font-size="${fz(8)}" font-weight="700" text-anchor="middle" font-family="Montserrat">${p.num}</text>`; } }
+    svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="${T.accent}" fill-opacity=".37"/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="1.6" stroke-linejoin="round"/>` + b + pk + fo +
       `<text x="${x0}" y="20" fill="${T.muted}" font-size="${fz(11)}" font-weight="700" letter-spacing="2.4" font-family="Montserrat">HÖHENPROFIL</text><text x="${x1}" y="20" fill="${T.muted}" font-size="${fz(11)}" text-anchor="end" font-family="Montserrat">Höchster Punkt ${nf(maxE)} m</text>` +
       `<text x="${x0}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" font-family="Montserrat">${esc(state.places.find(p => p.key === 'start')?.text || 'Start')}</text><text x="${x1}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" text-anchor="end" font-family="Montserrat">${esc(state.places.find(p => p.key === 'end')?.text || 'Ziel')}</text>`;
   }
@@ -1601,7 +1636,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       render(); say(`Projekt „${f.name}“ geladen – ${n} Foto(s) in Originalgröße.`, 'ok'); } catch (e) { say('Projekt nicht lesbar: ' + e.message, 'err'); } }
   $('#ldzip input').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadZipFile(f); });
   function restore(obj) {
-    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.peakThr = obj.peakThr ?? null; state.terrain = !!obj.terrain; $('#terrain').checked = state.terrain; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
     applyFrame(); render();
   }
