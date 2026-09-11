@@ -212,6 +212,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #wallscene svg { width:100%; height:auto; max-height:80vh; display:block; border-radius:8px; }
 #wallscene canvas { max-width:100%; max-height:80vh; width:auto; height:auto; display:block; border-radius:8px; }
 @media (max-width:900px) { .wallopts { gap:6px; } .wallopts label { font-size:10px; } }
+#fbdlg { position:fixed; inset:0; background:rgba(4,10,16,.7); z-index:50; display:grid; place-items:center; padding:16px; backdrop-filter:blur(3px); }
+#fbdlg[hidden] { display:none; }
+#fbdlg input[type=email], #fbdlg select { width:100%; padding:8px 10px; background:var(--panel2); border:1px solid var(--line); border-radius:8px; color:var(--text); font:13px Montserrat, Arial, sans-serif; }
+#fbdlg input[type=email]::placeholder { color:var(--muted); }
 #orderdlg { position:fixed; inset:0; background:rgba(4,10,16,.7); z-index:50; display:grid; place-items:center; padding:16px; backdrop-filter:blur(3px); }
 #orderdlg[hidden] { display:none; }
 .obody { padding:14px 18px 18px; font-size:13px; line-height:1.5; } .obody .muted { color:var(--muted); font-size:12px; } .obody a { color:var(--accent); }
@@ -350,7 +354,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <label class="f">Projekt (Tour + Layout + Fotos in Originalgröße)</label>
       <div class="btnrow"><button class="btn" id="exzip">Projekt sichern <small>.zip</small></button><label class="btn ghost" id="ldzip" style="cursor:pointer">Projekt laden<input type="file" accept=".zip,application/zip" style="display:none"></label></div>
       <div class="hint">Die Sitzung wird automatisch im Browser gesichert. Zum Archivieren oder auf einen anderen Rechner mitnehmen: Projekt sichern (.zip).</div>
-      <button class="link" id="reset">Alles zurücksetzen</button> <button class="link" id="helpbtn2">Hilfe / Bedienung</button>
+      <button class="link" id="reset">Alles zurücksetzen</button> <button class="link" id="helpbtn2">Hilfe / Bedienung</button> <button class="link" id="fbbtn">Feedback / Fehler melden</button>
       <div class="legal"><a href="impressum.html">Impressum</a> · <a href="datenschutz.html">Datenschutz</a> · © Tourposter</div>
       <div class="hint">Es werden keine Daten hochgeladen – nur die Kartenkacheln kommen aus dem Netz (OpenFreeMap sieht die Region, sonst nichts).</div>
     </div>
@@ -385,6 +389,23 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         </div><button id="wallclose">×</button></div>
         <div id="wallscene"></div>
         <div class="hfoot" id="wallinfo"></div>
+      </div>
+    </div>
+    <div id="fbdlg" hidden>
+      <div class="hbox" style="max-width:520px">
+        <div class="hhead"><b>Feedback</b><button id="fbclose">×</button></div>
+        <div class="obody">
+          <label class="f" style="margin-top:0">Art</label>
+          <select id="fbkind"><option value="Fehler">Fehler gefunden</option><option value="Idee">Idee / Wunsch</option><option value="Frage">Frage</option><option value="Sonstiges">Sonstiges</option></select>
+          <label class="f">Was ist passiert bzw. was wünschst du dir?</label>
+          <textarea id="fbtext" rows="6" style="width:100%;padding:8px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);font:13px/1.5 Montserrat,Arial,sans-serif;resize:vertical" placeholder="Je konkreter, desto besser: Was hast du gemacht, was war zu erwarten, was ist stattdessen passiert?"></textarea>
+          <label class="f">E-Mail für Rückfragen <span class="muted">(freiwillig)</span></label>
+          <input id="fbmail" type="email" autocomplete="email" placeholder="nur wenn du eine Antwort möchtest">
+          <label class="switch" style="margin-top:10px"><input type="checkbox" id="fbtech" checked><span class="kn"></span><span>Technische Angaben mitsenden<small id="fbtechinfo">Browser, Fenstergröße, gewähltes Format und Anzahl Etappen/Fotos – keine Karten, Fotos oder Koordinaten</small></span></label>
+          <input id="fbhoney" type="checkbox" name="botcheck" style="display:none" tabindex="-1" autocomplete="off">
+          <button class="btn primary" id="fbsend" style="margin-top:14px">Absenden</button>
+          <p id="fbnote" class="muted" style="margin:10px 0 0"></p>
+        </div>
       </div>
     </div>
     <div id="orderdlg" hidden>
@@ -786,6 +807,42 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   $('#wallstyle').addEventListener('change', async e => { applyTheme(e.target.value); $('#theme').value = e.target.value; $('#wallinfo').textContent = 'Poster wird neu gerendert …'; await new Promise(r => setTimeout(r, 400)); await renderWallPoster(); drawWall(); });
   $('#wallorient').addEventListener('change', async e => { setFormat(e.target.value); $('#format').value = e.target.value; $('#wallinfo').textContent = 'Poster wird neu gerendert …'; await new Promise(r => setTimeout(r, 500)); await renderWallPoster(); drawWall(); });
   $('#walluse').addEventListener('click', () => { const k = wallSizeSel.value; if (PAPER[k] && k !== state.paper) { state.paper = k; $('#paper').value = k; setFormat(state.format); drawWall(); } });
+  // ---------- Feedback: Formular ohne Login, Versand über Web3Forms (api.web3forms.com).
+  // Access Key hier eintragen (kostenlos auf web3forms.com anfordern, geht an die dort hinterlegte Mailadresse).
+  // Solange er leer ist, fällt der Dialog auf einen mailto-Link zurück.
+  const FEEDBACK = { key: '', mail: 'info@tourposter.online', endpoint: 'https://api.web3forms.com/submit' };
+  function techInfo() {
+    const ua = navigator.userAgent, br = /Firefox\/[\d.]+/.exec(ua)?.[0] || /Edg\/[\d.]+/.exec(ua)?.[0] || /Chrome\/[\d.]+/.exec(ua)?.[0] || /Version\/[\d.]+ Safari/.exec(ua)?.[0] || ua.slice(0, 60);
+    return [`Browser: ${br}`, `Plattform: ${navigator.platform || '–'}`, `Fenster: ${innerWidth}×${innerHeight}`,
+      `Format: ${state.format} ${state.paper}, Stil ${state.theme || 'retro'}`,
+      `Etappen: ${state.stages.length}, Fotos: ${state.photos.length}, Sportart: ${state.sport || 'automatisch'}`,
+      `Profil: ${state.showBand ? 'an' : 'aus'}, Relief: ${Math.round((state.relief ?? .6) * 100)} %`].join('\n');
+  }
+  function openFb() { $('#fbdlg').hidden = false; $('#fbnote').textContent = FEEDBACK.key ? '' : 'Versand noch nicht eingerichtet – „Absenden“ öffnet dein Mailprogramm.'; setTimeout(() => $('#fbtext').focus(), 50); }
+  $('#fbbtn').addEventListener('click', openFb);
+  $('#fbclose').addEventListener('click', () => { $('#fbdlg').hidden = true; });
+  $('#fbdlg').addEventListener('click', e => { if (e.target.id === 'fbdlg') $('#fbdlg').hidden = true; });
+  $('#fbsend').addEventListener('click', async () => {
+    const txt = $('#fbtext').value.trim(); if (txt.length < 5) { $('#fbnote').textContent = 'Bitte kurz beschreiben, worum es geht.'; $('#fbtext').focus(); return; }
+    const kind = $('#fbkind').value, mail = $('#fbmail').value.trim();
+    const body = txt + ($('#fbtech').checked ? '\n\n---\n' + techInfo() : '');
+    if (!FEEDBACK.key) {   // Fallback ohne Dienst: Mailprogramm öffnen
+      location.href = `mailto:${FEEDBACK.mail}?subject=${encodeURIComponent('Tourposter: ' + kind)}&body=${encodeURIComponent(body)}`;
+      $('#fbdlg').hidden = true; return; }
+    $('#fbsend').disabled = true; $('#fbnote').textContent = 'Wird gesendet …';
+    try {
+      const r = await fetch(FEEDBACK.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ access_key: FEEDBACK.key, subject: 'Tourposter: ' + kind, from_name: 'Tourposter', message: body,
+          email: mail || undefined, replyto: mail || undefined, botcheck: $('#fbhoney').checked }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.success === false) throw new Error(j.message || ('HTTP ' + r.status));
+      $('#fbnote').textContent = ''; $('#fbdlg').hidden = true; $('#fbtext').value = '';
+      say('Danke – dein Feedback ist angekommen.', 'ok');
+    } catch (e) {
+      $('#fbnote').innerHTML = `Senden fehlgeschlagen (${e.message}). <a href="mailto:${FEEDBACK.mail}?subject=${encodeURIComponent('Tourposter: ' + kind)}&body=${encodeURIComponent(body)}">Stattdessen per Mail schicken</a>`;
+    } finally { $('#fbsend').disabled = false; }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#fbdlg').hidden) $('#fbdlg').hidden = true; });
   $('#helpbtn').addEventListener('click', () => { $('#help').hidden = false; }); $('#helpbtn2').addEventListener('click', () => { $('#help').hidden = false; }); $('#helpclose').addEventListener('click', () => { $('#help').hidden = true; }); $('#help').addEventListener('click', e => { if (e.target.id === 'help') $('#help').hidden = true; });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#help').hidden) $('#help').hidden = true; if (e.key === '?' && !e.target.isContentEditable && e.target.tagName !== 'INPUT') $('#help').hidden = !$('#help').hidden; });
   $('#grade').addEventListener('input', e => { state.grade = +e.target.value; applyGrade(); });
