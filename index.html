@@ -155,6 +155,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #bandgrip:hover::after, #bandgrip.on::after { opacity:.8; }
 #bandgrip.on { background:rgba(255,255,255,.04); }
 #band svg { position:absolute; inset:0; width:100%; height:100%; }
+#profhover { pointer-events:none; }
 .place { position:absolute; transform:translate(0,-50%); white-space:nowrap; color:var(--pcap); font:600 17px Montserrat, Arial, sans-serif; font-size:calc(17px * var(--ts, 1)); text-shadow:0 0 3px var(--phalo),0 0 3px var(--phalo),0 0 2px var(--phalo); cursor:move; padding:2px 4px; margin:-2px -4px; border-radius:4px; touch-action:none; }
 .place.night { font-weight:700; }
 .place:hover, .place.sel { outline:1.5px dashed var(--accent); }
@@ -378,7 +379,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <div id="places"></div>
         <div id="pins"></div>
         <div id="tiles"></div>
-        <div id="bandfade"></div><div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg></div>
+        <div id="bandfade"></div><div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg><svg id="profhover" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg></div>
       </div>
     </div></div>
     <div id="maptools"><button id="mapbtn"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><div id="pscalebox" title="Alle Fotos gemeinsam größer/kleiner (fixierte behalten ihre Position)"><span class="w">FOTOS</span><span class="s">📷</span> <input type="range" id="pscale" min="50" max="160" step="5" value="100"> <span id="pscaleval">100 %</span></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
@@ -436,7 +437,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           <div class="hc"><svg viewBox="0 0 80 56"><circle cx="18" cy="16" r="9" class="ico lock"/><rect x="14" y="15.5" width="8" height="6" rx="1" fill="#1c1a12"/><path d="M15.5 15.5v-2a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="#1c1a12" stroke-width="1.4"/><circle cx="40" cy="16" r="9" class="ico star"/><path d="M40 10l1.8 3.8 4.2.5-3.1 2.9.8 4.1-3.7-2-3.7 2 .8-4.1-3.1-2.9 4.2-.5z" fill="#1c1a12"/><circle cx="62" cy="16" r="9" class="ico gps"/><path d="M62 10a4 4 0 0 0-4 4c0 3 4 7 4 7s4-4 4-7a4 4 0 0 0-4-4z" fill="#fff"/><text x="40" y="46" class="t">Schloss · Stern · Ort</text></svg><b>Nummer &amp; Icons</b>Klick auf die Nummer = Highlight ★ (größer im Auto-Layout). Beim Überfahren: Schloss = fixiert (Automatik lässt es in Ruhe), Pin/Lupe = Aufnahmeort setzen oder suchen – setzen geht per Klick auf die Karte oder ins Höhenprofil.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 40c10-20 20 10 30-6s20-14 34 2" class="route"/><rect x="26" y="6" width="28" height="12" rx="6" class="btn"/><text x="40" y="15" class="tb">Karte</text></svg><b>Karte</b>Button „Karte“ oben rechts, dann verschieben/zoomen (Maus, Finger oder Slider). „Auf Route einpassen“ setzt zurück. Die Route bleibt auch hinter dem Titel sichtbar; wie stark die Umgebung dort abgedunkelt wird, regelt „Abdeckung hinter dem Titel“ im Poster-Block.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 30c14-10 30-12 64-8" class="route"/><text x="30" y="20" class="tl">Ortsname</text><circle cx="52" cy="26" r="2.5" fill="#fff"/><path d="M52 26L46 21" class="dash2"/></svg><b>Ortsnamen</b>Start, Ziel, Übernachtungen: ziehen = verschieben, Doppelklick = Text ändern, Entf = ausblenden.</div>
-          <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Höhe richtet sich nach der Bergigkeit der Tour; Oberkante ziehen = Höhe, Doppelklick = zurück auf Automatik. Fotos erscheinen als nummerierte Punkte. Beim Ort setzen kann man statt auf die Karte auch ins Profil klicken – nahe Gipfel rasten ein.</div>
+          <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Höhe richtet sich nach der Bergigkeit der Tour; Oberkante ziehen = Höhe, Doppelklick = zurück auf Automatik. Fotos erscheinen als nummerierte Punkte. Beim Ort setzen kann man statt auf die Karte auch ins Profil klicken; eine Markierung zeigt dabei live Kilometer und Höhe, nahe Gipfel rasten ein.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><text x="10" y="24" class="th">Titel</text><rect x="8" y="8" width="44" height="22" class="dash"/><text x="10" y="42" class="t2">Untertitel · 209 km</text></svg><b>Texte</b>Titel, Untertitel und Kennzahlen direkt im Poster anklicken und tippen (Enter = neue Zeile).</div>
         </div>
         <div class="hfoot">Alles bleibt auf deinem Rechner. Die Sitzung wird automatisch im Browser gesichert – zum Archivieren oder Weitergeben „Projekt sichern (.zip)“.</div>
@@ -507,7 +508,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   let map = null, fallback = false;
   function initMap() {
     map = new maplibregl.Map({ container: 'map', style: T.map, center: [11.5, 51.5], zoom: 6, attributionControl: true, preserveDrawingBuffer: true, interactive: true, pitchWithRotate: false, dragRotate: false, touchZoomRotate: false });
-    map.on('load', () => { addRouteLayers(); if (state.stages.length) fitRoute(); }); map.on('click', mapClickSetPos); map.on('moveend', () => { if (!layouting) scheduleAuto('map'); });
+    map.on('load', () => { addRouteLayers(); if (state.stages.length) fitRoute(); }); map.on('click', mapClickSetPos);
+    map.on('mousemove', e => { if (!setPosFor || !state.stages.length) return; const [la, lo] = nearestOnRoute(e.lngLat.lat, e.lngLat.lng); const d = distOf(la, lo); if (d != null) hoverProfile(d, false); });
+    map.on('mouseout', () => { if (setPosFor) clearHover(); }); map.on('moveend', () => { if (!layouting) scheduleAuto('map'); });
     window.__map = map;   // für Tests
     map.on('idle', () => titleBlocker()); map.on('load', () => titleBlocker());
     map.on('move', () => { renderPins(); renderPlaces(); titleBlocker(); const z = map.getZoom(); $('#mapzoomsl').value = z; $('#mzval').textContent = z.toFixed(1); });
@@ -915,6 +918,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function routePts() { const pts = []; let off = 0; for (const st of state.stages) { for (const p of st.points) pts.push([p[0], p[1], p[2] ?? 0, off + p[3]]); off += st.points.at(-1)[3]; } return pts; }
   function routeAtDist(d) { const pts = routePts(); if (!pts.length) return null; let best = pts[0];
     for (const p of pts) { if (p[3] <= d) best = p; else break; } return best; }
+  function distOf(lat, lon) { const pts = routePts(); let bd = Infinity, bp = null;
+    for (const q of pts) { const dx = (q[0] - lat) * 111000, dy = (q[1] - lon) * 111000 * Math.cos(lat * d2r); const d = Math.hypot(dx, dy); if (d < bd) { bd = d; bp = q; } }
+    return bp && bd < 5000 ? bp[3] : null; }
   function photoDist(p) { if (p.lat == null) return null; const pts = routePts(); let bd = Infinity, bp = null;
     for (const q of pts) { const dx = (q[0] - p.lat) * 111000, dy = (q[1] - p.lon) * 111000 * Math.cos(p.lat * d2r); const d = Math.hypot(dx, dy); if (d < bd) { bd = d; bp = q; } }
     return bp && bd < 5000 ? bp[3] : null; }
@@ -1290,17 +1296,48 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   let hitMarker = null;
   function previewHit(h) { if (hitMarker) { hitMarker.remove(); hitMarker = null; } if (!h || !map) return; const el = document.createElement('div'); el.className = 'hitmark'; el.title = h.name; hitMarker = new maplibregl.Marker({ element: el }).setLngLat([h.lon, h.lat]).addTo(map); }
   const CLS_DE = { city: 'Stadt', town: 'Stadt', village: 'Dorf', hamlet: 'Weiler', suburb: 'Ortsteil', neighbourhood: 'Viertel', island: 'Insel', locality: 'Ort', peak: 'Gipfel', volcano: 'Berg', mountain_peak: 'Gipfel', water_name: 'Gewässer', lake: 'See', river: 'Fluss', park: 'Park', nature_reserve: 'Schutzgebiet', national_park: 'Nationalpark', museum: 'Museum', attraction: 'Sehenswürdigkeit', viewpoint: 'Aussichtspunkt', castle: 'Burg/Schloss', monument: 'Denkmal', memorial: 'Denkmal', ruins: 'Ruine', lighthouse: 'Leuchtturm', station: 'Bahnhof', railway: 'Bahn', hotel: 'Hotel', hostel: 'Hostel', guest_house: 'Pension', camp_site: 'Campingplatz', restaurant: 'Restaurant', cafe: 'Café', bakery: 'Bäckerei', alpine_hut: 'Hütte', shelter: 'Schutzhütte', bus_stop: 'Haltestelle', ferry_terminal: 'Fähre', tower: 'Turm', church: 'Kirche', place_of_worship: 'Kirche', bicycle: 'Fahrrad', information: 'Info', dam: 'Staumauer', bridge: 'Brücke', transportation_name: 'Straße/Weg' };
-  function startSetPos(p) { if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: Aufnahmeort auf der Karte anklicken – oder ins Höhenprofil klicken, dort rasten Gipfel ein (Esc = abbrechen).`); render(); }
+  function startSetPos(p) { clearHover(); if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: Aufnahmeort auf der Karte anklicken – oder ins Höhenprofil klicken, dort rasten Gipfel ein (Esc = abbrechen).`); render(); }
   function nearestOnRoute(lat, lon) { let best = null, bd = Infinity; for (const st of state.stages) for (let i = 0; i < st.points.length; i += 3) { const q = st.points[i]; const d = hav([lat, lon], [q[0], q[1]]); if (d < bd) { bd = d; best = q; } } return best && bd < 2000 ? [best[0], best[1]] : [lat, lon]; }
-  function mapClickSetPos(e) { if (!setPosFor) return; const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
+  function mapClickSetPos(e) { if (!setPosFor) return; clearHover(); const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
     [p.lat, p.lon] = nearestOnRoute(e.lngLat.lat, e.lngLat.lng); p.place = ''; p.detailTried = false; fillPlaceNames(); say(`Aufnahmeort von Foto ${p.num} gesetzt.`, 'ok'); render(); if (autoOn()) autoLayout(null, { quiet: true }); }
+  // ---------- Vorschau im „Ort setzen“-Modus: zeigt live, wo der Zeiger auf der Strecke liegt
+  // Über der Karte -> Markierung im Höhenprofil; über dem Profil -> zusätzlich ein Punkt auf der Karte.
+  let hoverPin = null;
+  function clearHover() { const el = $('#profhover'); if (el) el.innerHTML = ''; if (hoverPin) { hoverPin.remove(); hoverPin = null; } }
+  function snapPeak(d) { const total = profGeom?.total || 0;
+    const near = (state.showPeaks !== false ? state.peaks || [] : []).filter(q => q.lat != null)
+      .map(q => ({ q, dd: Math.abs(q.dist - d) })).sort((a, b) => a.dd - b.dd)[0];
+    return near && near.dd < total * .02 ? near.q : null; }
+  function hoverProfile(d, showMapPin) {
+    const el = $('#profhover'); if (!el || !profGeom || !setPosFor) return;
+    const { x0, x1, yt, yb, ymax, total, H, eleAt } = profGeom;
+    el.setAttribute('viewBox', `0 0 ${CW} ${H}`);
+    const pk = snapPeak(d); const dd = pk ? pk.dist : Math.max(0, Math.min(total, d));
+    const x = x0 + dd / total * (x1 - x0), ele = pk ? pk.ele : eleAt(dd), y = yb - Math.min(ele, ymax) / ymax * (yb - yt);
+    const label = pk ? `${pk.name} · ${nf(pk.ele)} m` : `km ${(dd / 1000).toFixed(1)} · ${nf(ele)} m`;
+    const ts = TS(), fs = (9 * ts).toFixed(1), tw = label.length * fs * .55;
+    const tx = Math.max(x0, Math.min(x1 - tw, x - tw / 2));
+    el.innerHTML = `<line x1="${x.toFixed(1)}" y1="${yt - 4}" x2="${x.toFixed(1)}" y2="${yb}" stroke="${T.cap}" stroke-width="1" stroke-dasharray="3 3" opacity=".7"/>
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(5 * ts).toFixed(1)}" fill="${pk ? T.cap : T.accent}" stroke="${T.halo}" stroke-width="2"/>
+      <rect x="${(tx - 4).toFixed(1)}" y="${(yt - 4 - fs * 1.9).toFixed(1)}" width="${(tw + 8).toFixed(1)}" height="${(fs * 1.6).toFixed(1)}" rx="${(fs * .4).toFixed(1)}" fill="${T.halo}" opacity=".85"/>
+      <text x="${tx.toFixed(1)}" y="${(yt - 4 - fs * .6).toFixed(1)}" fill="${T.cap}" font-size="${fs}" font-weight="600" font-family="Montserrat">${esc(label)}</text>`;
+    if (showMapPin && map) {   // Gegenstück auf der Karte: wo liegt dieser Kilometer?
+      const p = pk ? [pk.lat, pk.lon] : (routeAtDist(dd) || []).slice(0, 2);
+      if (p.length === 2) { const q = map.project([p[1], p[0]]);
+        if (!hoverPin) { hoverPin = document.createElement('div'); hoverPin.className = 'pin'; hoverPin.style.pointerEvents = 'none'; hoverPin.style.background = T.cap; hoverPin.style.color = T.halo; pinsEl.appendChild(hoverPin); }
+        hoverPin.textContent = pk ? '▲' : '•'; hoverPin.style.left = q.x + 'px'; hoverPin.style.top = q.y + 'px'; } }
+    else if (hoverPin) { hoverPin.remove(); hoverPin = null; }
+  }
+  const bandDist = e => { const r = $('#band').getBoundingClientRect(), vx = (e.clientX - r.left) / r.width * CW;
+    const x0 = profGeom?.x0 ?? 84, x1 = profGeom?.x1 ?? CW - 56, total = profGeom?.total || 0;
+    return Math.max(0, Math.min(total, (vx - x0) / (x1 - x0) * total)); };
+  $('#band').addEventListener('mousemove', e => { if (setPosFor) hoverProfile(bandDist(e), true); });
+  $('#band').addEventListener('mouseleave', clearHover);
   // Aufnahmeort auch über das Höhenprofil setzen: Klick = Streckenkilometer; liegt ein Gipfel nah, rastet er darauf ein
   $('#band').addEventListener('click', e => {
     if (!setPosFor || !state.stages.length) return;
     const p = state.photos.find(x => x.id === setPosFor); if (!p) return;
-    const r = $('#band').getBoundingClientRect(); const vx = (e.clientX - r.left) / r.width * CW;
-    const x0 = 84, x1 = CW - 56, total = routePts().at(-1)?.[3] || 0;
-    const d = Math.max(0, Math.min(total, (vx - x0) / (x1 - x0) * total));
+    const total = profGeom?.total || routePts().at(-1)?.[3] || 0, d = bandDist(e); clearHover();
     const near = (state.showPeaks !== false ? state.peaks || [] : []).filter(q => q.lat != null).map(q => ({ q, dd: Math.abs(q.dist - d) })).sort((a, b) => a.dd - b.dd)[0];
     setPosFor = null; stage.classList.remove('setpos');
     if (near && near.dd < total * .02) { p.lat = near.q.lat; p.lon = near.q.lon; p.place = near.q.name; p.detailTried = true;
@@ -1309,7 +1346,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       say(`Aufnahmeort von Foto ${p.num} auf Kilometer ${(d / 1000).toFixed(1)} gesetzt.`, 'ok'); }
     render(); if (autoOn()) autoLayout(null, { quiet: true });
   });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); say(''); render(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); clearHover(); say(''); render(); } });
   function renderPins() {
     pinsEl.innerHTML = ''; if (!map) { renderRouteTop(); return; }
     const groups = [];
@@ -1335,6 +1372,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         : `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="7" fill="${T.bg}" stroke="${T.accent}" stroke-width="3"/>`; }
     el.innerHTML = (d ? `<path d="${d}" fill="none" stroke="${T.halo}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><path d="${d}" fill="none" stroke="${T.accent}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : '') + pts;
   }
+  let profGeom = null;
   function profileData() {
     const xs = [], ys = [], bounds = []; let off = 0;
     for (const s of state.stages) { for (const p of s.points) { xs.push(off + p[3]); ys.push(p[2] ?? 0); } bounds.push({ name: s.name, end: off + s.points.at(-1)[3] }); off += s.points.at(-1)[3]; }
@@ -1363,6 +1401,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     let fo = ''; if (state.photos.length) { const eleAt = d => { let i = 0; while (i < xs.length - 1 && xs[i + 1] < d) i++; return ys[i] ?? 0; };
       for (const p of state.photos) { const d = photoDist(p); if (d == null) continue; const x = X(d), y = Y(Math.min(eleAt(d), ymax));
         fo += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${fz(7)}" fill="${T.accent}" stroke="${T.halo}" stroke-width="1.6"/><text x="${x.toFixed(1)}" y="${(y + +fz(3.2)).toFixed(1)}" fill="${T.pinBg || '#fff'}" font-size="${fz(8)}" font-weight="700" text-anchor="middle" font-family="Montserrat">${p.num}</text>`; } }
+    profGeom = { x0, x1, yt, yb, ymax, total, H, fz: +fz(1), eleAt: d => { let i = 0; while (i < xs.length - 1 && xs[i + 1] < d) i++; return ys[i] ?? 0; } };
     svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="${T.accent}" fill-opacity=".37"/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="1.6" stroke-linejoin="round"/>` + b + pk + fo +
       `<text x="${x0}" y="20" fill="${T.muted}" font-size="${fz(11)}" font-weight="700" letter-spacing="2.4" font-family="Montserrat">HÖHENPROFIL</text><text x="${x1}" y="20" fill="${T.muted}" font-size="${fz(11)}" text-anchor="end" font-family="Montserrat">Höchster Punkt ${nf(maxE)} m</text>` +
       `<text x="${x0}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" font-family="Montserrat">${esc(state.places.find(p => p.key === 'start')?.text || 'Start')}</text><text x="${x1}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" text-anchor="end" font-family="Montserrat">${esc(state.places.find(p => p.key === 'end')?.text || 'Ziel')}</text>`;
