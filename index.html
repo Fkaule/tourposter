@@ -325,7 +325,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <option value="hell">Hell – helle Karte, Rot</option>
         <option value="retro">Retro – bunte Karte, Ziegel</option>
       </select>
-      <label class="switch" style="margin-top:8px"><input type="checkbox" id="terrain" checked><span class="kn"></span><span>Geländeschummerung<small>Berge plastisch – Höhendaten von AWS Terrain Tiles, dafür lädt die Karte von einem zweiten Dienst</small></span></label>
+      <label class="f">Geländerelief <span id="reliefval">60 %</span></label>
+      <input type="range" id="relief" min="0" max="100" step="5" value="60" style="width:100%" title="Schummerung der Berge. 0 = aus, dann werden auch keine Höhendaten geladen. Im Flachland ist selbst bei hohem Wert wenig zu sehen. Höhendaten von AWS Terrain Tiles (zweiter Dienst neben der Karte)">
       <div class="grid2" style="margin-top:8px">
         <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div>
       </div>
@@ -446,7 +447,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${{ DIN: 'DIN', Poster: 'Posterdruck (cm)', Screen: 'Bildschirm / Handy (px)' }[grp]}"></optgroup>`); }
       sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${p[3]?.label || (grp === 'DIN' ? k + ' · ' : '') + (p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm')}</option>`); } }
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
-  const state = { terrain: true, format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 60, photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const state = { terrain: true, relief: .6, format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 60, photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; setFormat(state.format); });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
@@ -490,6 +491,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     map.on('error', e => {
       const msg = e?.error?.message || '';
       if (!fallback && !map.isStyleLoaded() && /fetch|style|network|load/i.test(msg)) { fallback = true; say('Kartenstil nicht erreichbar (offline?) – Route wird ohne Karte gezeigt.', 'err'); map.setStyle({ version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': T.bg } }] }); map.once('styledata', () => setTimeout(addRouteLayers, 200)); }
+      else if (e?.sourceId === 'dem') { if (!demWarned) { demWarned = true; say('Höhendaten für das Geländerelief nicht erreichbar – Relief bleibt aus, die Karte funktioniert normal.', 'warn'); } }
       else if (/fetch/i.test(msg)) say('Kartenkacheln nicht erreichbar – Internetverbindung?', 'err');
     });
   }
@@ -545,13 +547,22 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     terrainLayer(); peakLayer();
   }
   // Geländeschummerung aus freien Höhenkacheln (AWS Open Data, terrarium-Kodierung) – nur wenn eingeschaltet
+  // dunkles Thema? – aus der Helligkeit der Posterfarbe abgeleitet (die Themes führen kein eigenes Flag)
+  const isDarkTheme = () => { const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(T.bg || ''); if (!m) return false;
+    const [r, g, b] = [1, 2, 3].map(i => parseInt(m[i], 16)); return (.2126 * r + .7152 * g + .0722 * b) < 110; };
+  let demWarned = false;
   const DEM_TILES = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
   function terrainLayer() {
     if (!map || !map.isStyleLoaded()) return;
     if (!state.terrain) { if (map.getLayer('hillshade')) map.removeLayer('hillshade'); if (map.getSource('dem')) map.removeSource('dem'); return; }
+    const rel = state.relief ?? .6;
     if (!map.getSource('dem')) map.addSource('dem', { type: 'raster-dem', tiles: [DEM_TILES], encoding: 'terrarium', tileSize: 256, maxzoom: 13,
       attribution: 'Höhendaten: <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">AWS Terrain Tiles</a>' });
-    const paint = { 'hillshade-exaggeration': .45, 'hillshade-shadow-color': T.bg === '#0e1520' || T.dark ? '#000' : '#5b4a37', 'hillshade-highlight-color': '#ffffff', 'hillshade-accent-color': T.halo || '#ffffff' };
+    const dark = isDarkTheme(), k = Math.min(1, .25 + rel * .75);
+    const paint = { 'hillshade-exaggeration': k,
+      'hillshade-shadow-color': dark ? `rgba(0,0,0,${(.55 * rel + .25).toFixed(2)})` : `rgba(74,53,32,${(.5 * rel + .2).toFixed(2)})`,
+      'hillshade-highlight-color': dark ? `rgba(180,200,220,${(.25 * rel).toFixed(2)})` : `rgba(255,248,235,${(.45 * rel + .15).toFixed(2)})`,
+      'hillshade-accent-color': dark ? 'rgba(30,40,50,.4)' : 'rgba(107,83,54,.35)' };
     if (!map.getLayer('hillshade')) { const before = map.getLayer('route-halo') ? 'route-halo' : undefined;
       map.addLayer({ id: 'hillshade', type: 'hillshade', source: 'dem', paint }, before); }
     else for (const k in paint) map.setPaintProperty('hillshade', k, paint[k]);
@@ -793,8 +804,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     $('#viga').value = Math.round(vigA() * 100); }
   $('#viga').addEventListener('input', e => { state.vigA = +e.target.value / 100; stage.style.setProperty('--pvigA', vigA()); vigLabel(); autosave(); });
   $('#viga').addEventListener('dblclick', () => { state.vigA = null; stage.style.setProperty('--pvigA', vigA()); vigLabel(); autosave(); });
-  $('#terrain').addEventListener('change', e => { state.terrain = e.target.checked; terrainLayer();
-    if (state.terrain) say('Geländeschummerung an – Höhenkacheln kommen von AWS Terrain Tiles (zweiter Server neben der Karte).', 'ok'); });
+  let reliefT = 0;
+  $('#relief').addEventListener('input', e => { const v = +e.target.value / 100; state.relief = v; state.terrain = v > 0;
+    $('#reliefval').textContent = v > 0 ? Math.round(v * 100) + ' %' : 'aus';
+    clearTimeout(reliefT); reliefT = setTimeout(() => { terrainLayer(); autosave(); }, 120); });
   $('#peakmap').addEventListener('change', e => { state.showPeakMap = e.target.checked; if (state.showPeakMap && !state.peaks?.length) findPeaks(); else { peakLayer(); render(); } });
   function peakThrLabel() { $('#peakthrval').textContent = state.peakThr != null ? state.peakThr + ' m' : `automatisch${state.peakAuto ? ' (' + state.peakAuto + ' m)' : ''}`;
     if (state.peakThr == null && state.peakAuto) $('#peakthr').value = Math.min(600, Math.max(30, state.peakAuto)); }
@@ -1246,11 +1259,18 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const el = $('#rtop'); if (!el) return;
     el.setAttribute('viewBox', `0 0 ${CW} ${CH}`);
     if (!map || !state.stages.length) { el.innerHTML = ''; return; }
+    const CWv = CW;
     const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const lim = vigH + 10;
     let d = '', open = false;
     for (const st of state.stages) { for (const p of st.points) { const q = map.project([p[1], p[0]]);
       if (q.y < lim && q.x > -50 && q.x < CW + 50) { d += (open ? 'L' : 'M') + q.x.toFixed(1) + ',' + q.y.toFixed(1) + ' '; open = true; } else open = false; } open = false; }
-    el.innerHTML = d ? `<path d="${d}" fill="none" stroke="${T.halo}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><path d="${d}" fill="none" stroke="${T.accent}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : '';
+    // Start-, Ziel- und Übernachtungspunkte gehören mit ins Overlay, sonst verdeckt die Linie sie
+    let pts = '';
+    for (const f of nightsGeo().features) { const q = map.project(f.geometry.coordinates); if (!(q.y < lim && q.x > -50 && q.x < CW + 50)) continue;
+      pts += f.properties.kind === 'night'
+        ? `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="9.5" fill="${T.accent}" stroke="${T.halo}" stroke-width="3.5"/><circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="3.4" fill="#fff"/>`
+        : `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="7" fill="${T.bg}" stroke="${T.accent}" stroke-width="3"/>`; }
+    el.innerHTML = (d ? `<path d="${d}" fill="none" stroke="${T.halo}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><path d="${d}" fill="none" stroke="${T.accent}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : '') + pts;
   }
   function profileData() {
     const xs = [], ys = [], bounds = []; let off = 0;
@@ -1582,6 +1602,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       for (const pass of [[T.halo, 9, .9], [T.accent, 5, 1]]) { g.strokeStyle = pass[0]; g.lineWidth = P(pass[1]); g.globalAlpha = pass[2]; g.lineCap = 'round'; g.lineJoin = 'round';
         for (const s of seg) { if (s.length < 2) continue; g.beginPath(); g.moveTo(s[0][0], s[0][1]); for (let i = 1; i < s.length; i++) g.lineTo(s[i][0], s[i][1]); g.stroke(); } }
       g.globalAlpha = 1;
+      for (const f of nightsGeo().features) { const q = map.project(f.geometry.coordinates); if (!(q.y < lim && q.x > -50 && q.x < CW + 50)) continue;
+        const x = P(q.x), y = P(q.y);
+        if (f.properties.kind === 'night') { g.beginPath(); g.arc(x, y, P(9.5), 0, 7); g.fillStyle = T.accent; g.fill(); g.lineWidth = P(3.5); g.strokeStyle = T.halo; g.stroke();
+          g.beginPath(); g.arc(x, y, P(3.4), 0, 7); g.fillStyle = '#fff'; g.fill(); }
+        else { g.beginPath(); g.arc(x, y, P(7), 0, 7); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(3); g.strokeStyle = T.accent; g.stroke(); } }
     }
     // Titelblock
     const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(57), P(28), P(2));
@@ -1683,7 +1708,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       render(); say(`Projekt „${f.name}“ geladen – ${n} Foto(s) in Originalgröße.`, 'ok'); } catch (e) { say('Projekt nicht lesbar: ' + e.message, 'err'); } }
   $('#ldzip input').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadZipFile(f); });
   function restore(obj) {
-    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.peakThr = obj.peakThr ?? null; state.terrain = obj.terrain !== false; $('#terrain').checked = state.terrain; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.peakThr = obj.peakThr ?? null; state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
     applyFrame(); render();
   }
