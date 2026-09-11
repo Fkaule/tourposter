@@ -677,19 +677,26 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   const quadPath = (ctx, q) => { ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]); for (let i = 1; i < 4; i++) ctx.lineTo(q[i][0], q[i][1]); ctx.closePath(); };
   // Schattierung des Fotos auf das Poster übertragen: Ausschnitt entsättigen, auf Mittelwert normieren, multiplizieren
-  function shadeLayer(photo, q) {
+  // Licht des Raums auf das Poster übertragen: Wandausschnitt hinter dem Poster entsättigen, weichzeichnen
+  // (damit nur der Helligkeitsverlauf übrig bleibt, keine Wandstruktur) und auf den Mittelwert normieren.
+  // Zusätzlich die mittlere Lichtfarbe zurückgeben – so nimmt das Poster die Raumstimmung an.
+  function shadeLayer(photo, q, soft = 1) {
     const xs = q.map(p => p[0]), ys = q.map(p => p[1]);
     const x0 = Math.max(0, Math.floor(Math.min(...xs)) - 2), y0 = Math.max(0, Math.floor(Math.min(...ys)) - 2);
     const PW = photo.naturalWidth || photo.width, PH = photo.naturalHeight || photo.height;
     const w = Math.min(PW - x0, Math.ceil(Math.max(...xs)) - x0 + 4), h = Math.min(PH - y0, Math.ceil(Math.max(...ys)) - y0 + 4);
     if (w < 2 || h < 2) return null;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d', { willReadFrequently: true });
-    x.drawImage(photo, x0, y0, w, h, 0, 0, w, h);
-    const d = x.getImageData(0, 0, w, h), p = d.data; let sum = 0;
-    for (let i = 0; i < p.length; i += 4) { const l = .2126 * p[i] + .7152 * p[i + 1] + .0722 * p[i + 2]; p[i] = p[i + 1] = p[i + 2] = l; sum += l; }
-    const mean = Math.max(1, sum / (p.length / 4));
-    for (let i = 0; i < p.length; i += 4) { const v = Math.max(0, Math.min(255, 255 * p[i] / mean)); p[i] = p[i + 1] = p[i + 2] = v; }
-    x.putImageData(d, 0, 0); return { canvas: c, x0, y0 };
+    x.filter = `blur(${Math.max(2, Math.min(w, h) * .06 * soft).toFixed(1)}px)`;
+    x.drawImage(photo, x0 - 8, y0 - 8, w + 16, h + 16, -8, -8, w + 16, h + 16); x.filter = 'none';
+    const d = x.getImageData(0, 0, w, h), p = d.data; let sum = 0, sr = 0, sg = 0, sb = 0, n = p.length / 4;
+    for (let i = 0; i < p.length; i += 4) { sr += p[i]; sg += p[i + 1]; sb += p[i + 2];
+      const l = .2126 * p[i] + .7152 * p[i + 1] + .0722 * p[i + 2]; p[i] = p[i + 1] = p[i + 2] = l; sum += l; }
+    const mean = Math.max(1, sum / n);
+    for (let i = 0; i < p.length; i += 4) { const v = 255 * Math.pow(p[i] / mean, .85); p[i] = p[i + 1] = p[i + 2] = Math.max(0, Math.min(255, v)); }
+    x.putImageData(d, 0, 0);
+    const mx = Math.max(sr, sg, sb) / n || 1;   // Lichtfarbe auf Helligkeit 1 normiert -> färbt, ohne abzudunkeln
+    return { canvas: c, x0, y0, tint: [sr / n / mx, sg / n / mx, sb / n / mx] };
   }
   const roomCache = new Map();
   function loadRoom(room) {
@@ -724,7 +731,21 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (!fw) { ctx.save(); quadPath(ctx, inner); ctx.strokeStyle = 'rgba(0,0,0,.12)'; ctx.lineWidth = Math.max(.8, off * .12); ctx.stroke(); ctx.restore(); }
     // Licht und Schatten des Raums übernehmen
     const sh = shadeLayer(photo, outer);
-    if (sh) { ctx.save(); quadPath(ctx, outer); ctx.clip(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = .38; ctx.drawImage(sh.canvas, sh.x0, sh.y0); ctx.restore(); }
+    if (sh) {
+      ctx.save(); quadPath(ctx, outer); ctx.clip();
+      // 1. Helligkeitsverlauf des Raums (Schatten, Vignette, Lichtkeil)
+      ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = .62; ctx.drawImage(sh.canvas, sh.x0, sh.y0);
+      // 2. Lichtfarbe des Raums, damit das Poster nicht kälter wirkt als alles andere
+      const [tr, tg, tb] = sh.tint; ctx.globalAlpha = .24;
+      ctx.fillStyle = `rgb(${Math.round(tr * 255)},${Math.round(tg * 255)},${Math.round(tb * 255)})`; quadPath(ctx, outer); ctx.fill();
+      // 3. Streiflicht aus der Lichtrichtung: hell auf der Fensterseite, minimal dunkler gegenüber
+      const a0 = inner[0], a1 = inner[1], a3 = inner[3], dx = sun[0] >= 0 ? 1 : -1;
+      const gx0 = dx > 0 ? a0[0] : a1[0], gx1 = dx > 0 ? a1[0] : a0[0];
+      const gr = ctx.createLinearGradient(gx0, a0[1], gx1, a3[1]);
+      gr.addColorStop(0, 'rgba(255,252,244,.13)'); gr.addColorStop(.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(24,20,16,.07)');
+      ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = 1; ctx.fillStyle = gr; quadPath(ctx, outer); ctx.fill();
+      ctx.restore();
+    }
     // Hinweis, dass die Szene ein KI-generiertes Beispielbild ist
     if (room.note) { const fs = Math.max(9, cv.height * .0125), pad = fs * .85, m = cv.height * .022;
       ctx.save(); ctx.font = `500 ${fs.toFixed(1)}px Montserrat, Arial, sans-serif`; ctx.letterSpacing = (fs * .06).toFixed(2) + 'px';
