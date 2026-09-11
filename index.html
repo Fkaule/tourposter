@@ -548,21 +548,25 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // ---------- Wandvorschau: maßstabsgetreues Wohnzimmer (cm) mit Stahlrennrad, Poster in echter Größe
   const WALL = { w: 480, h: 265, floor: 70 };   // Wandbreite, Raumhöhe, sichtbare Bodentiefe (cm)
   let wallImg = null, wallSizeSel = null;
-  function bikeSvg(x, y, scale, col) {   // klassisches Stahlrennrad, Hinterachse bei (x,y), Maße in cm, Blick von links (Kettenblatt sichtbar)
-    const P = (px, py) => `${(x + px * scale).toFixed(1)},${(y - py * scale).toFixed(1)}`;   // py nach oben
-    const R = 34 * scale, RA = P(0, 0), FA = P(100, 0), BB = P(41, -7), ST = P(24, 47), HT = P(84, 50), HB = P(89, 37), SP = P(21, 57);
-    const tube = (a, b, w = 2.6) => `<line x1="${a.split(',')[0]}" y1="${a.split(',')[1]}" x2="${b.split(',')[0]}" y2="${b.split(',')[1]}" stroke="${col}" stroke-width="${w * scale}" stroke-linecap="round"/>`;
-    const wheel = c => { const [cx, cy] = c.split(',').map(Number); let sp = ''; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; sp += `<line x1="${cx}" y1="${cy}" x2="${(cx + Math.cos(a) * R * .92).toFixed(1)}" y2="${(cy + Math.sin(a) * R * .92).toFixed(1)}" stroke="#9aa3ab" stroke-width="${.35 * scale}"/>`; }
-      return `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#1d2226" stroke-width="${2.6 * scale}"/><circle cx="${cx}" cy="${cy}" r="${R * .92}" fill="none" stroke="#c9ced3" stroke-width="${1.6 * scale}"/>${sp}<circle cx="${cx}" cy="${cy}" r="${3 * scale}" fill="#c9ced3" stroke="#6b757e" stroke-width="${.6 * scale}"/>`; };
-    const [bx, by] = BB.split(',').map(Number); const [hx, hy] = HT.split(',').map(Number); const [sx, sy] = SP.split(',').map(Number); const [fx, fy] = FA.split(',').map(Number); const [hbx, hby] = HB.split(',').map(Number);
-    return `<g>${wheel(RA)}${wheel(FA)}
-      ${tube(BB, ST)}${tube(ST, HT)}${tube(BB, HB)}${tube(HT, HB, 3.2)}${tube(BB, RA, 1.8)}${tube(ST, RA, 1.8)}
-      <path d="M${hbx},${hby} Q${(hbx + (fx - hbx) * .3).toFixed(1)},${(hby + (fy - hby) * .8).toFixed(1)} ${fx},${fy}" fill="none" stroke="#c9ced3" stroke-width="${2 * scale}" stroke-linecap="round"/>
-      ${tube(ST, SP, 1.6)}<path d="M${(sx - 13 * scale).toFixed(1)},${(sy - 1 * scale).toFixed(1)} c4,-3 9,-3.5 14,-3.5 l11,1.5 c-1,2.5 -6,4 -12,4 l-9,0 c-3,0 -4,-1 -4,-2z" fill="#2b2118"/>
-      <line x1="${hx}" y1="${hy}" x2="${(hx + 9 * scale).toFixed(1)}" y2="${(hy - 2 * scale).toFixed(1)}" stroke="#c9ced3" stroke-width="${1.8 * scale}" stroke-linecap="round"/>
-      <path d="M${(hx + 9 * scale).toFixed(1)},${(hy - 2 * scale).toFixed(1)} l9,0 c7,0 9,5 8,10 c-1,6 -6,8 -11,7" fill="none" stroke="#c9ced3" stroke-width="${1.8 * scale}" stroke-linecap="round"/><path d="M${(hx + 9 * scale).toFixed(1)},${(hy - 2 * scale).toFixed(1)} l9,0" stroke="#2b2118" stroke-width="${2.6 * scale}" stroke-linecap="round"/>
-      <circle cx="${bx}" cy="${by}" r="${10 * scale}" fill="none" stroke="#3a4148" stroke-width="${1.4 * scale}"/><circle cx="${bx}" cy="${by}" r="${1.6 * scale}" fill="#3a4148"/>
-      <line x1="${bx}" y1="${by}" x2="${(bx + 12 * scale).toFixed(1)}" y2="${(by + 12 * scale).toFixed(1)}" stroke="#3a4148" stroke-width="${1.8 * scale}" stroke-linecap="round"/><rect x="${(bx + 10 * scale).toFixed(1)}" y="${(by + 11 * scale).toFixed(1)}" width="${6 * scale}" height="${2.2 * scale}" fill="#3a4148"/>
+  function bikeSvg(x, y, scale, col) {   // klassisches Stahlrennrad, Hinterachse bei (x,y), Maße in cm; Geometrie: Radstand 100, BB-Tiefe 7, Unterrohr mit 3 cm Reifenfreiheit
+    const pt = (px, py) => [x + px * scale, y - py * scale];   // py nach oben
+    const R = 34 * scale, RA = pt(0, 0), FA = pt(100, 0), BB = pt(41, -7), ST = pt(24, 47), HT = pt(85, 54), HB = pt(90, 40), SP = pt(21, 57);
+    const L = (a, b, w, c = col) => `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${c}" stroke-width="${(w * scale).toFixed(2)}" stroke-linecap="round"/>`;
+    const wheel = c => { let sp = ''; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; sp += `<line x1="${c[0].toFixed(1)}" y1="${c[1].toFixed(1)}" x2="${(c[0] + Math.cos(a) * R * .92).toFixed(1)}" y2="${(c[1] + Math.sin(a) * R * .92).toFixed(1)}" stroke="#9aa3ab" stroke-width="${.35 * scale}"/>`; }
+      return `<circle cx="${c[0]}" cy="${c[1]}" r="${R}" fill="none" stroke="#1d2226" stroke-width="${2.6 * scale}"/><circle cx="${c[0]}" cy="${c[1]}" r="${R * .92}" fill="none" stroke="#c9ced3" stroke-width="${1.6 * scale}"/>${sp}<circle cx="${c[0]}" cy="${c[1]}" r="${3 * scale}" fill="#c9ced3" stroke="#6b757e" stroke-width="${.6 * scale}"/>`; };
+    const [bx, by] = BB, [hx, hy] = HT, [sx, sy] = SP, [fx, fy] = FA, [hbx, hby] = HB, [rx, ry] = RA; const cr = 10 * scale, cg = 4 * scale;
+    // Kette: Tangenten oben/unten zwischen Kettenblatt (BB) und Ritzel (Hinterachse)
+    const chain = `<path d="M${(bx).toFixed(1)},${(by - cr).toFixed(1)} L${(rx).toFixed(1)},${(ry - cg).toFixed(1)} M${(bx).toFixed(1)},${(by + cr).toFixed(1)} L${(rx).toFixed(1)},${(ry + cg).toFixed(1)}" fill="none" stroke="#3a4148" stroke-width="${1.1 * scale}"/><circle cx="${rx}" cy="${ry}" r="${cg}" fill="none" stroke="#3a4148" stroke-width="${1.1 * scale}"/>`;
+    const crank = (dx, dy) => `<line x1="${bx}" y1="${by}" x2="${(bx + dx).toFixed(1)}" y2="${(by + dy).toFixed(1)}" stroke="#3a4148" stroke-width="${1.8 * scale}" stroke-linecap="round"/><rect x="${(bx + dx - 3.5 * scale).toFixed(1)}" y="${(by + dy - 1.2 * scale).toFixed(1)}" width="${7 * scale}" height="${2.4 * scale}" rx="${.6 * scale}" fill="#3a4148"/>`;
+    return `<g>${wheel(RA)}${wheel(FA)}${chain}
+      ${L(BB, ST, 2.6)}${L(ST, HT, 2.6)}${L(BB, HB, 2.8)}${L(HT, HB, 3.2)}${L(BB, RA, 1.8)}${L(ST, RA, 1.8)}
+      <path d="M${hbx.toFixed(1)},${hby.toFixed(1)} Q${(hbx + (fx - hbx) * .25).toFixed(1)},${(hby + (fy - hby) * .85).toFixed(1)} ${fx.toFixed(1)},${fy.toFixed(1)}" fill="none" stroke="#c9ced3" stroke-width="${2 * scale}" stroke-linecap="round"/>
+      ${L(ST, SP, 1.6, '#c9ced3')}
+      <path d="M${(sx - 13 * scale).toFixed(1)},${(sy - 1.5 * scale).toFixed(1)} h${(25 * scale).toFixed(1)} c${(2 * scale).toFixed(1)},0 ${(3 * scale).toFixed(1)},${(1 * scale).toFixed(1)} ${(3 * scale).toFixed(1)},${(2 * scale).toFixed(1)} c0,${(1 * scale).toFixed(1)} -${(1 * scale).toFixed(1)},${(1.8 * scale).toFixed(1)} -${(3 * scale).toFixed(1)},${(1.8 * scale).toFixed(1)} h-${(20 * scale).toFixed(1)} c-${(3 * scale).toFixed(1)},0 -${(5 * scale).toFixed(1)},-${(1.5 * scale).toFixed(1)} -${(5 * scale).toFixed(1)},-${(3.8 * scale).toFixed(1)}z" fill="#2b2118"/>
+      <line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${(hx + 9 * scale).toFixed(1)}" y2="${(hy - 2 * scale).toFixed(1)}" stroke="#c9ced3" stroke-width="${1.8 * scale}" stroke-linecap="round"/>
+      <path d="M${(hx + 9 * scale).toFixed(1)},${(hy - 2 * scale).toFixed(1)} l${(9 * scale).toFixed(1)},0 c${(7 * scale).toFixed(1)},0 ${(9 * scale).toFixed(1)},${(5 * scale).toFixed(1)} ${(8 * scale).toFixed(1)},${(10 * scale).toFixed(1)} c-${(1 * scale).toFixed(1)},${(6 * scale).toFixed(1)} -${(6 * scale).toFixed(1)},${(8 * scale).toFixed(1)} -${(11 * scale).toFixed(1)},${(7 * scale).toFixed(1)}" fill="none" stroke="#c9ced3" stroke-width="${1.8 * scale}" stroke-linecap="round"/><path d="M${(hx + 9 * scale).toFixed(1)},${(hy - 2 * scale).toFixed(1)} l${(9 * scale).toFixed(1)},0" stroke="#2b2118" stroke-width="${2.6 * scale}" stroke-linecap="round"/>
+      <circle cx="${bx}" cy="${by}" r="${cr}" fill="none" stroke="#3a4148" stroke-width="${1.4 * scale}"/>
+      ${crank(11 * scale, 12 * scale)}${crank(-11 * scale, -12 * scale)}<circle cx="${bx}" cy="${by}" r="${1.8 * scale}" fill="#3a4148"/>
     </g>`;
   }
   function wallScene(pw, ph, frame, wallc, img) {
@@ -600,8 +604,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <!-- Teppich -->
       <path d="M120,${H + 14} L440,${H + 14} L470,${H + 58} L90,${H + 58}z" fill="#d8ccb8" opacity=".55"/>
       <!-- Rad über dem Sofa: Hinterachse bei (176, 152) -> 170 cm lang, Wandhaken -->
-      <g transform="translate(-22,0)"><rect x="229" y="84" width="3" height="20" rx="1" fill="#6b757e"/><rect x="226" y="82" width="9" height="3" rx="1" fill="#6b757e"/>
-      <g filter="url(#sh)">${bikeSvg(176, 152, 1, '#2f4a3f')}</g></g>
+      <g transform="translate(-22,0)"><rect x="229" y="60" width="3" height="20" rx="1" fill="#6b757e"/><rect x="226" y="58" width="9" height="3" rx="1" fill="#6b757e"/>
+      <g filter="url(#sh)">${bikeSvg(176, 130, 1, '#2f4a3f')}</g></g>
       <!-- Poster -->
       <g filter="url(#sh)">
         ${fr[0] ? `<rect x="${px - fr[0]}" y="${py - fr[0]}" width="${pw + 2 * fr[0]}" height="${ph + 2 * fr[0]}" fill="${fr[1]}"/>` : ''}
