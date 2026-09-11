@@ -925,13 +925,14 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     afterTourChange(); if (window.innerWidth <= 900 && state.stages.length) showTab('fotos');
   }
   // Distanz entlang der gesamten Tour (über alle Etappen) <-> Punkt auf der Route
-  function routePts() { const pts = []; let off = 0; for (const st of state.stages) { for (const p of st.points) pts.push([p[0], p[1], p[2] ?? 0, off + p[3]]); off += st.points.at(-1)[3]; } return pts; }
-  function routeAtDist(d) { const pts = routePts(); if (!pts.length) return null; let best = pts[0];
+  // alle Routenpunkte mit durchlaufender Distanz über die Etappen hinweg (Achtung: routePts() weiter unten ist die ausgedünnte Variante für die Kachelsuche)
+  function routeAll() { const pts = []; let off = 0; for (const st of state.stages) { for (const p of st.points) pts.push([p[0], p[1], p[2] ?? 0, off + p[3]]); off += st.points.at(-1)[3]; } return pts; }
+  function routeAtDist(d) { const pts = routeAll(); if (!pts.length) return null; let best = pts[0];
     for (const p of pts) { if (p[3] <= d) best = p; else break; } return best; }
-  function distOf(lat, lon) { const pts = routePts(); let bd = Infinity, bp = null;
+  function distOf(lat, lon) { const pts = routeAll(); let bd = Infinity, bp = null;
     for (const q of pts) { const dx = (q[0] - lat) * 111000, dy = (q[1] - lon) * 111000 * Math.cos(lat * d2r); const d = Math.hypot(dx, dy); if (d < bd) { bd = d; bp = q; } }
     return bp && bd < 5000 ? bp[3] : null; }
-  function photoDist(p) { if (p.lat == null) return null; const pts = routePts(); let bd = Infinity, bp = null;
+  function photoDist(p) { if (p.lat == null) return null; const pts = routeAll(); let bd = Infinity, bp = null;
     for (const q of pts) { const dx = (q[0] - p.lat) * 111000, dy = (q[1] - p.lon) * 111000 * Math.cos(p.lat * d2r); const d = Math.hypot(dx, dy); if (d < bd) { bd = d; bp = q; } }
     return bp && bd < 5000 ? bp[3] : null; }
 
@@ -1196,6 +1197,22 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     return sortHits(hits);
   }
   function centroid(g) { if (!g) return null; if (g.type === 'Point') return g.coordinates; const pts = []; const walk = a => Array.isArray(a[0]) ? a.forEach(walk) : pts.push(a); walk(g.coordinates); if (!pts.length) return null; return [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length]; }
+  // Feinerer Ortsname für Fotos: nächster benannter Punkt aus den Zoom-14-Kacheln (Gipfel, Höhle, Aussicht,
+  // Hütte, Gewässer, Park, Weiler). Bei kurzen Touren liegt sonst für jedes Foto dasselbe Dorf am nächsten.
+  const POI_PREF = { peak: .5, volcano: .5, cave_entrance: .5, viewpoint: .55, waterfall: .55, spring: .6, ruins: .6, castle: .6,
+    monument: .65, memorial: .65, tower: .7, attraction: .7, alpine_hut: .7, shelter: .8, museum: .8, information: 1.1, picnic_site: 1.1 };
+  async function detailPoi(lat, lon, radius = 700) {
+    const tpl = await tileTemplate(); if (!tpl || typeof VectorTile === 'undefined') return null;
+    const tiles = areaTiles(14, [[lat, lon]], radius); let best = null;
+    await Promise.all(tiles.map(async ([x, y]) => { const vt = await tileFetch(14, x, y); if (!vt) return;
+      for (const ln of ['mountain_peak', 'poi', 'water_name', 'park', 'place']) { const layer = vt.layers[ln]; if (!layer) continue;
+        for (let i = 0; i < layer.length; i++) { const f = layer.feature(i).toGeoJSON(x, y, 14); const pr = f.properties;
+          const name = pr.name || pr['name:de'] || pr['name:latin']; if (!name) continue;
+          const c = centroid(f.geometry); if (!c) continue; const d = hav([lat, lon], [c[1], c[0]]); if (d > radius) continue;
+          const w = POI_PREF[pr.class] ?? (ln === 'mountain_peak' ? .5 : ln === 'poi' ? 1.4 : 1);
+          const score = d * w; if (!best || score < best.score) best = { score, d, name, cls: pr.class }; } } }));
+    return best;
+  }
   const pendingDetail = new Set();
   function queueDetail(obj, key, done, mode = 'near') {
     if (pendingDetail.has(key) || !map) return; pendingDetail.add(key);
@@ -1205,10 +1222,24 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     let changed = false;
     for (const p of state.places) if (!p.text && !p.edited && !p.detailTried) { p.detailTried = true; queueDetail(p, 'pl' + p.key, b => { if (!p.text && !p.edited) { p.text = b.name; render(); } }, 'city'); }
     for (const p of state.places) if (!p.text && !p.edited && p.detailTried && !pendingDetail.has('pl' + p.key)) { const b = nearestPlace(p.lat, p.lon); if (b && b.d < 12000) { p.text = b.name; changed = true; } }
-    const mode = 'near';   // Bildunterschrift: genauer Ort (Dorf/Stadtteil) aus der Detail-Kachel
+    // Bildunterschrift: genauer Ort (Dorf/Stadtteil) aus der Detail-Kachel. Bei kurzen Touren oder wenn zwei Fotos
+    // denselben Ortsnamen bekämen, stattdessen den nächsten benannten Punkt (Gipfel, Höhle, Aussicht, Gewässer …).
+    const km = state.stages.reduce((s, x) => s + x.distance, 0) / 1000;
     for (const p of state.photos) if (!p.place && p.lat != null) {
-      if (mode === 'near') { if (!p.detailTried) { p.detailTried = true; queueDetail(p, 'ph' + p.id, b => { if (!p.place) { p.place = b.name; render(); } }); } continue; }
-      const b = nearestPlace(p.lat, p.lon, mode) || nearestPlace(p.lat, p.lon, 'near'); if (b) { p.place = b.name; changed = true; }
+      if (p.detailTried) continue; p.detailTried = true;
+      const key = 'ph' + p.id; if (pendingDetail.has(key) || !map) continue; pendingDetail.add(key);
+      (async () => {
+        const taken = () => state.photos.filter(q => q.id !== p.id && q.place).map(q => q.place.toLowerCase());
+        let name = null;
+        const b = await detailPlace(p.lat, p.lon).catch(() => null);
+        if (b) name = b.name;
+        if (!name || km < 30 || taken().includes((name || '').toLowerCase())) {
+          const poi = await detailPoi(p.lat, p.lon).catch(() => null);
+          if (poi && !taken().includes(poi.name.toLowerCase())) name = poi.name;
+        }
+        if (!name) { const n = nearestPlace(p.lat, p.lon, 'near') || nearestPlace(p.lat, p.lon, 'city'); if (n && n.d < 15000) name = n.name; }
+        if (name && !p.place) { p.place = name; render(); }
+      })().catch(() => { p.detailFailed = true; }).finally(() => pendingDetail.delete(key));
     }
     return changed;
   }
@@ -1354,7 +1385,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   $('#band').addEventListener('click', e => {
     if (!setPosFor || !state.stages.length) return;
     const p = state.photos.find(x => x.id === setPosFor); if (!p) return;
-    const total = profGeom?.total || routePts().at(-1)?.[3] || 0, d = bandDist(e); clearHover();
+    const total = profGeom?.total || routeAll().at(-1)?.[3] || 0, d = bandDist(e); clearHover();
     const near = (state.showPeaks !== false ? state.peaks || [] : []).filter(q => q.lat != null).map(q => ({ q, dd: Math.abs(q.dist - d) })).sort((a, b) => a.dd - b.dd)[0];
     setPosFor = null; stage.classList.remove('setpos');
     if (near && near.dd < total * .02) { p.lat = near.q.lat; p.lon = near.q.lon; p.place = near.q.name; p.detailTried = true;
