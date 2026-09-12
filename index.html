@@ -61,6 +61,16 @@ aside h1 { margin:0; font-size:21px; font-weight:900; letter-spacing:-.035em; li
 #stage.setpos #map, #stage.setpos #map * { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23000' stroke-width='3.5' opacity='.6'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Cg stroke='%23000' stroke-width='3.5' opacity='.6'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='1.5'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='1.6' fill='%23ff5a36'/%3E%3C/svg%3E") 20 20, crosshair !important; }
 #stage.setpos #tiles, #stage.setpos #pins, #stage.setpos #places { pointer-events:none; }
 #tsyms { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
+#tfhandles { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
+.tfh { position:absolute; transform:translate(-50%,-50%); width:16px; height:16px; border-radius:50%; background:var(--accent); border:2.5px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,.5); pointer-events:auto; cursor:grab; touch-action:none; }
+.tfh:active { cursor:grabbing; }
+.tfpts { grid-column:1 / -1; margin-top:6px; display:flex; flex-direction:column; gap:4px; }
+.tfpt { display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--muted); }
+.tfpt .k { width:16px; text-align:center; color:var(--accent); font-weight:700; }
+.tfpt .c { flex:1; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tfpt a { color:var(--muted); text-decoration:underline; cursor:pointer; }
+.tfpt a:hover { color:var(--accent); }
+.tfadd2 { font-size:11.5px; color:var(--accent); text-decoration:none; cursor:pointer; margin-top:2px; }
 .tsym { position:absolute; transform:translate(-50%,-50%); width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); border-radius:50%; box-shadow:0 3px 10px rgba(0,0,0,.45); display:grid; place-items:center; }
 .tsym svg { width:68%; height:68%; }
 #stage.setpos #band { pointer-events:auto; cursor:crosshair; }
@@ -321,7 +331,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     <div class="steps">
     <div class="step on" data-t="tour">
       <h2><span class="no">1</span>Tour <span class="sub" id="mapinfo"></span></h2>
-      <label class="drop" id="dropfit"><b>FIT / GPX / TCX</b> hierher ziehen oder tippen<br><span style="font-size:11px">mehrere Dateien = Etappen (Übernachtung am Etappenende)</span><input type="file" accept=".fit,.gpx,.tcx,.FIT,.GPX" multiple></label>
+      <label class="drop" id="dropfit"><b>FIT / GPX / TCX</b> hierher ziehen oder tippen<br><span style="font-size:11px">mehrere Dateien = Etappen · Übernachtung nur, wenn ein Tag dazwischen liegt</span><input type="file" accept=".fit,.gpx,.tcx,.FIT,.GPX" multiple></label>
       <label class="f" style="margin-top:10px">Sportart</label>
       <select id="sport" title="Bestimmt Titelvorschlag, Untertitel und Kennzahlen"><option value="">automatisch (aus der Datei)</option><option value="bike">Rad</option><option value="hike">Wandern</option><option value="canoe">Kanu</option></select>
       <div class="list" id="stages"></div>
@@ -418,6 +428,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <div id="places"></div>
         <div id="pins"></div>
         <div id="tiles"></div>
+        <div id="tfhandles"></div>
         <div id="bandfade"></div><div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg><svg id="profhover" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg></div>
       </div>
     </div></div>
@@ -515,7 +526,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${{ DIN: 'DIN', Poster: 'Posterdruck (cm)', Screen: 'Bildschirm / Handy (px)' }[grp]}"></optgroup>`); }
       sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${p[3]?.label || (grp === 'DIN' ? k + ' · ' : '') + (p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm')}</option>`); } }
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
-  const state = { terrain: true, relief: .6, format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 0, font: 'montserrat', photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, stages: [], transfers: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const state = { terrain: true, relief: .6, format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 0, font: 'montserrat', photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, stages: [], transfers: [], tfSeen: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; setFormat(state.format); });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
@@ -645,6 +656,18 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // Übernachtung: liegt zwischen dem Ende der einen und dem Start der nächsten Etappe. Sind beide nah beieinander
   // (Aufzeichnung am Quartier gestoppt und wieder gestartet), ist der Mittelpunkt der richtige Ort – sonst sitzt der
   // Punkt am Ende eines kleinen Abstechers und wirkt neben der Route.
+  // Reisetage statt Dateien zählen: zwei Aufzeichnungen am selben Tag (etwa vor und nach einer Fähre)
+  // sind ein Tag und keine Übernachtung. Ohne Zeitstempel in der Datei bleibt es bei der Etappenzahl.
+  const dayOf = ms => new Date(ms).toDateString();
+  // Achtung: tourDays() weiter unten liefert die Menge der Tage – hier zählen wir sie nur
+  const dayCount = () => tourDays().size || state.stages.length;
+  const hasTimes = () => state.stages.some(s => s.start || s.end);
+  // Liegt zwischen Etappe i und i+1 eine Nacht? Ohne Zeitangaben wird sie wie bisher angenommen.
+  function isNightBreak(i) {
+    const a = state.stages[i]?.end || state.stages[i]?.start, b = state.stages[i + 1]?.start || state.stages[i + 1]?.end;
+    if (!a || !b) return true;
+    return dayOf(a) !== dayOf(b);
+  }
   function nightPos(i) {
     const A = state.stages[i].points, B = state.stages[i + 1]?.points;
     const a = A.at(-1); if (!B) return [a[0], a[1]];
@@ -656,7 +679,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   function nightsGeo() {
     const f = [];
-    state.stages.forEach((s, i) => { if (i < state.stages.length - 1) { const p = nightPos(i); f.push({ type: 'Feature', properties: { kind: 'night' }, geometry: { type: 'Point', coordinates: [p[1], p[0]] } }); } });
+    state.stages.forEach((s, i) => { if (i < state.stages.length - 1 && isNightBreak(i)) { const p = nightPos(i); f.push({ type: 'Feature', properties: { kind: 'night' }, geometry: { type: 'Point', coordinates: [p[1], p[0]] } }); } });
     if (state.stages.length) { const a = state.stages[0].points[0], b = state.stages.at(-1).points.at(-1); for (const p of [a, b]) f.push({ type: 'Feature', properties: { kind: 'end' }, geometry: { type: 'Point', coordinates: [p[1], p[0]] } }); }
     return { type: 'FeatureCollection', features: f };
   }
@@ -672,20 +695,32 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     plane: { name: 'Flug',  d: 'M21 4.5 3.5 11.5l6 2.2 2.2 6z M9.5 13.7 21 4.5' },
     other: { name: 'Transfer', d: 'M4 12h13 M13.5 7.5 18 12l-4.5 4.5' },
   };
-  const tfPts = t => [t.a, t.b];
-  // Leicht gewölbter Bogen, damit die Linie nie mit der echten Route verwechselt wird
+  // Ein Transfer hat mindestens zwei Stützpunkte; zwischen ihnen liegt bei genau zwei Punkten ein
+  // leicht gewölbter Bogen, ab drei Punkten eine weiche Kurve genau durch die gesetzten Punkte
+  // (damit eine Fähre auch im Wasser bleibt). Ältere Projekte kannten nur a/b.
+  const tfPts = t => { if (!t.pts) t.pts = [t.a, t.b].filter(Boolean); return t.pts; };
   function transferArc(t, n = 64) {
-    const [a, b] = tfPts(t); const cs = Math.cos((a[0] + b[0]) / 2 * Math.PI / 180) || 1;
-    const A = [a[1] * cs, a[0]], B = [b[1] * cs, b[0]];
-    const dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy) || 1;
-    const cx = (A[0] + B[0]) / 2 - dy * .14, cy = (A[1] + B[1]) / 2 + dx * .14;
-    const out = [];
-    for (let i = 0; i <= n; i++) { const s = i / n, u = 1 - s;
-      out.push([(u * u * A[0] + 2 * u * s * cx + s * s * B[0]) / cs, u * u * A[1] + 2 * u * s * cy + s * s * B[1]]); }
+    const pts = tfPts(t); if (pts.length < 2) return [];
+    const cs = Math.cos(pts[0][0] * Math.PI / 180) || 1;
+    const P = pts.map(q => [q[1] * cs, q[0]]);               // lokal flach rechnen, sonst wird der Bogen schief
+    const back = q => [q[0] / cs, q[1]];
+    if (P.length === 2) {
+      const [A, B] = P, dx = B[0] - A[0], dy = B[1] - A[1];
+      const cx = (A[0] + B[0]) / 2 - dy * .14, cy = (A[1] + B[1]) / 2 + dx * .14;
+      const out = [];
+      for (let i = 0; i <= n; i++) { const s = i / n, u = 1 - s;
+        out.push(back([u * u * A[0] + 2 * u * s * cx + s * s * B[0], u * u * A[1] + 2 * u * s * cy + s * s * B[1]])); }
+      return out;
+    }
+    // Catmull-Rom durch alle Punkte, je Abschnitt gleich viele Schritte
+    const ext = [P[0], ...P, P.at(-1)], out = [], per = Math.max(8, Math.round(n / (P.length - 1)));
+    for (let i = 0; i < ext.length - 3; i++) { const [p0, p1, p2, p3] = ext.slice(i, i + 4);
+      for (let k = 0; k <= per; k++) { if (i && !k) continue; const s = k / per, s2 = s * s, s3 = s2 * s;
+        out.push(back([0, 1].map(j => .5 * ((2 * p1[j]) + (-p0[j] + p2[j]) * s + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * s2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * s3)))); } }
     return out;
   }
-  const tfMid = t => { const arc = transferArc(t, 32); return arc[16]; };
-  const tfLen = t => { const [a, b] = tfPts(t); return hav(a, b); };
+  const tfMid = t => { const arc = transferArc(t, 32); return arc[Math.floor(arc.length / 2)] || [0, 0]; };
+  const tfLen = t => { const pts = tfPts(t); let d = 0; for (let i = 1; i < pts.length; i++) d += hav(pts[i - 1], pts[i]); return d; };
   const transferGeo = () => ({ type: 'FeatureCollection', features: (state.transfers || []).map(t => ({ type: 'Feature', properties: { mode: t.mode }, geometry: { type: 'LineString', coordinates: transferArc(t) } })) });
   function transferLayers() {
     if (!map || !map.getSource) return;
@@ -1122,21 +1157,41 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       state.peaks = sel.sort((a, b) => a.dist - b.dist); peakLayer(); peakThrLabel(); render();
     } catch (e) { console.warn('Gipfel', e); }
   }
+  window.__after = () => afterTourChange();   // für Tests
+  // Zwei Aufzeichnungen am selben Tag, die weit auseinander enden und anfangen: dazwischen lag eine
+  // Fahrt mit Fähre, Zug oder Bus. Ohne Markierung bliebe an der Stelle nur eine unerklärte Lücke.
+  function autoTransfers() {
+    const st = state.stages; if (st.length < 2) return 0;
+    let added = 0;
+    for (let i = 0; i < st.length - 1; i++) {
+      if (isNightBreak(i)) continue;
+      const a = st[i].points.at(-1), b = st[i + 1].points[0], A = [a[0], a[1]], B = [b[0], b[1]];
+      const gap = hav(A, B); if (gap < 2000) continue;
+      const key = A.map(v => v.toFixed(2)).join() + '>' + B.map(v => v.toFixed(2)).join();
+      if ((state.tfSeen ||= []).includes(key)) continue;            // einmal angeboten reicht – gelöschte kommen nicht wieder
+      state.tfSeen.push(key);
+      (state.transfers ||= []).push({ id: Math.random().toString(36).slice(2, 9), mode: 'other', pts: [A, B], auto: true });
+      added++;
+    }
+    if (added) say(`${added === 1 ? 'Eine Lücke' : added + ' Lücken'} am selben Tag als Transfer eingezeichnet – Verkehrsmittel im Tour-Feld wählbar.`, 'ok');
+    return added;
+  }
   function afterTourChange() {
     tourSeq++;
     const sp = sportOf(); if (!state.bandEdited) { state.showBand = sp.band; $('#showband').checked = sp.band; }   // Kanu: Höhenprofil ist ohne Aussage
+    autoTransfers();
     findPeaks();
     buildPlaces(); autoTexts();
     if (map) { if (map.loaded()) { addRouteLayers(); fitRoute(); } else map.once('idle', () => { addRouteLayers(); fitRoute(); render(); }); }
     render();
     const km = state.stages.reduce((s, x) => s + x.distance, 0) / 1000;
-    $('#mapinfo').textContent = state.stages.length ? `${state.stages.length} Etappe(n) · ${km.toFixed(0)} km · ${nf(state.stages.reduce((s, x) => s + x.gain, 0))} Hm` : '';
+    $('#mapinfo').textContent = state.stages.length ? `${hasTimes() ? (dayCount() === 1 ? '1 Tag' : dayCount() + ' Tage') : state.stages.length + (state.stages.length === 1 ? ' Etappe' : ' Etappen')} · ${km.toFixed(0)} km · ${nf(state.stages.reduce((s, x) => s + x.gain, 0))} Hm` : '';
   }
   // ---------- Sportart: bestimmt Texte und Kennzahlen. Aus der FIT-Datei erkannt, im Tour-Block umschaltbar.
   const SPORTS = {
-    bike:  { label: 'Radtour',  title: 'Meine\nRadtour',  one: 'Eine Tagestour mit dem Rad.',   many: n => `${n} Etappen mit dem Rad.`,    timeLabel: 'FAHRZEIT',   band: true },
-    hike:  { label: 'Wanderung', title: 'Meine\nWanderung', one: 'Eine Tageswanderung.',          many: n => `${n} Etappen zu Fuß.`,        timeLabel: 'GEHZEIT',    band: true },
-    canoe: { label: 'Kanutour', title: 'Meine\nKanutour', one: 'Eine Tagestour auf dem Wasser.', many: n => `${n} Etappen auf dem Wasser.`, timeLabel: 'PADDELZEIT', band: false }
+    bike:  { label: 'Radtour',  title: 'Meine\nRadtour',  one: 'Eine Tagestour mit dem Rad.',   many: n => `${n} Tage mit dem Rad.`,    timeLabel: 'FAHRZEIT',   band: true },
+    hike:  { label: 'Wanderung', title: 'Meine\nWanderung', one: 'Eine Tageswanderung.',          many: n => `${n} Tage zu Fuß.`,        timeLabel: 'GEHZEIT',    band: true },
+    canoe: { label: 'Kanutour', title: 'Meine\nKanutour', one: 'Eine Tagestour auf dem Wasser.', many: n => `${n} Tage auf dem Wasser.`, timeLabel: 'PADDELZEIT', band: false }
   };
   const SPORT_OF = (sport, sub) => { const s = String(sport || '').toLowerCase() + ' ' + String(sub || '').toLowerCase();
     if (/paddl|kayak|canoe|rowing|row|sail|surf/.test(s)) return 'canoe';
@@ -1193,14 +1248,15 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const a = st[0].start ? new Date(st[0].start) : null, b = st.at(-1).end ? new Date(st.at(-1).end) : null;
     if (a && !state.dateEdited) state.date = (b && b.toDateString() !== a.toDateString()) ? `${a.getDate()}. – ${b.getDate()}. ${MON[b.getMonth()]} ${b.getFullYear()}` : `${a.getDate()}. ${MON[a.getMonth()]} ${a.getFullYear()}`;
     const sp = sportOf();
+    const days = hasTimes() ? dayCount() : st.length;
     if (!state.titleEdited) state.title = st.length === 1 ? (st[0].name || 'Meine Tour') : sp.title;
-    if (!state.sublineEdited) state.subline = st.length > 1 ? sp.many(st.length) : sp.one;
+    if (!state.sublineEdited) state.subline = days > 1 ? sp.many(days) : sp.one;
     const km = st.reduce((s, x) => s + x.distance, 0) / 1000, hm = st.reduce((s, x) => s + x.gain, 0);
     const secs = st.reduce((s, x) => s + (x.time || (x.start && x.end ? (x.end - x.start) / 1000 : 0)), 0), dur = hhmm(secs);
     if (!state.statsEdited) {
       const out = [[nf(km), 'KILOMETER']];
       if (sp.band) out.push([nf(hm), 'HÖHENMETER']);            // beim Kanu sind Höhenmeter ohne Aussage
-      if (st.length > 1) out.push([String(st.length), 'ETAPPEN']);
+      if (days > 1) out.push([String(days), 'TAGE']);
       else if (dur) out.push([dur, sp.timeLabel]);               // Eintagestour: Gehzeit / Paddelzeit / Fahrzeit
       state.stats = out;
     }
@@ -1269,8 +1325,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const ck = p => p.lat.toFixed(4) + ',' + p.lon.toFixed(4); const old = new Map(state.places.map(p => [ck(p), p])); const out = [];
     state.stages.forEach((s, i) => {
       if (i === 0) out.push({ key: 'start', kind: 'start', lat: s.points[0][0], lon: s.points[0][1] });
-      const e = s.points.at(-1), n = i < state.stages.length - 1 ? nightPos(i) : null;
-      out.push(n ? { key: 'night' + i, kind: 'night', lat: n[0], lon: n[1] } : { key: 'end', kind: 'end', lat: e[0], lon: e[1] });
+      const last = i === state.stages.length - 1;
+      const n = !last && isNightBreak(i) ? nightPos(i) : null;
+      if (n) out.push({ key: 'night' + i, kind: 'night', lat: n[0], lon: n[1] });
+      else if (last) { const e = s.points.at(-1); out.push({ key: 'end', kind: 'end', lat: e[0], lon: e[1] }); }
     });
     state.places = out.map(p => { const o = old.get(ck(p)); return Object.assign({ text: '', dx: 12, dy: -16, edited: false }, o ? { text: o.text, dx: o.dx, dy: o.dy, edited: o.edited, detailTried: o.detailTried } : {}, p); });
   }
@@ -1525,21 +1583,47 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const CLS_DE = { city: 'Stadt', town: 'Stadt', village: 'Dorf', hamlet: 'Weiler', suburb: 'Ortsteil', neighbourhood: 'Viertel', island: 'Insel', locality: 'Ort', peak: 'Gipfel', volcano: 'Berg', mountain_peak: 'Gipfel', water_name: 'Gewässer', lake: 'See', river: 'Fluss', park: 'Park', nature_reserve: 'Schutzgebiet', national_park: 'Nationalpark', museum: 'Museum', attraction: 'Sehenswürdigkeit', viewpoint: 'Aussichtspunkt', castle: 'Burg/Schloss', monument: 'Denkmal', memorial: 'Denkmal', ruins: 'Ruine', lighthouse: 'Leuchtturm', station: 'Bahnhof', railway: 'Bahn', hotel: 'Hotel', hostel: 'Hostel', guest_house: 'Pension', camp_site: 'Campingplatz', restaurant: 'Restaurant', cafe: 'Café', bakery: 'Bäckerei', alpine_hut: 'Hütte', shelter: 'Schutzhütte', bus_stop: 'Haltestelle', ferry_terminal: 'Fähre', tower: 'Turm', church: 'Kirche', place_of_worship: 'Kirche', bicycle: 'Fahrrad', information: 'Info', dam: 'Staumauer', bridge: 'Brücke', transportation_name: 'Straße/Weg' };
   function startSetPos(p) { clearHover(); if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: Aufnahmeort auf der Karte anklicken – oder ins Höhenprofil klicken, dort rasten Gipfel ein (Esc = abbrechen).`); render(); }
   function nearestOnRoute(lat, lon) { let best = null, bd = Infinity; for (const st of state.stages) for (let i = 0; i < st.points.length; i += 3) { const q = st.points[i]; const d = hav([lat, lon], [q[0], q[1]]); if (d < bd) { bd = d; best = q; } } return best && bd < 2000 ? [best[0], best[1]] : [lat, lon]; }
-  // Transfer einzeichnen: erster Klick Abfahrt, zweiter Klick Ankunft
-  let tfDraft = null;
+  // ---------- Transfer: einzeichnen, Punkte verschieben, Orte suchen
+  // Beim Setzen rastet ein Punkt an dem ein, was schon da ist: Etappenanfang und -ende,
+  // Quartiere, Fotoorte und Punkte anderer Transfers – sonst liegt die Fähre neben dem Hafen.
+  function snapCandidates(skip) {
+    const out = [];
+    state.stages.forEach((st, i) => { out.push({ p: [st.points[0][0], st.points[0][1]], n: `Start Etappe ${i + 1}` });
+      const e = st.points.at(-1); out.push({ p: [e[0], e[1]], n: `Ende Etappe ${i + 1}` }); });
+    for (const q of state.places) if (q.lat != null) out.push({ p: [q.lat, q.lon], n: q.text || 'Ortsmarke' });
+    for (const ph of state.photos) if (ph.lat != null) out.push({ p: [ph.lat, ph.lon], n: `Foto ${ph.num}` });
+    for (const t of state.transfers || []) tfPts(t).forEach((q, k) => { if (!skip || skip.t !== t.id || skip.i !== k) out.push({ p: q, n: 'Transferpunkt' }); });
+    return out;
+  }
+  function snapPoint(c, skip) {
+    if (!map) return { p: c };
+    const at = map.project([c[1], c[0]]); let best = null;
+    for (const cand of snapCandidates(skip)) { const q = map.project([cand.p[1], cand.p[0]]); const d = Math.hypot(q.x - at.x, q.y - at.y);
+      if (d < 18 && (!best || d < best.d)) best = { d, p: [cand.p[0], cand.p[1]], n: cand.n }; }
+    return best || { p: c };
+  }
+  let tfDraft = null, tfEdit = null, tfPick = null, tfSearch = null, tfLastTap = null;   // Entwurf beim Anlegen / bearbeiteter Transfer / Punkt, der per Karte gesetzt wird
   function startTransfer() {
-    if (tfDraft) { cancelTransfer(); return; }
+    if (tfDraft || tfPick) { cancelTransfer(); return; }
     if (!map) { say('Erst eine Tour laden.', 'warn'); return; }
     tfDraft = { a: null }; stage.classList.add('setpos', 'tfmode'); stage.dataset.tf = 'Abfahrtspunkt auf der Karte anklicken · Esc bricht ab'; $('#tfadd').classList.add('on');
     say('Transfer: Abfahrtspunkt auf der Karte anklicken (Esc = abbrechen).');
   }
-  function cancelTransfer() { tfDraft = null; stage.classList.remove('setpos', 'tfmode'); delete stage.dataset.tf; $('#tfadd').classList.remove('on'); say(''); }
+  function cancelTransfer() { tfDraft = null; tfPick = null; stage.classList.remove('setpos', 'tfmode'); delete stage.dataset.tf; $('#tfadd').classList.remove('on'); say(''); render(); }
+  function startPickPoint(id, i) {
+    tfDraft = null; tfPick = { id, i }; stage.classList.add('setpos', 'tfmode');
+    stage.dataset.tf = 'Neue Stelle auf der Karte anklicken · Esc bricht ab'; render();
+  }
   function mapClickTransfer(e) {
     const c = [e.lngLat.lat, e.lngLat.lng];
-    if (!tfDraft.a) { tfDraft.a = c; stage.dataset.tf = 'Und jetzt den Ankunftspunkt anklicken'; say('Und jetzt den Ankunftspunkt anklicken.'); return; }
-    (state.transfers ||= []).push({ id: Math.random().toString(36).slice(2, 9), mode: 'ferry', a: tfDraft.a, b: c });
+    if (tfPick) { const t = (state.transfers || []).find(x => x.id === tfPick.id);
+      if (t) { const s = snapPoint(c, { t: t.id, i: tfPick.i }); tfPts(t)[tfPick.i] = s.p; if (s.n) say(`Eingerastet: ${s.n}`, 'ok'); }
+      cancelTransfer(); transferLayers(); render(); autosave(); return; }
+    if (!tfDraft.a) { tfDraft.a = snapPoint(c).p; stage.dataset.tf = 'Und jetzt den Ankunftspunkt anklicken'; say('Und jetzt den Ankunftspunkt anklicken.'); return; }
+    const t = { id: Math.random().toString(36).slice(2, 9), mode: 'ferry', pts: [tfDraft.a, snapPoint(c).p] };
+    (state.transfers ||= []).push(t); tfEdit = t.id;
     cancelTransfer(); transferLayers(); render(); autosave();
-    say('Transfer eingezeichnet – Verkehrsmittel in der Liste wählbar.', 'ok');
+    say('Transfer eingezeichnet – Verkehrsmittel wählbar, Punkte lassen sich ziehen.', 'ok');
   }
   $('#tfadd').addEventListener('click', startTransfer);
   function mapClickSetPos(e) { if (tfDraft) { mapClickTransfer(e); return; } if (!setPosFor) return; clearHover(); const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
@@ -1619,11 +1703,71 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function renderTransferList() {
     const el = $('#transfers'); if (!el) return;
     const ts = state.transfers || [];
-    el.innerHTML = ts.map((t, i) => `<div class="row"><div class="n">~</div><div>
-      <select data-i="${i}" aria-label="Verkehrsmittel">${Object.entries(TMODE).map(([k, m]) => `<option value="${k}"${k === t.mode ? ' selected' : ''}>${m.name}</option>`).join('')}</select>
-      <div class="meta">Luftlinie ${(tfLen(t) / 1000).toFixed(0)} km · zählt nicht zu den Kennzahlen</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
-    el.querySelectorAll('select').forEach(sel => sel.addEventListener('change', e => { state.transfers[+e.target.dataset.i].mode = e.target.value; renderTransferSyms(); autosave(); }));
-    el.querySelectorAll('button').forEach(b => b.addEventListener('click', e => { state.transfers.splice(+e.target.dataset.del, 1); transferLayers(); render(); autosave(); }));
+    el.innerHTML = '';
+    ts.forEach((t, i) => {
+      const open = tfEdit === t.id, pts = tfPts(t);
+      const row = document.createElement('div'); row.className = 'row';
+      row.innerHTML = `<div class="n">~</div><div>
+        <select aria-label="Verkehrsmittel">${Object.entries(TMODE).map(([k, m]) => `<option value="${k}"${k === t.mode ? ' selected' : ''}>${m.name}</option>`).join('')}</select>
+        <div class="meta">${(tfLen(t) / 1000).toFixed(0)} km über ${pts.length} Punkte · zählt nicht zu den Kennzahlen · <a href="#" class="edit">${open ? 'fertig' : 'Punkte bearbeiten'}</a></div>
+        </div><button title="Transfer entfernen">×</button>`;
+      row.querySelector('select').addEventListener('change', e => { t.mode = e.target.value; renderTransferSyms(); autosave(); });
+      row.querySelector('button').addEventListener('click', () => { state.transfers.splice(i, 1); if (tfEdit === t.id) tfEdit = null; transferLayers(); render(); autosave(); });
+      row.querySelector('.edit').addEventListener('click', e => { e.preventDefault(); tfEdit = open ? null : t.id; tfSearch = null; render(); });
+      if (open) { const box = document.createElement('div'); box.className = 'tfpts';
+        pts.forEach((q, k) => { const line = document.createElement('div'); line.className = 'tfpt';
+          line.innerHTML = `<span class="k">${k === 0 ? 'ab' : k === pts.length - 1 ? 'an' : '·'}</span>
+            <span class="c">${t.names?.[k] ? esc(t.names[k]) : q[0].toFixed(3) + ', ' + q[1].toFixed(3)}</span>
+            <a href="#" class="map" title="Punkt auf der Karte anklicken">Karte</a><a href="#" class="srch" title="Ort suchen">suchen</a>${pts.length > 2 ? '<a href="#" class="del" title="Punkt entfernen">×</a>' : ''}`;
+          line.querySelector('.map').addEventListener('click', e => { e.preventDefault(); startPickPoint(t.id, k); });
+          line.querySelector('.srch').addEventListener('click', e => { e.preventDefault(); tfSearch = (tfSearch && tfSearch.id === t.id && tfSearch.i === k) ? null : { id: t.id, i: k }; render(); });
+          line.querySelector('.del')?.addEventListener('click', e => { e.preventDefault(); pts.splice(k, 1); (t.names || []).splice(k, 1); transferLayers(); render(); autosave(); });
+          box.appendChild(line);
+          if (tfSearch && tfSearch.id === t.id && tfSearch.i === k) box.appendChild(tfSearchBox(t, k));
+        });
+        const add = document.createElement('a'); add.href = '#'; add.className = 'tfadd2'; add.textContent = '+ Zwischenpunkt im längsten Abschnitt';
+        add.addEventListener('click', e => { e.preventDefault();
+          let bi = 0, bd = -1; for (let k = 1; k < pts.length; k++) { const d = hav(pts[k - 1], pts[k]); if (d > bd) { bd = d; bi = k; } }
+          pts.splice(bi, 0, [(pts[bi - 1][0] + pts[bi][0]) / 2, (pts[bi - 1][1] + pts[bi][1]) / 2]);
+          transferLayers(); render(); autosave(); });
+        box.appendChild(add);
+        const hint = document.createElement('div'); hint.className = 'meta'; hint.textContent = 'Punkte lassen sich direkt im Poster ziehen; sie rasten an Etappenenden, Ortsmarken und Fotoorten ein.';
+        box.appendChild(hint);
+        row.appendChild(box); }
+      el.appendChild(row);
+    });
+  }
+  // Ortssuche für einen Transferpunkt: sucht in den geladenen Kartenkacheln (Orte, Häfen, Bahnhöfe).
+  // Die Suche entlang der Route hilft hier nicht – ein Fährhafen liegt gerade nicht an der eigenen Strecke.
+  function tfSearchBox(t, k) {
+    const box = document.createElement('div'); box.className = 'psearch';
+    box.innerHTML = `<input placeholder="Ort, Hafen, Bahnhof … im sichtbaren Kartenausschnitt"><div class="hits"></div>`;
+    const inp = box.querySelector('input'), hits = box.querySelector('.hits');
+    const run = () => { const q = inp.value.trim().toLowerCase(); hits.innerHTML = '';
+      if (q.length < 2) return;
+      if (!map || !map.isStyleLoaded()) { hits.innerHTML = '<span class="muted">Karte lädt noch …</span>'; return; }
+      const found = new Map();
+      for (const [id, src] of Object.entries(map.getStyle().sources || {})) if (src.type === 'vector')
+        for (const layer of ['place', 'poi', 'transportation_name'])
+          { try { for (const f of map.querySourceFeatures(id, { sourceLayer: layer })) {
+            const nm = f.properties.name || f.properties['name:de'] || f.properties['name:latin']; if (!nm || !String(nm).toLowerCase().includes(q)) continue;
+            const c = centroid(f.geometry); if (!c || typeof c[0] !== 'number') continue;
+            const key = nm + '|' + c[0].toFixed(2) + ',' + c[1].toFixed(2);
+            if (!found.has(key)) found.set(key, { name: String(nm), cls: f.properties.class || layer, lat: c[1], lon: c[0] });
+          } } catch (e) {} }
+      const list = [...found.values()].slice(0, 12);
+      if (!list.length) { hits.innerHTML = '<span class="muted">nichts gefunden – Karte auf die Gegend schieben oder herauszoomen, dann noch einmal suchen</span>'; return; }
+      for (const h of list) { const a = document.createElement('a'); a.href = '#';
+        a.innerHTML = `<b>${esc(h.name)}</b> <span class="muted">${esc(CLS_DE[h.cls] || h.cls)}</span>`;
+        a.addEventListener('mouseenter', () => previewHit(h)); a.addEventListener('mouseleave', () => previewHit(null));
+        a.addEventListener('click', e => { e.preventDefault(); tfPts(t)[k] = [h.lat, h.lon]; (t.names ||= [])[k] = h.name;
+          tfSearch = null; previewHit(null); transferLayers(); render(); autosave(); say(`Transferpunkt: ${h.name}`, 'ok'); });
+        hits.appendChild(a); }
+    };
+    let tmr; inp.addEventListener('input', () => { clearTimeout(tmr); tmr = setTimeout(run, 300); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run(); } if (e.key === 'Escape') { tfSearch = null; render(); } });
+    setTimeout(() => inp.focus(), 0);
+    return box;
   }
   // Verkehrsmittel-Symbol in der Mitte jeder Transferlinie
   function renderTransferSyms() {
@@ -1634,6 +1778,33 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const d = document.createElement('div'); d.className = 'tsym'; d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg; d.title = m.name;
       d.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="${T.pinFg}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${m.d}"/></svg>`;
       el.appendChild(d); }
+    renderTfHandles();
+  }
+  // Ziehbare Griffe an den Stützpunkten des gerade bearbeiteten Transfers
+  function renderTfHandles() {
+    const el = $('#tfhandles'); if (!el) return; el.innerHTML = '';
+    const t = (state.transfers || []).find(x => x.id === tfEdit); if (!t || !map) return;
+    tfPts(t).forEach((q, k) => {
+      const pt = map.project([q[1], q[0]]);
+      const h = document.createElement('div'); h.className = 'tfh'; h.style.left = pt.x + 'px'; h.style.top = pt.y + 'px';
+      h.title = k === 0 ? 'Abfahrt ziehen' : k === tfPts(t).length - 1 ? 'Ankunft ziehen' : 'Zwischenpunkt ziehen (Doppelklick entfernt ihn)';
+      h.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); h.setPointerCapture(e.pointerId);
+        const x0 = e.clientX, y0 = e.clientY; let moved = false;
+        const move = ev => { if (Math.hypot(ev.clientX - x0, ev.clientY - y0) > 3) moved = true; if (!moved) return;
+          const r = $('#map').getBoundingClientRect(); const sc = r.width / CW;
+          const c = map.unproject([(ev.clientX - r.left) / sc, (ev.clientY - r.top) / sc]);
+          const s = snapPoint([c.lat, c.lng], { t: t.id, i: k }); tfPts(t)[k] = s.p; if (t.names) t.names[k] = s.n || '';
+          transferLayers(); renderTransferSyms(); renderRouteTop(); };
+        const up = () => { h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up);
+          if (moved) { render(); autosave(); return; }
+          // Zwei kurze Klicks auf denselben Zwischenpunkt entfernen ihn (die Griffe werden neu
+          // aufgebaut, ein echtes dblclick-Ereignis erreicht dasselbe Element deshalb nie)
+          const now = Date.now(), pts = tfPts(t);
+          if (tfLastTap && tfLastTap.id === t.id && tfLastTap.k === k && now - tfLastTap.at < 450 && k > 0 && k < pts.length - 1) {
+            pts.splice(k, 1); t.names?.splice(k, 1); tfLastTap = null; transferLayers(); render(); autosave(); say('Zwischenpunkt entfernt.', 'ok'); }
+          else tfLastTap = { id: t.id, k, at: now }; };
+        h.addEventListener('pointermove', move); h.addEventListener('pointerup', up); });
+      el.appendChild(h); });
   }
   // Route über dem Titelverlauf: immer aktiv, aber nur der Teil, der im abgedunkelten Bereich liegt – sonst verschwindet sie dort
   function renderRouteTop() {
@@ -1692,7 +1863,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (let h = 0; h <= ymax; h += stepG) g += `<line x1="${x0}" y1="${Y(h)}" x2="${x1}" y2="${Y(h)}" stroke="${T.grid}" stroke-width=".5"/>` + (h ? `<text x="${x0 - 6}" y="${Y(h) + 3.5}" fill="${T.axis}" font-size="${fz(10)}" text-anchor="end" font-family="${fontSvg()}">${nf(h)} m</text>` : '');
     const pts = xs.map((x, i) => `${X(x).toFixed(1)},${Y(ys[i]).toFixed(1)}`).join(' ');
     let b = '';
-    bounds.slice(0, -1).forEach((bd, i) => { const x = X(bd.end); const nm = state.places.find(p => p.key === 'night' + i)?.text || ''; b += `<line x1="${x}" y1="${yt - 6}" x2="${x}" y2="${yb}" stroke="${T.axis}" stroke-width=".6"/><circle cx="${x}" cy="${yt - 3}" r="4.2" fill="${T.accent}" stroke="${T.halo}"/><circle cx="${x}" cy="${yt - 3}" r="1.4" fill="${T.pinBg}"/><text x="${x}" y="${yt - 10}" fill="${T.cap}" font-size="${fz(12)}" font-weight="600" text-anchor="middle" font-family="${fontSvg()}">${esc(nm)}</text>`; });
+    bounds.slice(0, -1).forEach((bd, i) => { if (!isNightBreak(i)) return;   // gleicher Tag: keine Quartiersmarke
+      const x = X(bd.end); const nm = state.places.find(p => p.key === 'night' + i)?.text || ''; b += `<line x1="${x}" y1="${yt - 6}" x2="${x}" y2="${yb}" stroke="${T.axis}" stroke-width=".6"/><circle cx="${x}" cy="${yt - 3}" r="4.2" fill="${T.accent}" stroke="${T.halo}"/><circle cx="${x}" cy="${yt - 3}" r="1.4" fill="${T.pinBg}"/><text x="${x}" y="${yt - 10}" fill="${T.cap}" font-size="${fz(12)}" font-weight="600" text-anchor="middle" font-family="${fontSvg()}">${esc(nm)}</text>`; });
     // Entfernungsmarken: Schrittweite so, dass höchstens ~8 Marken entstehen
     const tkm = total / 1000, stepK = [5, 10, 20, 25, 50, 100, 200, 500].find(st => tkm / st <= 8) || 500;
     for (let k = stepK; k < tkm - stepK * .35; k += stepK) { const x = X(k * 1000); g += `<line x1="${x}" y1="${yb}" x2="${x}" y2="${yb + 4}" stroke="${T.axis}" stroke-width=".6"/><line x1="${x}" y1="${yt}" x2="${x}" y2="${yb}" stroke="${T.grid}" stroke-width=".4" stroke-dasharray="2 3"/><text x="${x}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(10)}" text-anchor="middle" font-family="${fontSvg()}">${k} km</text>`; }
@@ -2161,7 +2333,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (!Array.isArray(obj.photos)) obj.photos = [];
     if (!Array.isArray(obj.places)) obj.places = [];
     Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.showPhotoDots = obj.showPhotoDots !== false; $('#photodots').checked = state.showPhotoDots; state.peakThr = obj.peakThr ?? null; if ($('#peakthr') && state.peakThr != null) $('#peakthr').value = state.peakThr;
-    if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 0; $('#grade').value = state.grade; state.transfers = Array.isArray(obj.transfers) ? obj.transfers : []; applyFont(obj.font || 'montserrat'); state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 0; $('#grade').value = state.grade; state.transfers = Array.isArray(obj.transfers) ? obj.transfers : []; state.tfSeen = Array.isArray(obj.tfSeen) ? obj.tfSeen : []; applyFont(obj.font || 'montserrat'); state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) { keepView = true;   // gespeicherte Ansicht gehört zum gespeicherten Layout – nicht neu einpassen
       const jump = () => { map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }); state.fitZoom = obj.map.zoom; setTimeout(() => { keepView = false; }, 1500); };
       if (map.loaded() || map.isStyleLoaded()) setTimeout(jump, 0); else map.once('load', jump); }
@@ -2172,6 +2344,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
 
   // ------------------------------------------------------------ Start
+  window.__state = state;   // für Tests
   buildPickers(); setFormat('portrait'); applyFont('montserrat'); applyTheme('retro'); initMap(); applyFrame();
   try { const s = localStorage.getItem(KEY); if (s) { restore(JSON.parse(s)); afterTourChange(); loadOriginals().then(n => { const miss = missingOriginals().length; say(`Gespeichertes Layout geladen${n ? `, ${n} Foto(s) in Originalgröße` : ''}${miss ? ` – ${miss} Foto(s) nur als Vorschau: Originale bitte erneut hinzufügen (Zuordnung per Dateiname)` : ''}.`, miss ? 'warn' : 'ok'); render(); }); } } catch (e) {}
   render();
