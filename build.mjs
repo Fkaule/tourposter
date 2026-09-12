@@ -12,9 +12,17 @@ const js = fs.readFileSync('vendor.js');
 const heif = fs.readFileSync('node_modules/libheif-js/libheif-wasm/libheif-bundle.js');
 fs.writeFileSync('heif.js', heif);
 const h = b => crypto.createHash('md5').update(b).digest('hex').slice(0, 8);
-const base = app.replace('/*MAPLIBRE_CSS*/', css);
+const base0 = app.replace('/*MAPLIBRE_CSS*/', css);
+// Schriften liegen als eigene Dateien im Repo (kein Google-CDN): gehostet unter fonts/, in der Einzeldatei eingebettet
+const FONTS = [['montserrat', 'Montserrat'], ['inter', 'Inter'], ['oswald', 'Oswald'], ['space-grotesk', 'Space Grotesk'], ['playfair-display', 'Playfair Display'], ['lora', 'Lora']];
+const faces = embed => FONTS.map(([key, fam]) => {
+  const url = embed ? `data:font/woff2;base64,${fs.readFileSync(`fonts/${key}.woff2`).toString('base64')}` : `fonts/${key}.woff2`;
+  return `@font-face{font-family:'${fam}';font-style:normal;font-weight:100 900;font-display:swap;src:url(${url}) format('woff2')}`;
+}).join('\n');
+const fHead = base0.slice(0, base0.indexOf('/*FONTS*/')), fTail = base0.slice(base0.indexOf('/*FONTS_END*/') + '/*FONTS_END*/'.length);
+const base = fHead + faces(false) + fTail, baseSingle = fHead + faces(true) + fTail;
 // Einzeldatei: als data:-URL einbetten (das Bundle enthält "<!--" und "<script", was den HTML-Parser in einem Inline-Script aus dem Tritt bringt)
-const single = base.replace('<script>/*VENDOR_JS*/</script>', `<script src="data:text/javascript;base64,${js.toString('base64')}" onerror="window.__vendorFail=true"></script>`).replace('/*HEIF_B64*/', heif.toString('base64'));
+const single = baseSingle.replace('<script>/*VENDOR_JS*/</script>', `<script src="data:text/javascript;base64,${js.toString('base64')}" onerror="window.__vendorFail=true"></script>`).replace('/*HEIF_B64*/', heif.toString('base64'));
 // Raumfotos für die Wandvorschau: Einzeldatei bettet sie als data:-URL ein, gehostet liegen sie unter rooms/
 const rooms = fs.existsSync('rooms') ? fs.readdirSync('rooms').sort() : [];
 let singleR = single;

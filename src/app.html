@@ -12,8 +12,14 @@
 <link rel="canonical" href="https://tourposter.online/">
 <title>Tourposter</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f6efe3'/%3E%3Cpath d='M6 24c4-3 5-11 9-11s3 9 7 6 3-9 4-11' fill='none' stroke='%23b8402c' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='6' cy='24' r='2.4' fill='%232b2118'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap">
+<style id="fontfaces">/*FONTS*/
+@font-face{font-family:'Montserrat';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/montserrat.woff2) format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/inter.woff2) format('woff2')}
+@font-face{font-family:'Oswald';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/oswald.woff2) format('woff2')}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/space-grotesk.woff2) format('woff2')}
+@font-face{font-family:'Playfair Display';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/playfair-display.woff2) format('woff2')}
+@font-face{font-family:'Lora';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/lora.woff2) format('woff2')}
+/*FONTS_END*/</style>
 <style>
 /*MAPLIBRE_CSS*/
 :root { --bg:#0d1a26; --panel:#0f1b27; --panel2:#182a3b; --card:#142434; --line:#243649; --text:#e6edf3; --muted:#8fa3b8; --accent:#ff5a36; --accent2:#ff7a5c; --ok:#5ec48f; --r:14px; }
@@ -519,12 +525,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   };
   // ------------------------------------------------------------ Schriften (Google Fonts, bei Bedarf nachgeladen)
   const FONTS = {
-    montserrat: { css: 'Montserrat', g: 'Montserrat:wght@400;500;600;700;800;900' },
-    inter:      { css: 'Inter', g: 'Inter:wght@400;500;600;700;800;900' },
-    oswald:     { css: 'Oswald', g: 'Oswald:wght@400;500;600;700' },
-    space:      { css: '"Space Grotesk"', g: 'Space+Grotesk:wght@400;500;600;700' },
-    playfair:   { css: '"Playfair Display"', g: 'Playfair+Display:wght@400;500;600;700;800;900' },
-    lora:       { css: 'Lora', g: 'Lora:wght@400;500;600;700' },
+    montserrat: { css: 'Montserrat' },
+    inter:      { css: 'Inter' },
+    oswald:     { css: 'Oswald' },
+    space:      { css: '"Space Grotesk"' },
+    playfair:   { css: '"Playfair Display"' },
+    lora:       { css: 'Lora' },
   };
   // ---- Auswahl mit Vorschau: Stile als Miniposter, Schriften als Schriftprobe
   const THEME_META = {
@@ -569,8 +575,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           b.addEventListener('click', () => { pick(k); autosave(); });
           host.appendChild(b); } } };
     mk($('#themepick'), THEME_GROUPS, THEME_META, k => themeSvg(THEMES[k]), applyTheme);
-    mk($('#fontpick'), FONT_GROUPS, FONT_META, k => `<span class="fp" style="font-family:${FONTS[k].css}, Arial, sans-serif">Tour</span>`, applyFont);
-    for (const k of Object.keys(FONTS)) loadFontCss(k);   // Schriftproben brauchen die echten Schriften
+    mk($('#fontpick'), FONT_GROUPS, FONT_META, k => `<span class="fp" style="font-family:${FONTS[k].css.replace(/"/g, '&quot;')}, Arial, sans-serif">Tour</span>`, applyFont);
     syncPickers();
   }
   function syncPickers() {
@@ -579,11 +584,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   const fontStack = () => (FONTS[state.font]?.css || 'Montserrat') + ', Arial, sans-serif';
   const fontSvg = () => fontStack().replace(/"/g, '');   // SVG-Attribute vertragen keine Anführungszeichen
-  const fontLoaded = new Set(['montserrat']);
-  function loadFontCss(f) { if (!FONTS[f] || fontLoaded.has(f)) return; fontLoaded.add(f);
-    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=' + FONTS[f].g + '&display=swap'; document.head.appendChild(l); }
   function applyFont(name) {
-    const f = FONTS[name] ? name : 'montserrat'; state.font = f; $('#font').value = f; loadFontCss(f); syncPickers();
+    const f = FONTS[name] ? name : 'montserrat'; state.font = f; $('#font').value = f; syncPickers();
     stage.style.setProperty('--pfont', fontStack());
     (document.fonts?.ready || Promise.resolve()).then(() => render());
     render();
