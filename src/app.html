@@ -1312,11 +1312,14 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     renumber(); autosave();
     // Fokus im Bildunterschrift-Feld über den Neuaufbau retten
     const act = document.activeElement, focusRow = act && act.tagName === 'INPUT' && act.closest('.row.photo'); const focusId = focusRow ? focusRow.dataset.id : null, focusSel = focusRow ? act.selectionStart : 0;
-    $('#title .date').textContent = state.date || ''; $('#title .h').textContent = state.title || ''; $('#title .sub').textContent = state.subline || '';
+    // Text nur setzen, wenn er abweicht und das Feld nicht gerade bearbeitet wird: sonst springt der Cursor
+    // und Chrome zeigt den ganzen Absatz als Auswahl an (gemeldeter Fall: „Titeltext blieb markiert“).
+    const setTxt = (sel, val) => { const el = $(sel); if (el !== document.activeElement && el.textContent !== val) el.textContent = val; };
+    setTxt('#title .date', state.date || ''); setTxt('#title .h', state.title || ''); setTxt('#title .sub', state.subline || '');
     stage.style.setProperty('--statsTop', ($('#title').offsetTop + $('#title').offsetHeight + 24) + 'px');
     // Vignette reicht immer bis unter die Kennzahlen (Titelblock bleibt auf jeder Karte lesbar)
     titleBlocker(); stage.style.setProperty('--vigH', Math.max(480, $('#title').offsetTop + $('#title').offsetHeight + 24 + ($('#stats').offsetHeight || 60) + 110) + 'px');
-    $('#stats').innerHTML = (state.stats || []).map(([n, l]) => `<div><b contenteditable="true" spellcheck="false">${n}</b><span contenteditable="true" spellcheck="false">${l}</span></div>`).join('');
+    if (!$('#stats').contains(document.activeElement)) $('#stats').innerHTML = (state.stats || []).map(([n, l]) => `<div><b contenteditable="true" spellcheck="false">${esc(n)}</b><span contenteditable="true" spellcheck="false">${esc(l)}</span></div>`).join('');
     $('#stages').innerHTML = state.stages.map((s, i) => `<div class="row"><div class="n">${i + 1}</div><div><input value="${(s.name || '').replace(/"/g, '&quot;')}" data-i="${i}" aria-label="Etappenname"><div class="meta">${(s.distance / 1000).toFixed(0)} km · ${nf(s.gain)} Hm${s.hasEle ? '' : ' · keine Höhendaten'}</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
     $('#stages').querySelectorAll('input').forEach(inp => inp.addEventListener('change', e => { state.stages[+e.target.dataset.i].name = e.target.value; renderProfile(); }));
     $('#stages').querySelectorAll('button').forEach(b => b.addEventListener('click', e => { state.stages.splice(+e.target.dataset.del, 1); afterTourChange(); }));
@@ -1380,6 +1383,16 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function nearestOnRoute(lat, lon) { let best = null, bd = Infinity; for (const st of state.stages) for (let i = 0; i < st.points.length; i += 3) { const q = st.points[i]; const d = hav([lat, lon], [q[0], q[1]]); if (d < bd) { bd = d; best = q; } } return best && bd < 2000 ? [best[0], best[1]] : [lat, lon]; }
   function mapClickSetPos(e) { if (!setPosFor) return; clearHover(); const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
     [p.lat, p.lon] = nearestOnRoute(e.lngLat.lat, e.lngLat.lng); p.place = ''; p.detailTried = false; fillPlaceNames(); say(`Aufnahmeort von Foto ${p.num} gesetzt.`, 'ok'); render(); if (autoOn()) autoLayout(null, { quiet: true }); }
+  // Klick irgendwo außerhalb eines Textfeldes: Bearbeitung beenden und die Textauswahl aufheben.
+  // Sonst bleibt die Auswahl im Titel sichtbar, weil viele Poster-Klicks preventDefault() aufrufen
+  // und der Browser die alte Auswahl deshalb nicht ersetzt.
+  document.addEventListener('pointerdown', e => {
+    const act = document.activeElement;
+    if (!act || !act.isContentEditable) return;
+    if (e.target === act || act.contains(e.target)) return;
+    act.blur();
+    const sel = document.getSelection(); if (sel && sel.rangeCount) sel.removeAllRanges();
+  }, true);
   // ---------- Vorschau im „Ort setzen“-Modus: zeigt live, wo der Zeiger auf der Strecke liegt
   // Über der Karte -> Markierung im Höhenprofil; über dem Profil -> zusätzlich ein Punkt auf der Karte.
   let hoverPin = null;
@@ -1458,6 +1471,22 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         : `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="7" fill="${T.bg}" stroke="${T.accent}" stroke-width="3"/>`; }
     el.innerHTML = (d ? `<path d="${d}" fill="none" stroke="${T.halo}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><path d="${d}" fill="none" stroke="${T.accent}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : '') + pts;
   }
+  // Punkte auf einer Achse so verschieben, dass sie mindestens gap auseinander liegen.
+  // Überlappende Nachbarn werden zu Blöcken verschmolzen, jeder Block bleibt um seinen
+  // Schwerpunkt zentriert (Pool-Adjacent-Violators). Ergebnis: [{ i, n, x:[…] }]
+  function spread(xs, gap, lo, hi) {
+    const bl = [];
+    for (let i = 0; i < xs.length; i++) { bl.push({ i, n: 1, sum: xs[i] });
+      while (bl.length > 1) { const b = bl.at(-1), a = bl.at(-2);
+        const ea = a.sum / a.n + (a.n - 1) / 2 * gap, sb = b.sum / b.n - (b.n - 1) / 2 * gap;
+        if (sb - ea < gap - 1e-6) { a.n += b.n; a.sum += b.sum; bl.pop(); } else break; } }
+    const out = []; let prev = -Infinity;
+    for (const b of bl) { let s = b.sum / b.n - (b.n - 1) / 2 * gap;
+      s = Math.max(lo, prev + gap, Math.min(hi - (b.n - 1) * gap, s));
+      prev = s + (b.n - 1) * gap;
+      out.push({ i: b.i, n: b.n, x: Array.from({ length: b.n }, (_, k) => s + k * gap) }); }
+    return out;
+  }
   let profGeom = null;
   function profileData() {
     const xs = [], ys = [], bounds = []; let off = 0;
@@ -1483,10 +1512,19 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     let pk = ''; if (state.showPeaks !== false && state.peaks?.length) { const lab = []; for (const q of state.peaks) { const x = X(q.dist), y = Y(Math.min(q.routeEle, ymax)); const txt = `${q.name} ${nf(Math.round(q.ele))} m`; const tw = txt.length * fz(10) * .55; let tx = x, anchor = 'middle'; if (tx - tw / 2 < x0 + 4) { tx = x + 5; anchor = 'start'; } else if (tx + tw / 2 > x1 - 4) { tx = x - 5; anchor = 'end'; }
         let ty = y - 10; while (lab.some(l => Math.abs(l.x - tx) < tw && Math.abs(l.y - ty) < 12)) ty -= 12; ty = Math.max(yt - 2, ty); lab.push({ x: tx, y: ty });
         pk += `<path d="M${x - 3.6},${y + 1} L${x},${y - 5} L${x + 3.6},${y + 1} Z" fill="${T.cap}" stroke="${T.halo}" stroke-width=".8"/><text x="${tx}" y="${ty}" fill="${T.cap}" font-size="${fz(10)}" font-weight="600" text-anchor="${anchor}" font-family="Montserrat" stroke="${T.halo}" stroke-width="2.5" paint-order="stroke" stroke-linejoin="round">${esc(txt)}</text>`; } }
-    // Aufnahmeorte der Fotos als nummerierte Punkte auf der Kurve
+    // Aufnahmeorte der Fotos als nummerierte Punkte auf der Kurve.
+    // Liegen mehrere zu dicht beieinander, werden sie nebeneinander gestellt und
+    // über der Kurve abgesetzt; ein dünner Stiel zeigt auf den echten Ort.
     let fo = ''; if (state.photos.length && state.showPhotoDots !== false) { const eleAt = d => { let i = 0; while (i < xs.length - 1 && xs[i + 1] < d) i++; return ys[i] ?? 0; };
-      for (const p of state.photos) { const d = photoDist(p); if (d == null) continue; const x = X(d), y = Y(Math.min(eleAt(d), ymax));
-        fo += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${fz(7.5)}" fill="${T.pinBg}"/><text x="${x.toFixed(1)}" y="${(y + +fz(3.2)).toFixed(1)}" fill="${T.pinFg}" font-size="${fz(8.5)}" font-weight="700" text-anchor="middle" font-family="Montserrat">${p.num}</text>`; } }
+      const r = +fz(7.5), gap = r * 2 + 1.5;
+      const its = state.photos.map(p => ({ num: p.num, d: photoDist(p) })).filter(o => o.d != null).sort((a, b) => a.d - b.d)
+        .map(o => { const x = X(o.d), y = Y(Math.min(eleAt(o.d), ymax)); return { num: o.num, ax: x, ay: y }; });
+      for (const b of spread(its.map(o => o.ax), gap, x0 + r, x1 - r)) {
+        const grp = its.slice(b.i, b.i + b.n), moved = b.n > 1;
+        const yTop = moved ? Math.max(yt + r, Math.min(...grp.map(o => o.ay)) - r - 6) : 0;
+        grp.forEach((o, k) => { const cx = b.x[k], cy = moved ? yTop : o.ay;
+          if (moved) fo += `<line x1="${cx.toFixed(1)}" y1="${(cy + r * .9).toFixed(1)}" x2="${o.ax.toFixed(1)}" y2="${o.ay.toFixed(1)}" stroke="${T.pinBg}" stroke-width="${(r * .22).toFixed(1)}" stroke-linecap="round" opacity=".85"/>`;
+          fo += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${T.pinBg}"/><text x="${cx.toFixed(1)}" y="${(cy + +fz(3.2)).toFixed(1)}" fill="${T.pinFg}" font-size="${fz(8.5)}" font-weight="700" text-anchor="middle" font-family="Montserrat">${o.num}</text>`; }); } }
     profGeom = { x0, x1, yt, yb, ymax, total, H, fz: +fz(1), eleAt: d => { let i = 0; while (i < xs.length - 1 && xs[i + 1] < d) i++; return ys[i] ?? 0; } };
     svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="${T.accent}" fill-opacity=".37"/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="1.6" stroke-linejoin="round"/>` + b + pk + fo +
       `<text x="${x0}" y="20" fill="${T.muted}" font-size="${fz(11)}" font-weight="700" letter-spacing="2.4" font-family="Montserrat">HÖHENPROFIL</text><text x="${x1}" y="20" fill="${T.muted}" font-size="${fz(11)}" text-anchor="end" font-family="Montserrat">Höchster Punkt ${nf(maxE)} m</text>` +
