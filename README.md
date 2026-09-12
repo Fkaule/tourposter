@@ -1,6 +1,6 @@
 # Tourposter
 
-Radtour-Poster (A4 bis 70 × 100 cm, 300 dpi) aus FIT/GPX/TCX-Dateien und Fotos – **komplett im Browser**. Es gibt keinen Server: Tourdaten und Fotos verlassen den Rechner nicht. Einziger Netzwerkzugriff sind die Kartenkacheln (OpenFreeMap, sieht nur die Region); die Schriften liefert die Seite selbst aus (`fonts/`, SIL Open Font License).
+Radtour-Poster (A4 bis 70 × 100 cm, 300 dpi) aus FIT/GPX/TCX-Dateien und Fotos – **komplett im Browser**. Es gibt keinen Server: Tourdaten und Fotos verlassen den Rechner nicht. Netzwerkzugriffe: Kartenkacheln (OpenFreeMap, sieht nur die Region), Höhendaten (AWS Terrain Tiles) und – nur bei Eingabe – die Ortssuche für Transferstrecken (Photon, ersatzweise Nominatim). Die Schriften liefert die Seite selbst aus (`fonts/`, SIL Open Font License).
 
 **Live:** https://tourposter.online (GitHub Pages mit eigener Domain, siehe unten) – oder lokal `npm run build` ausführen: erzeugt `Tourposter.html`, eine Datei mit allem drin, die per Doppelklick offline läuft (nicht im Repo, damit das Pages-Deployment klein bleibt).
 

@@ -75,6 +75,11 @@ aside h1 { margin:0; font-size:21px; font-weight:900; letter-spacing:-.035em; li
 .tfadd2 { font-size:11.5px; color:var(--accent); text-decoration:none; cursor:pointer; margin-top:2px; }
 .tsym { position:absolute; transform:translate(-50%,-50%); width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); border-radius:50%; box-shadow:0 3px 10px rgba(0,0,0,.45); display:grid; place-items:center; }
 .tsym svg { width:68%; height:68%; }
+.tsym { pointer-events:auto; cursor:pointer; }
+.tsym.on { outline:2.5px solid var(--accent); outline-offset:2px; }
+.row.tfopen { box-shadow:0 0 0 1.5px var(--accent) inset; }
+button.tfedit { margin-top:6px; width:100%; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:7px; padding:6px 8px; font:600 11.5px Montserrat, Arial, sans-serif; cursor:pointer; }
+.row.tfopen button.tfedit { background:var(--accent); border-color:var(--accent); color:#fff; }
 #stage.setpos #band { pointer-events:auto; cursor:crosshair; }
 #stage.tfmode::after { content:attr(data-tf); position:absolute; left:50%; top:14px; transform:translateX(-50%); z-index:6; background:var(--accent); color:#fff; font:700 12px Montserrat, Arial, sans-serif; padding:6px 12px; border-radius:14px; pointer-events:none; box-shadow:0 4px 14px rgba(0,0,0,.4); }
 #stage.tfmode #band { pointer-events:none; }
@@ -338,8 +343,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <select id="sport" title="Bestimmt Titelvorschlag, Untertitel und Kennzahlen"><option value="">automatisch (aus der Datei)</option><option value="bike">Rad</option><option value="hike">Wandern</option><option value="canoe">Kanu</option></select>
       <div class="list" id="stages"></div>
       <label class="f" style="margin-top:12px">Anreise &amp; Transfer</label>
-      <div class="hint" style="margin-top:0">Strecken mit Zug, Bus, Fähre oder Auto – gestrichelt dargestellt und nicht in den Kennzahlen enthalten.</div>
-      <button class="btn" id="tfadd" title="Zwei Punkte auf der Karte anklicken: Abfahrt und Ankunft">Transfer einzeichnen <small>zwei Klicks</small></button>
+      <div class="hint" style="margin-top:0">Strecken mit Zug, Bus, Fähre oder Auto – gestrichelt dargestellt und nicht in den Kennzahlen enthalten. Punkte lassen sich nach dem Anlegen im Poster ziehen (Symbol anklicken).</div>
+      <div class="toolrow">
+        <button class="btn" id="tfsearch" title="Abfahrt und Ankunft über die Ortssuche wählen">Transfer über Ortssuche <small>z. B. Fährhafen</small></button>
+        <button class="btn" id="tfadd" title="Zwei Punkte auf der Karte anklicken: Abfahrt und Ankunft">… oder auf der Karte einzeichnen <small>zwei Klicks</small></button>
+      </div>
       <div class="list" id="transfers"></div>
     </div>
 
@@ -488,7 +496,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="10" y="12" width="26" height="20" rx="3" class="ph sel"/><rect x="44" y="18" width="26" height="20" rx="3" class="ph sel"/><text x="40" y="52" class="t">Shift + Klick</text></svg><b>Mehrfachauswahl</b>Shift-Klick wählt mehrere Fotos, die dann zusammen verschoben und ausgerichtet werden.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><circle cx="18" cy="16" r="9" class="ico lock"/><rect x="14" y="15.5" width="8" height="6" rx="1" fill="#1c1a12"/><path d="M15.5 15.5v-2a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="#1c1a12" stroke-width="1.4"/><circle cx="40" cy="16" r="9" class="ico star"/><path d="M40 10l1.8 3.8 4.2.5-3.1 2.9.8 4.1-3.7-2-3.7 2 .8-4.1-3.1-2.9 4.2-.5z" fill="#1c1a12"/><circle cx="62" cy="16" r="9" class="ico gps"/><path d="M62 10a4 4 0 0 0-4 4c0 3 4 7 4 7s4-4 4-7a4 4 0 0 0-4-4z" fill="#fff"/><text x="40" y="46" class="t">Schloss · Stern · Ort</text></svg><b>Nummer &amp; Icons</b>Klick auf die Nummer = Highlight ★ (größer im Auto-Layout). Beim Überfahren: Schloss = fixiert (Automatik lässt es in Ruhe), Pin/Lupe = Aufnahmeort setzen oder suchen – setzen geht per Klick auf die Karte oder ins Höhenprofil.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 40c10-20 20 10 30-6s20-14 34 2" class="route"/><rect x="26" y="6" width="28" height="12" rx="6" class="btn"/><text x="40" y="15" class="tb">Karte</text></svg><b>Karte</b>Button „Karte“ oben rechts, dann verschieben/zoomen (Maus, Finger oder Slider). „Auf Route einpassen“ setzt zurück. Die Route bleibt auch hinter dem Titel sichtbar; wie stark die Umgebung dort abgedunkelt wird, regelt „Abdeckung hinter dem Titel“ im Poster-Block.</div>
-          <div class="hc"><svg viewBox="0 0 80 56"><path d="M6 40c10-6 18-6 28-10" class="route"/><path d="M34 30c12-5 22-12 40-16" class="dash2"/><circle cx="52" cy="21" r="7" class="ico lock"/><path d="M48 22.5h8l-1 2.5h-6zM49.5 22.5V19h3l1.7 1.7V22.5M51.5 19v-1.5h1" fill="none" stroke="#1c1a12" stroke-width="1.1" stroke-linejoin="round"/></svg><b>Anreise &amp; Transfer</b>Strecken mit Zug, Bus, Fähre oder Auto: im Tour-Feld „Transfer einzeichnen“, dann Abfahrt und Ankunft auf der Karte anklicken. Gestrichelt dargestellt, nicht in den Kennzahlen.</div>
+          <div class="hc"><svg viewBox="0 0 80 56"><path d="M6 40c10-6 18-6 28-10" class="route"/><path d="M34 30c12-5 22-12 40-16" class="dash2"/><circle cx="52" cy="21" r="7" class="ico lock"/><path d="M48 22.5h8l-1 2.5h-6zM49.5 22.5V19h3l1.7 1.7V22.5M51.5 19v-1.5h1" fill="none" stroke="#1c1a12" stroke-width="1.1" stroke-linejoin="round"/></svg><b>Anreise &amp; Transfer</b>Strecken mit Zug, Bus, Fähre oder Auto: im Tour-Feld anlegen – Abfahrt und Ankunft per Ortssuche oder Klick auf die Karte. Das Symbol im Poster anklicken, dann lassen sich die Punkte ziehen und Zwischenpunkte setzen (etwa damit die Fähre im Wasser bleibt). Gestrichelt dargestellt, nicht in den Kennzahlen.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 30c14-10 30-12 64-8" class="route"/><text x="30" y="20" class="tl">Ortsname</text><circle cx="52" cy="26" r="2.5" fill="#fff"/><path d="M52 26L46 21" class="dash2"/></svg><b>Ortsnamen</b>Start, Ziel, Übernachtungen: ziehen = verschieben, Doppelklick = Text ändern, Entf = ausblenden.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Höhe richtet sich nach der Bergigkeit der Tour; Oberkante ziehen = Höhe, Doppelklick = zurück auf Automatik. Fotos erscheinen als nummerierte Punkte (im Poster-Block abschaltbar). Beim Ort setzen kann man statt auf die Karte auch ins Profil klicken; eine Markierung zeigt dabei live Kilometer und Höhe, nahe Gipfel rasten ein.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><text x="10" y="24" class="th">Titel</text><rect x="8" y="8" width="44" height="22" class="dash"/><text x="10" y="42" class="t2">Untertitel · 209 km</text></svg><b>Texte</b>Titel, Untertitel und Kennzahlen direkt im Poster anklicken und tippen (Enter = neue Zeile).</div>
@@ -1605,12 +1613,27 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     return best || { p: c };
   }
   let tfDraft = null, tfEdit = null, tfPick = null, tfSearch = null, tfLastTap = null;   // Entwurf beim Anlegen / bearbeiteter Transfer / Punkt, der per Karte gesetzt wird
+  // Anlegen per Klick auf die Karte …
   function startTransfer() {
     if (tfDraft || tfPick) { cancelTransfer(); return; }
     if (!map) { say('Erst eine Tour laden.', 'warn'); return; }
     tfDraft = { a: null }; stage.classList.add('setpos', 'tfmode'); stage.dataset.tf = 'Abfahrtspunkt auf der Karte anklicken · Esc bricht ab'; $('#tfadd').classList.add('on');
     say('Transfer: Abfahrtspunkt auf der Karte anklicken (Esc = abbrechen).');
   }
+  // … oder gleich über zwei Ortssuchen: der Transfer entsteht sofort und steht offen zum Ausfüllen.
+  // Die Startpunkte liegen am Ende der letzten Etappe bzw. etwas daneben, damit es etwas zu ziehen gibt.
+  function addTransferBySearch() {
+    if (!map) { say('Erst eine Tour laden.', 'warn'); return; }
+    cancelTransfer();
+    const last = state.stages.at(-1)?.points.at(-1);
+    const c = map.getCenter(), base = last ? [last[0], last[1]] : [c.lat, c.lng];
+    const d = Math.max(.05, Math.abs(map.getBounds().getEast() - map.getBounds().getWest()) / 6);
+    const t = { id: Math.random().toString(36).slice(2, 9), mode: 'ferry', pts: [[base[0], base[1] - d / 2], [base[0], base[1] + d / 2]] };
+    (state.transfers ||= []).push(t); tfEdit = t.id; tfSearch = { id: t.id, i: 0 };
+    transferLayers(); render(); autosave();
+    say('Transfer angelegt – Abfahrt und Ankunft suchen, auf der Karte setzen oder die Punkte im Poster ziehen.', 'ok');
+  }
+  $('#tfsearch').addEventListener('click', addTransferBySearch);
   function cancelTransfer() { tfDraft = null; tfPick = null; stage.classList.remove('setpos', 'tfmode'); delete stage.dataset.tf; $('#tfadd').classList.remove('on'); say(''); render(); }
   function startPickPoint(id, i) {
     tfDraft = null; tfPick = { id, i }; stage.classList.add('setpos', 'tfmode');
@@ -1708,14 +1731,15 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     el.innerHTML = '';
     ts.forEach((t, i) => {
       const open = tfEdit === t.id, pts = tfPts(t);
-      const row = document.createElement('div'); row.className = 'row';
+      const row = document.createElement('div'); row.className = 'row' + (open ? ' tfopen' : '');
       row.innerHTML = `<div class="n">~</div><div>
         <select aria-label="Verkehrsmittel">${Object.entries(TMODE).map(([k, m]) => `<option value="${k}"${k === t.mode ? ' selected' : ''}>${m.name}</option>`).join('')}</select>
-        <div class="meta">${(tfLen(t) / 1000).toFixed(0)} km über ${pts.length} Punkte · zählt nicht zu den Kennzahlen · <a href="#" class="edit">${open ? 'fertig' : 'Punkte bearbeiten'}</a></div>
+        <div class="meta">${(tfLen(t) / 1000).toFixed(0)} km über ${pts.length} Punkte · zählt nicht zu den Kennzahlen</div>
+        <button class="tfedit">${open ? '✓ Punkte fertig' : 'Punkte bearbeiten'}</button>
         </div><button title="Transfer entfernen">×</button>`;
       row.querySelector('select').addEventListener('change', e => { t.mode = e.target.value; renderTransferSyms(); autosave(); });
-      row.querySelector('button').addEventListener('click', () => { state.transfers.splice(i, 1); if (tfEdit === t.id) tfEdit = null; transferLayers(); render(); autosave(); });
-      row.querySelector('.edit').addEventListener('click', e => { e.preventDefault(); tfEdit = open ? null : t.id; tfSearch = null; render(); });
+      row.querySelectorAll('button')[1].addEventListener('click', () => { state.transfers.splice(i, 1); if (tfEdit === t.id) tfEdit = null; transferLayers(); render(); autosave(); });
+      row.querySelector('.tfedit').addEventListener('click', e => { e.preventDefault(); tfEdit = open ? null : t.id; tfSearch = null; render(); });
       if (open) { const box = document.createElement('div'); box.className = 'tfpts';
         pts.forEach((q, k) => { const line = document.createElement('div'); line.className = 'tfpt';
           line.innerHTML = `<span class="k">${k === 0 ? 'ab' : k === pts.length - 1 ? 'an' : '·'}</span>
@@ -1741,33 +1765,71 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   // Ortssuche für einen Transferpunkt: sucht in den geladenen Kartenkacheln (Orte, Häfen, Bahnhöfe).
   // Die Suche entlang der Route hilft hier nicht – ein Fährhafen liegt gerade nicht an der eigenen Strecke.
+  // Ortssuche für Transferpunkte: weltweit über einen Geokodierdienst (Photon/Komoot, ersatzweise
+  // Nominatim), denn ein Fährhafen liegt gerade nicht an der eigenen Route. Zusätzlich die Namen aus
+  // den schon geladenen Kartenkacheln, damit auch ohne Netz etwas gefunden wird.
+  async function geoSearch(q) {
+    const c = map ? map.getCenter() : null, bias = c ? `&lat=${c.lat.toFixed(3)}&lon=${c.lng.toFixed(3)}` : '';
+    const pick = (name, extra, lat, lon, cls) => ({ name, extra, lat, lon, cls });
+    try {
+      const r = await fetch(`https://photon.komoot.io/api/?limit=8&lang=de${bias}&q=` + encodeURIComponent(q));
+      if (!r.ok) throw new Error('photon ' + r.status);
+      const d = await r.json();
+      return (d.features || []).filter(f => f.geometry?.coordinates)
+        .map(f => { const p = f.properties || {};
+          const extra = [p.city && p.city !== p.name ? p.city : '', p.state, p.country].filter(Boolean).join(', ');
+          return pick(p.name || q, extra, f.geometry.coordinates[1], f.geometry.coordinates[0], p.osm_value || p.type); });
+    } catch (e) {
+      try {
+        const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&accept-language=de&q=' + encodeURIComponent(q));
+        if (!r.ok) throw new Error('nominatim ' + r.status);
+        const d = await r.json();
+        return d.map(h => { const parts = String(h.display_name).split(',').map(x => x.trim());
+          return pick(h.name || parts[0], parts.slice(1, 3).join(', '), +h.lat, +h.lon, h.type); });
+      } catch (e2) { return null; }
+    }
+  }
+  function localSearch(q) {
+    const out = new Map(); if (!map || !map.isStyleLoaded()) return [];
+    const needle = q.toLowerCase();
+    for (const [id, src] of Object.entries(map.getStyle().sources || {})) if (src.type === 'vector')
+      for (const layer of ['place', 'poi', 'transportation_name'])
+        { try { for (const f of map.querySourceFeatures(id, { sourceLayer: layer })) {
+          const nm = f.properties.name || f.properties['name:de'] || f.properties['name:latin']; if (!nm || !String(nm).toLowerCase().includes(needle)) continue;
+          const c = centroid(f.geometry); if (!c || typeof c[0] !== 'number') continue;
+          const key = nm + '|' + c[0].toFixed(2) + ',' + c[1].toFixed(2);
+          if (!out.has(key)) out.set(key, { name: String(nm), extra: 'auf der Karte', lat: c[1], lon: c[0], cls: f.properties.class || layer });
+        } } catch (e) {} }
+    return [...out.values()].slice(0, 6);
+  }
+  function setTfPoint(t, k, h) {
+    tfPts(t)[k] = [h.lat, h.lon]; (t.names ||= [])[k] = h.name;
+    tfSearch = null; previewHit(null); transferLayers(); render(); autosave();
+    if (map) { const pts = tfPts(t); if (pts.every(q => q)) { const b = new maplibregl.LngLatBounds(); for (const c of transferArc(t, 16)) b.extend(c);
+      for (const st of state.stages) { b.extend([st.points[0][1], st.points[0][0]]); const e = st.points.at(-1); b.extend([e[1], e[0]]); } } }
+    say(`Transferpunkt gesetzt: ${h.name}`, 'ok');
+  }
   function tfSearchBox(t, k) {
     const box = document.createElement('div'); box.className = 'psearch';
-    box.innerHTML = `<input placeholder="Ort, Hafen, Bahnhof … im sichtbaren Kartenausschnitt"><div class="hits"></div>`;
+    box.innerHTML = `<input placeholder="Ort, Hafen, Bahnhof, Adresse …"><div class="hits"></div>`;
     const inp = box.querySelector('input'), hits = box.querySelector('.hits');
-    const run = () => { const q = inp.value.trim().toLowerCase(); hits.innerHTML = '';
-      if (q.length < 2) return;
-      if (!map || !map.isStyleLoaded()) { hits.innerHTML = '<span class="muted">Karte lädt noch …</span>'; return; }
-      const found = new Map();
-      for (const [id, src] of Object.entries(map.getStyle().sources || {})) if (src.type === 'vector')
-        for (const layer of ['place', 'poi', 'transportation_name'])
-          { try { for (const f of map.querySourceFeatures(id, { sourceLayer: layer })) {
-            const nm = f.properties.name || f.properties['name:de'] || f.properties['name:latin']; if (!nm || !String(nm).toLowerCase().includes(q)) continue;
-            const c = centroid(f.geometry); if (!c || typeof c[0] !== 'number') continue;
-            const key = nm + '|' + c[0].toFixed(2) + ',' + c[1].toFixed(2);
-            if (!found.has(key)) found.set(key, { name: String(nm), cls: f.properties.class || layer, lat: c[1], lon: c[0] });
-          } } catch (e) {} }
-      const list = [...found.values()].slice(0, 12);
-      if (!list.length) { hits.innerHTML = '<span class="muted">nichts gefunden – Karte auf die Gegend schieben oder herauszoomen, dann noch einmal suchen</span>'; return; }
+    let seq = 0;
+    const run = async () => { const q = inp.value.trim(); if (q.length < 2) { hits.innerHTML = ''; return; }
+      const my = ++seq; hits.innerHTML = '<span class="muted">suche …</span>';
+      const remote = await geoSearch(q); if (my !== seq) return;
+      const list = [...(remote || []), ...localSearch(q)];
+      hits.innerHTML = '';
+      if (!list.length) { hits.innerHTML = remote === null
+        ? '<span class="muted">Ortssuche nicht erreichbar – Punkt über „Karte“ setzen oder im Poster ziehen</span>'
+        : '<span class="muted">nichts gefunden – anders schreiben oder Punkt über „Karte“ setzen</span>'; return; }
       for (const h of list) { const a = document.createElement('a'); a.href = '#';
-        a.innerHTML = `<b>${esc(h.name)}</b> <span class="muted">${esc(CLS_DE[h.cls] || h.cls)}</span>`;
+        a.innerHTML = `<b>${esc(h.name)}</b> <span class="muted">${esc([CLS_DE[h.cls] || h.cls, h.extra].filter(Boolean).join(' · '))}</span>`;
         a.addEventListener('mouseenter', () => previewHit(h)); a.addEventListener('mouseleave', () => previewHit(null));
-        a.addEventListener('click', e => { e.preventDefault(); tfPts(t)[k] = [h.lat, h.lon]; (t.names ||= [])[k] = h.name;
-          tfSearch = null; previewHit(null); transferLayers(); render(); autosave(); say(`Transferpunkt: ${h.name}`, 'ok'); });
+        a.addEventListener('click', e => { e.preventDefault(); setTfPoint(t, k, h); });
         hits.appendChild(a); }
     };
-    let tmr; inp.addEventListener('input', () => { clearTimeout(tmr); tmr = setTimeout(run, 300); });
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run(); } if (e.key === 'Escape') { tfSearch = null; render(); } });
+    let tmr; inp.addEventListener('input', () => { clearTimeout(tmr); tmr = setTimeout(run, 350); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(tmr); run(); } if (e.key === 'Escape') { tfSearch = null; render(); } });
     setTimeout(() => inp.focus(), 0);
     return box;
   }
@@ -1777,7 +1839,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (!map) return;
     for (const t of state.transfers || []) { const m = TMODE[t.mode] || TMODE.other; const c = tfMid(t); const pt = map.project(c);
       if (!(pt.x > -40 && pt.x < CW + 40 && pt.y > -40 && pt.y < CH + 40)) continue;
-      const d = document.createElement('div'); d.className = 'tsym'; d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg; d.title = m.name;
+      const d = document.createElement('div'); d.className = 'tsym' + (tfEdit === t.id ? ' on' : ''); d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg;
+      d.title = m.name + ' – anklicken, um die Punkte zu ziehen';
+      d.addEventListener('click', e => { e.stopPropagation(); tfEdit = tfEdit === t.id ? null : t.id; tfSearch = null; render();
+        if (tfEdit) { const r = $('#transfers .tfopen'); if (r) r.scrollIntoView({ block: 'center', behavior: 'smooth' }); say('Punkte im Poster ziehen; zwei kurze Klicks auf einen Zwischenpunkt entfernen ihn.'); } });
       d.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="${T.pinFg}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${m.d}"/></svg>`;
       el.appendChild(d); }
     renderTfHandles();
