@@ -176,11 +176,14 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #rtop { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
 #vig { position:absolute; left:0; top:0; width:100%; height:var(--vigH,480px); background:linear-gradient(rgba(var(--pvig),var(--pvigA,.9)) 0%, rgba(var(--pvig),calc(var(--pvigA,.9) * .8)) 45%, rgba(var(--pvig),0) 100%); pointer-events:none; }
 #bandfade { position:absolute; left:0; bottom:var(--bandH,100px); width:100%; height:46px; background:linear-gradient(rgba(var(--pvig),0), rgba(var(--pvig),calc(var(--pvigA,.9) * .75))); pointer-events:none; }
-#title { position:absolute; left:56px; top:52px; }
+#title { position:absolute; left:56px; top:52px; width:var(--titleW, 560px); }
+#titlegrip { position:absolute; right:-7px; top:0; width:14px; height:100%; cursor:ew-resize; pointer-events:auto; touch-action:none; }
+#titlegrip::after { content:''; position:absolute; top:50%; left:5px; width:4px; height:44px; margin-top:-22px; border-radius:2px; background:var(--pmuted); opacity:0; transition:opacity .15s; }
+#titlegrip:hover::after, #titlegrip.on::after { opacity:.8; }
 #title .date { color:var(--pa); font-weight:700; font-size:calc(12px * var(--ts, 1)); letter-spacing:.32em; display:flex; align-items:center; gap:12px; }
 #title .date::before { content:""; width:28px; height:2px; background:var(--pa); display:inline-block; }
 #title .h { font-weight:900; font-size:calc(80px * var(--tt, 1)); line-height:.92; letter-spacing:-.02em; color:var(--ptext); margin-top:14px; white-space:pre-line; }
-#title .sub { color:var(--psub); font-size:calc(16px * var(--ts, 1)); line-height:1.4; max-width:420px; margin-top:14px; white-space:pre-line; }
+#title .sub { color:var(--psub); font-size:calc(16px * var(--ts, 1)); line-height:1.4; margin-top:14px; white-space:pre-line; }
 #stats { position:absolute; left:56px; top:var(--statsTop,322px); display:flex; gap:28px; }
 #stats div { display:flex; flex-direction:column; gap:4px; padding-right:28px; border-right:1px solid var(--pline); }
 #stats div:last-child { border:0; }
@@ -432,7 +435,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <div id="overlay">
         <div id="vig"></div>
         <svg id="rtop"></svg>
-        <div id="title"><div class="date" contenteditable="true" spellcheck="false">DATUM</div><div class="h" contenteditable="true" spellcheck="false">Titel</div><div class="sub" contenteditable="true" spellcheck="false">Untertitel</div></div>
+        <div id="title"><div id="titlegrip" title="Textbreite von Titel und Untertitel ziehen (Doppelklick = Standard)"></div><div class="date" contenteditable="true" spellcheck="false">DATUM</div><div class="h" contenteditable="true" spellcheck="false">Titel</div><div class="sub" contenteditable="true" spellcheck="false">Untertitel</div></div>
         <div id="stats"></div>
         <div id="tsyms"></div>
         <div id="places"></div>
@@ -1527,6 +1530,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     // und Chrome zeigt den ganzen Absatz als Auswahl an (gemeldeter Fall: „Titeltext blieb markiert“).
     const setTxt = (sel, val) => { const el = $(sel); if (el !== document.activeElement && el.textContent !== val) el.textContent = val; };
     setTxt('#title .date', state.date || ''); setTxt('#title .h', state.title || ''); setTxt('#title .sub', state.subline || '');
+    stage.style.setProperty('--titleW', titleW() + 'px');
     stage.style.setProperty('--statsTop', ($('#title').offsetTop + $('#title').offsetHeight + 24) + 'px');
     // Vignette reicht immer bis unter die Kennzahlen (Titelblock bleibt auf jeder Karte lesbar)
     titleBlocker(); stage.style.setProperty('--vigH', Math.max(480, $('#title').offsetTop + $('#title').offsetHeight + 24 + ($('#stats').offsetHeight || 60) + 110) + 'px');
@@ -1768,26 +1772,33 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // Ortssuche für Transferpunkte: weltweit über einen Geokodierdienst (Photon/Komoot, ersatzweise
   // Nominatim), denn ein Fährhafen liegt gerade nicht an der eigenen Route. Zusätzlich die Namen aus
   // den schon geladenen Kartenkacheln, damit auch ohne Netz etwas gefunden wird.
+  async function photonSearch(q, bias) {
+    const r = await fetch(`https://photon.komoot.io/api/?limit=8&lang=de${bias}&q=` + encodeURIComponent(q));
+    if (!r.ok) throw new Error('photon ' + r.status);
+    const d = await r.json();
+    return (d.features || []).filter(f => f.geometry?.coordinates).map(f => { const p = f.properties || {};
+      return { name: p.name || q, extra: [p.city && p.city !== p.name ? p.city : '', p.state, p.country].filter(Boolean).join(', '),
+        lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], cls: p.osm_value || p.type }; });
+  }
+  async function nominatimSearch(q) {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&accept-language=de&q=' + encodeURIComponent(q));
+    if (!r.ok) throw new Error('nominatim ' + r.status);
+    const d = await r.json();
+    return d.map(h => { const parts = String(h.display_name).split(',').map(x => x.trim());
+      return { name: h.name || parts[0], extra: parts.slice(1, 3).join(', '), lat: +h.lat, lon: +h.lon, cls: h.type }; });
+  }
+  // Beide Dienste zugleich fragen und die Treffer mischen: Photon ist gut bei Tippfehlern und Teilnamen,
+  // Nominatim findet dafür zusammengesetzte Namen wie „Kopenhagen Hauptbahnhof". Gibt null zurück,
+  // wenn keiner der beiden erreichbar war.
   async function geoSearch(q) {
     const c = map ? map.getCenter() : null, bias = c ? `&lat=${c.lat.toFixed(3)}&lon=${c.lng.toFixed(3)}` : '';
-    const pick = (name, extra, lat, lon, cls) => ({ name, extra, lat, lon, cls });
-    try {
-      const r = await fetch(`https://photon.komoot.io/api/?limit=8&lang=de${bias}&q=` + encodeURIComponent(q));
-      if (!r.ok) throw new Error('photon ' + r.status);
-      const d = await r.json();
-      return (d.features || []).filter(f => f.geometry?.coordinates)
-        .map(f => { const p = f.properties || {};
-          const extra = [p.city && p.city !== p.name ? p.city : '', p.state, p.country].filter(Boolean).join(', ');
-          return pick(p.name || q, extra, f.geometry.coordinates[1], f.geometry.coordinates[0], p.osm_value || p.type); });
-    } catch (e) {
-      try {
-        const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&accept-language=de&q=' + encodeURIComponent(q));
-        if (!r.ok) throw new Error('nominatim ' + r.status);
-        const d = await r.json();
-        return d.map(h => { const parts = String(h.display_name).split(',').map(x => x.trim());
-          return pick(h.name || parts[0], parts.slice(1, 3).join(', '), +h.lat, +h.lon, h.type); });
-      } catch (e2) { return null; }
-    }
+    const rs = await Promise.allSettled([photonSearch(q, bias), nominatimSearch(q)]);
+    if (rs.every(r => r.status === 'rejected')) return null;
+    const seen = new Set(), out = [];
+    for (const r of rs) if (r.status === 'fulfilled') for (const h of r.value) {
+      const key = h.name.toLowerCase() + '|' + h.lat.toFixed(2) + ',' + h.lon.toFixed(2);
+      if (!seen.has(key)) { seen.add(key); out.push(h); } }
+    return out;
   }
   function localSearch(q) {
     const out = new Map(); if (!map || !map.isStyleLoaded()) return [];
@@ -1816,12 +1827,19 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     let seq = 0;
     const run = async () => { const q = inp.value.trim(); if (q.length < 2) { hits.innerHTML = ''; return; }
       const my = ++seq; hits.innerHTML = '<span class="muted">suche …</span>';
-      const remote = await geoSearch(q); if (my !== seq) return;
-      const list = [...(remote || []), ...localSearch(q)];
-      hits.innerHTML = '';
+      let remote = await geoSearch(q); if (my !== seq) return;
+      let list = [...(remote || []), ...localSearch(q)], note = '';
+      // Nichts gefunden? Dann mit dem aussagekräftigsten Wort erneut versuchen – „Kopenhagen Hauptbahnhof“
+      // kennt keiner der Dienste, „Kopenhagen“ schon.
+      if (!list.length && remote !== null && /\s/.test(q)) {
+        const word = q.split(/\s+/).find(w => w.length >= 3) || q.split(/\s+/)[0];
+        const again = await geoSearch(word); if (my !== seq) return;
+        if (again && again.length) { remote = again; list = [...again, ...localSearch(word)]; note = `<span class="muted">nichts zu „${esc(q)}“ – Treffer für „${esc(word)}“:</span>`; }
+      }
+      hits.innerHTML = note;
       if (!list.length) { hits.innerHTML = remote === null
         ? '<span class="muted">Ortssuche nicht erreichbar – Punkt über „Karte“ setzen oder im Poster ziehen</span>'
-        : '<span class="muted">nichts gefunden – anders schreiben oder Punkt über „Karte“ setzen</span>'; return; }
+        : '<span class="muted">nichts gefunden – anders schreiben (auch der Name vor Ort hilft, etwa „København H“) oder Punkt über „Karte“ setzen</span>'; return; }
       for (const h of list) { const a = document.createElement('a'); a.href = '#';
         a.innerHTML = `<b>${esc(h.name)}</b> <span class="muted">${esc([CLS_DE[h.cls] || h.cls, h.extra].filter(Boolean).join(' · '))}</span>`;
         a.addEventListener('mouseenter', () => previewHit(h)); a.addEventListener('mouseleave', () => previewHit(null));
@@ -1834,18 +1852,56 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     return box;
   }
   // Verkehrsmittel-Symbol in der Mitte jeder Transferlinie
+  // Verkehrsmittel-Symbol in der Mitte jeder Transferlinie. Die Elemente werden wiederverwendet
+  // (nicht bei jedem Zeichnen neu gebaut), sonst reißt beim Ziehen die Zeigerbindung ab.
+  const tsymEls = new Map();
   function renderTransferSyms() {
-    const el = $('#tsyms'); if (!el) return; el.innerHTML = '';
-    if (!map) return;
-    for (const t of state.transfers || []) { const m = TMODE[t.mode] || TMODE.other; const c = tfMid(t); const pt = map.project(c);
+    const el = $('#tsyms'); if (!el) return;
+    if (!map) { el.innerHTML = ''; tsymEls.clear(); return; }
+    const live = new Set();
+    for (const t of state.transfers || []) {
+      const m = TMODE[t.mode] || TMODE.other, pt = map.project(tfMid(t));
       if (!(pt.x > -40 && pt.x < CW + 40 && pt.y > -40 && pt.y < CH + 40)) continue;
-      const d = document.createElement('div'); d.className = 'tsym' + (tfEdit === t.id ? ' on' : ''); d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg;
-      d.title = m.name + ' – anklicken, um die Punkte zu ziehen';
-      d.addEventListener('click', e => { e.stopPropagation(); tfEdit = tfEdit === t.id ? null : t.id; tfSearch = null; render();
-        if (tfEdit) { const r = $('#transfers .tfopen'); if (r) r.scrollIntoView({ block: 'center', behavior: 'smooth' }); say('Punkte im Poster ziehen; zwei kurze Klicks auf einen Zwischenpunkt entfernen ihn.'); } });
-      d.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="${T.pinFg}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${m.d}"/></svg>`;
-      el.appendChild(d); }
+      live.add(t.id);
+      let d = tsymEls.get(t.id);
+      if (!d) { d = document.createElement('div'); d.className = 'tsym'; tsymEls.set(t.id, d); el.appendChild(d); bindTransferSym(d, t.id); }
+      d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg;
+      d.classList.toggle('on', tfEdit === t.id);
+      d.title = m.name + ' – ziehen biegt die Linie, Doppelklick macht sie wieder gerade';
+      const want = `<svg viewBox="0 0 24 24" fill="none" stroke="${T.pinFg}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${m.d}"/></svg>`;
+      if (d.innerHTML !== want) d.innerHTML = want;
+    }
+    for (const [id, d] of [...tsymEls]) if (!live.has(id)) { d.remove(); tsymEls.delete(id); }
     renderTfHandles();
+  }
+  // Ziehen am Symbol biegt die Linie: der Punkt unter dem Zeiger wird zum Stützpunkt der Kurve.
+  // Anfangs hat ein Transfer nur Anfang und Ende – der Stützpunkt entsteht beim ersten Ziehen.
+  function bindTransferSym(d, id) {
+    const find = () => (state.transfers || []).find(x => x.id === id);
+    d.addEventListener('pointerdown', e => { const t = find(); if (!t) return;
+      e.preventDefault(); e.stopPropagation(); d.setPointerCapture(e.pointerId);
+      const x0 = e.clientX, y0 = e.clientY; let moved = false, idx = -1;
+      const move = ev => {
+        if (!moved && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 4) return;
+        const pts = tfPts(t);
+        if (!moved) { moved = true;
+          if (pts.length === 2) { const mid = tfMid(t); pts.splice(1, 0, [mid[1], mid[0]]); if (t.names) t.names.splice(1, 0, ''); idx = 1; }
+          else idx = Math.max(1, Math.min(pts.length - 2, Math.round((pts.length - 1) / 2))); }
+        const r = $('#map').getBoundingClientRect(), sc = r.width / CW;
+        const c = map.unproject([(ev.clientX - r.left) / sc, (ev.clientY - r.top) / sc]);
+        tfPts(t)[idx] = [c.lat, c.lng];
+        transferLayers(); renderRouteTop(); renderTfHandles();
+        const q = map.project(tfMid(t)); d.style.left = q.x + 'px'; d.style.top = q.y + 'px'; };
+      const up = () => { d.removeEventListener('pointermove', move); d.removeEventListener('pointerup', up);
+        if (moved) { renderTransferList(); autosave(); return; }
+        tfEdit = tfEdit === id ? null : id; tfSearch = null; render();
+        if (tfEdit) { const r = $('#transfers .tfopen'); if (r) r.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          say('Symbol ziehen biegt die Linie; Anfang und Ende lassen sich ziehen oder im Feld links suchen.'); } };
+      d.addEventListener('pointermove', move); d.addEventListener('pointerup', up); });
+    d.addEventListener('dblclick', e => { e.preventDefault(); e.stopPropagation(); const t = find(); if (!t) return;
+      const pts = tfPts(t);
+      if (pts.length > 2) { t.pts = [pts[0], pts.at(-1)]; if (t.names) t.names = [t.names[0], t.names.at(-1)];
+        transferLayers(); render(); autosave(); say('Linie wieder gerade.', 'ok'); } });
   }
   // Ziehbare Griffe an den Stützpunkten des gerade bearbeiteten Transfers
   function renderTfHandles() {
@@ -1861,7 +1917,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           const r = $('#map').getBoundingClientRect(); const sc = r.width / CW;
           const c = map.unproject([(ev.clientX - r.left) / sc, (ev.clientY - r.top) / sc]);
           const s = snapPoint([c.lat, c.lng], { t: t.id, i: k }); tfPts(t)[k] = s.p; if (t.names) t.names[k] = s.n || '';
-          transferLayers(); renderTransferSyms(); renderRouteTop(); };
+          transferLayers(); renderRouteTop();
+          const q = map.project([tfPts(t)[k][1], tfPts(t)[k][0]]); h.style.left = q.x + 'px'; h.style.top = q.y + 'px';
+          const sym = tsymEls.get(t.id); if (sym) { const m2 = map.project(tfMid(t)); sym.style.left = m2.x + 'px'; sym.style.top = m2.y + 'px'; } };
         const up = () => { h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up);
           if (moved) { render(); autosave(); return; }
           // Zwei kurze Klicks auf denselben Zwischenpunkt entfernen ihn (die Griffe werden neu
@@ -2215,6 +2273,17 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const end = () => { if (!gd) return; gd = null; grip.classList.remove('on'); clampPhotos(); render(); scheduleAuto('band'); };
     grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
     grip.addEventListener('dblclick', () => { state.bandH = null; clampPhotos(); render(); scheduleAuto('band'); }); }
+  // Textbreite von Titel und Untertitel ziehen
+  const TITLEW = 560;
+  const titleW = () => state.titleW || TITLEW;
+  { const grip = $('#titlegrip'); let gd = null;
+    grip.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); gd = { x: e.clientX, w: titleW(), s: +stage.dataset.scale || 1 }; grip.classList.add('on'); grip.setPointerCapture(e.pointerId); });
+    grip.addEventListener('pointermove', e => { if (!gd) return;
+      state.titleW = Math.round(Math.max(220, Math.min(CW - 112, gd.w + (e.clientX - gd.x) / gd.s)));
+      stage.style.setProperty('--titleW', state.titleW + 'px'); render(); });
+    const end = () => { if (!gd) return; gd = null; grip.classList.remove('on'); render(); scheduleAuto('title'); autosave(); };
+    grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
+    grip.addEventListener('dblclick', e => { e.stopPropagation(); state.titleW = null; stage.style.setProperty('--titleW', TITLEW + 'px'); render(); scheduleAuto('title'); autosave(); }); }
   stage.addEventListener('pointerdown', e => { if (e.target.id === 'overlay' || e.target.id === 'vig' || e.target.closest('#map')) { selected = new Set(); selPlace = null; cropMode = null; render(); } });
   $('#reset').addEventListener('click', async () => { if (!confirm('Alles zurücksetzen? Tour, Fotos und Texte werden aus dieser Seite und dem Browser-Speicher entfernt.')) return;
     try { localStorage.removeItem(KEY); } catch (e) {}
@@ -2279,15 +2348,17 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const textH = (t, x, y) => g.fillText(t, x, y); const spacedH = (t, x, y, gap) => spaced(g, t, x, y, gap);
     g.font = F(700, 12); g.textBaseline = 'top'; spacedH(state.date || '', x0 + P(40), P(52), P(3.6 * TS()));
     g.fillStyle = T.text; g.font = F(900, 80, false); g.textBaseline = 'alphabetic';
-    const tsz = 80 * TT(), tl = (state.title || '').split('\n'); tl.forEach((l, i) => textH(l, x0 - P(4), P(78 + tsz * .92 * .78 + i * tsz * .925)));
+    // Zeilen wie am Bildschirm umbrechen: an eigenen Umbrüchen und an der eingestellten Textbreite
+    const wrapT = (txt, maxW) => { const out = [];
+      for (const raw of String(txt || '').split('\n')) { let line = '';
+        for (const w of raw.split(' ')) { const test = line ? line + ' ' + w : w;
+          if (line && g.measureText(test).width > maxW) { out.push(line); line = w; } else line = test; }
+        out.push(line); }
+      return out; };
+    const tsz = 80 * TT(), tl = wrapT(state.title, P(titleW())); tl.forEach((l, i) => textH(l, x0 - P(4), P(78 + tsz * .92 * .78 + i * tsz * .925)));
     const subY = 81 + tl.length * tsz * .92 + 14 + 17 * TS();   // wie im Bildschirm-Layout: Untertitel folgt dem Titel (Zeilenzahl, Größe)
     g.fillStyle = T.sub; g.font = F(400, 16);
-    // wie am Bildschirm (#title .sub, max-width 420 px): zu lange Zeilen umbrechen statt über das Poster laufen zu lassen
-    const subLines = [];
-    for (const raw of (state.subline || '').split('\n')) { let line = '';
-      for (const w of raw.split(' ')) { const test = line ? line + ' ' + w : w;
-        if (line && g.measureText(test).width > P(420)) { subLines.push(line); line = w; } else line = test; }
-      subLines.push(line); }
+    const subLines = wrapT(state.subline, P(titleW()));
     subLines.forEach((l, i) => textH(l, x0, P(subY + i * 22 * TS())));
     let x = x0; const nSub = subLines.filter(Boolean).length;
     const statsTop = subY - 17 * TS() + nSub * 22 * TS() + 24;   // wie am Bildschirm: 24 px unter dem Untertitel
