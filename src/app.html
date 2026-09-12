@@ -1660,6 +1660,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // Klick irgendwo außerhalb eines Textfeldes: Bearbeitung beenden und die Textauswahl aufheben.
   // Sonst bleibt die Auswahl im Titel sichtbar, weil viele Poster-Klicks preventDefault() aufrufen
   // und der Browser die alte Auswahl deshalb nicht ersetzt.
+  // Klick irgendwo daneben beendet die Transferbearbeitung (Symbol, Griffe und das Tour-Feld zählen dazu)
+  document.addEventListener('pointerdown', e => {
+    if (!tfEdit) return;
+    if (e.target.closest && e.target.closest('.tsym, .tfh, #transfers, #tfadd, #tfsearch')) return;
+    tfEdit = null; tfSearch = null; render();
+  });
   document.addEventListener('pointerdown', e => {
     const act = document.activeElement;
     if (!act || !act.isContentEditable) return;
@@ -1713,7 +1719,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       say(`Aufnahmeort von Foto ${p.num} auf Kilometer ${(d / 1000).toFixed(1)} gesetzt.`, 'ok'); }
     render(); if (autoOn()) autoLayout(null, { quiet: true });
   });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && tfDraft) { cancelTransfer(); return; } if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); clearHover(); say(''); render(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && tfDraft) { cancelTransfer(); return; } if (e.key === 'Escape' && tfEdit) { tfEdit = null; tfSearch = null; render(); return; } if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); clearHover(); say(''); render(); } });
   function renderPins() {
     pinsEl.innerHTML = ''; if (!map) { renderRouteTop(); return; }
     // Pins nur zusammenfassen, wenn sie sich auf dem Poster tatsächlich überlappen würden (Abstand in Pixeln).
