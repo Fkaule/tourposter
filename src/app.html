@@ -524,7 +524,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     $('#mapzoomsl').addEventListener('input', e => map.setZoom(+e.target.value));
     $('#mapfit').addEventListener('click', e => { e.preventDefault(); fitRoute(); });
     map.on('idle', () => { if (fillPlaceNames()) render(); });
-    map.on('sourcedata', e => { if (e.isSourceLoaded && fillPlaceNames()) render(); });
+    let srcT = 0;   // sourcedata feuert beim Pannen/Zoomen laufend – gebündelt auswerten
+    map.on('sourcedata', e => { if (!e.isSourceLoaded) return; clearTimeout(srcT); srcT = setTimeout(() => { if (fillPlaceNames()) render(); }, 400); });
     map.on('error', e => {
       const msg = e?.error?.message || '';
       if (!fallback && !map.isStyleLoaded() && /fetch|style|network|load/i.test(msg)) { fallback = true; say('Kartenstil nicht erreichbar (offline?) – Route wird ohne Karte gezeigt.', 'err'); map.setStyle({ version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': T.bg } }] }); map.once('styledata', () => setTimeout(addRouteLayers, 200)); }
@@ -629,7 +630,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       paint: { 'text-color': T.cap || '#1c1a12', 'text-halo-color': T.halo || '#fff', 'text-halo-width': 1.6 } });
     else { map.setPaintProperty('peaks', 'text-color', T.cap || '#1c1a12'); map.setPaintProperty('peaks', 'text-halo-color', T.halo || '#fff'); }
   }
+  let keepView = false;
   function fitRoute() {
+    if (keepView) return;   // beim Wiederherstellen zählt die gespeicherte Ansicht
     const pts = state.stages.flatMap(s => s.points); if (!pts.length) return;
     const b = new maplibregl.LngLatBounds(); pts.forEach(p => b.extend([p[1], p[0]]));
     map.fitBounds(b, { padding: { top: 360, bottom: 40 + BH(), left: 80, right: 80 }, duration: 0 });
@@ -909,7 +912,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
   // ------------------------------------------------------------ Tour-Dateien
   const dropfit = $('#dropfit');
-  wireDrop(dropfit, addTourFiles);
+  // Projektdateien (.json/.zip) hier mit abfangen – sonst meldet addTourFiles „keine Positionsdaten“
+  wireDrop(dropfit, files => { const rest = [];
+    for (const f of files) { if (/\.json$/i.test(f.name)) loadJsonFile(f); else if (/\.zip$/i.test(f.name)) loadZipFile(f); else rest.push(f); }
+    if (rest.length) addTourFiles(rest); });
   async function addTourFiles(files) {
     if (!files.length) return;
     for (const f of [...files].sort((a, b) => a.name.localeCompare(b.name))) {
@@ -974,6 +980,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     } catch (e) { console.warn('Gipfel', e); }
   }
   function afterTourChange() {
+    tourSeq++;
     const sp = sportOf(); if (!state.bandEdited) { state.showBand = sp.band; $('#showband').checked = sp.band; }   // Kanu: Höhenprofil ist ohne Aussage
     findPeaks();
     buildPlaces(); autoTexts();
@@ -1060,7 +1067,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     el.addEventListener('input', () => { state[f] = el.innerText.replace(/\n+$/, ''); state[f + 'Edited'] = true; });
     el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' && f === 'date') e.preventDefault(); if (e.key === 'Escape') el.blur(); });
   }
-  $('#stats').addEventListener('input', () => { state.stats = [...$('#stats').querySelectorAll('div')].map(d => [d.querySelector('b').innerText.trim(), d.querySelector('span').innerText.trim()]); state.statsEdited = true; });
+  $('#stats').addEventListener('input', () => { state.stats = [...$('#stats').querySelectorAll('div')].map(d => [d.querySelector('b')?.innerText.trim() || '', d.querySelector('span')?.innerText.trim() || '']).filter(([n, l]) => n || l); state.statsEdited = true; });
   $('#stats').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
 
   // ------------------------------------------------------------ Fotos
@@ -1220,13 +1227,14 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   // Ortsnamen der Fotos nacheinander vergeben (nicht parallel): sonst sehen sich die Anfragen gegenseitig nicht
   // und bei einer kurzen Rundtour bekommen alle Fotos denselben nächstgelegenen Namen.
-  let namingRun = false;
+  let namingRun = false, tourSeq = 0;
   async function nameThePhotos() {
-    namingRun = true;
+    namingRun = true; const my = tourSeq; const list = state.photos;
     try {
       const km = state.stages.reduce((s, x) => s + x.distance, 0) / 1000;
       const used = new Set(state.photos.filter(p => p.place).map(p => p.place.toLowerCase()));
-      for (const p of state.photos) {
+      for (const p of list) {
+        if (my !== tourSeq || state.photos !== list) return;   // Tour gewechselt oder Fotos ersetzt -> alten Lauf verwerfen
         if (p.place || p.lat == null || p.detailTried) continue;
         p.detailTried = true;
         const cands = [];
@@ -1241,6 +1249,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         if (!name) { const n = nearestPlace(p.lat, p.lon, 'near') || nearestPlace(p.lat, p.lon, 'city');
           if (n && n.d < 15000 && !used.has(n.name.toLowerCase())) name = n.name; }
         if (!name) name = cands[0] || null;   // lieber doppelt als gar nichts
+        if (my !== tourSeq || !state.photos.includes(p)) continue;   // Foto inzwischen gelöscht
         if (name) { used.add(name.toLowerCase()); p.place = name; render(); }
       }
     } catch (e) { console.warn('Ortsnamen', e); } finally { namingRun = false; }
@@ -1272,7 +1281,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   placesEl.addEventListener('pointerdown', e => {
     const el = e.target.closest('.place'); if (!el || el.isContentEditable) return; e.stopPropagation();
-    const p = state.places.find(x => x.key === el.dataset.key); selPlace = p.key; selected = new Set(); render();
+    const p = state.places.find(x => x.key === el.dataset.key); if (!p) { el.remove(); return; }   // Beschriftung aus einer inzwischen gelöschten Etappe
+    selPlace = p.key; selected = new Set(); render();
     if (lastPlace.key === p.key && performance.now() - lastPlace.t < 350) { lastPlace = { key: null, t: 0 }; e.preventDefault(); setTimeout(() => editPlace(p), 0); return; }
     lastPlace = { key: p.key, t: performance.now() };
     const el2 = placesEl.querySelector(`[data-key="${p.key}"]`); placeDrag = { p, sx: e.clientX, sy: e.clientY, dx: p.dx, dy: p.dy, s: +stage.dataset.scale, el: el2, pt: map.project([p.lon, p.lat]) }; el2.setPointerCapture(e.pointerId);
@@ -1286,7 +1296,18 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   // ------------------------------------------------------------ Rendern
   let autosaveT = null;
-  function autosave() { clearTimeout(autosaveT); autosaveT = setTimeout(() => { try { if (state.stages.length || state.photos.length) localStorage.setItem(KEY, JSON.stringify(serial())); } catch (e) {} }, 1500); }
+  let quotaWarned = false;
+  // Foto entfernen: Objekt-URL freigeben und die Kopie in der Datenbank mit aufräumen, sonst wächst der Speicher
+  function dropPhotos(pred) {
+    const gone = state.photos.filter(pred);
+    for (const p of gone) { try { if (p.url && p.url.startsWith('blob:')) URL.revokeObjectURL(p.url); } catch (e) {} originals.delete(p.id); }
+    state.photos = state.photos.filter(p => !pred(p));
+    if (gone.length) idb.keep(state.photos.map(p => p.id)).catch(() => {});
+  }
+  function autosave() { clearTimeout(autosaveT); autosaveT = setTimeout(() => {
+    try { if (state.stages.length || state.photos.length) localStorage.setItem(KEY, JSON.stringify(serial())); quotaWarned = false; }
+    catch (e) { if (!quotaWarned) { quotaWarned = true;   // sonst verspricht die App eine Sicherung, die nie stattfindet
+      say('Die Sitzung passt nicht mehr in den Browser-Speicher – bitte über „Projekt sichern (.zip)“ sichern.', 'warn'); } } }, 1500); }
   function render() {
     renumber(); autosave();
     // Fokus im Bildunterschrift-Feld über den Neuaufbau retten
@@ -1343,7 +1364,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           if (searchHits) show(searchHits); row.appendChild(box); setTimeout(() => inp.focus(), 0); } }
       row.querySelector('input').addEventListener('input', e => { p.caption = e.target.value; const c = tilesEl.querySelector(`[data-id="${p.id}"] .c`); if (c) c.textContent = p.caption; });   // sofort übernehmen – render() (z. B. durch nachgeladene Ortsnamen) baut die Zeile sonst mit altem Text neu
       row.querySelector('input').addEventListener('change', () => render());
-      row.querySelector('button').addEventListener('click', () => { state.photos = state.photos.filter(x => x.id !== p.id); render(); scheduleAuto('del'); });
+      row.querySelector('button').addEventListener('click', () => { dropPhotos(x => x.id === p.id); render(); scheduleAuto('del'); });
       $('#photos').appendChild(row);
     }
     if (focusId) { const inp = $('#photos').querySelector(`.row.photo[data-id="${focusId}"] > div > input`); if (inp) { inp.focus(); try { inp.setSelectionRange(focusSel, focusSel); } catch (e) {} } }
@@ -1383,7 +1404,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (showMapPin && map) {   // Gegenstück auf der Karte: wo liegt dieser Kilometer?
       const p = pk ? [pk.lat, pk.lon] : (routeAtDist(dd) || []).slice(0, 2);
       if (p.length === 2) { const q = map.project([p[1], p[0]]);
-        if (!hoverPin) { hoverPin = document.createElement('div'); hoverPin.className = 'pin'; hoverPin.style.pointerEvents = 'none'; hoverPin.style.background = T.cap; hoverPin.style.color = T.halo; pinsEl.appendChild(hoverPin); }
+        if (!hoverPin || !hoverPin.isConnected) { hoverPin = document.createElement('div'); hoverPin.className = 'pin'; hoverPin.style.pointerEvents = 'none'; hoverPin.style.background = T.cap; hoverPin.style.color = T.halo; pinsEl.appendChild(hoverPin); }
         hoverPin.textContent = pk ? '▲' : '•'; hoverPin.style.left = q.x + 'px'; hoverPin.style.top = q.y + 'px'; } }
     else if (hoverPin) { hoverPin.remove(); hoverPin = null; }
   }
@@ -1408,10 +1429,16 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); clearHover(); say(''); render(); } });
   function renderPins() {
     pinsEl.innerHTML = ''; if (!map) { renderRouteTop(); return; }
-    const groups = [];
-    for (const p of state.photos.filter(p => p.lat != null)) { const g = groups.find(g => hav([g.lat, g.lon], [p.lat, p.lon]) < 3000); if (g) g.nums.push(p.num); else groups.push({ lat: p.lat, lon: p.lon, nums: [p.num] }); }
+    // Pins nur zusammenfassen, wenn sie sich auf dem Poster tatsächlich überlappen würden (Abstand in Pixeln).
+    // Eine feste Entfernung in Metern war falsch: bei einer 15-km-Wanderung lag die halbe Route innerhalb davon
+    // und alle Fotos landeten in einem einzigen Pin.
+    const lim = 30 * TS(), groups = [];
+    for (const p of state.photos.filter(p => p.lat != null)) { const pt = map.project([p.lon, p.lat]);
+      const g = groups.find(q => Math.hypot(q.x - pt.x, q.y - pt.y) < lim);
+      if (g) { g.nums.push(p.num); g.x = (g.x * (g.nums.length - 1) + pt.x) / g.nums.length; g.y = (g.y * (g.nums.length - 1) + pt.y) / g.nums.length; }
+      else groups.push({ x: pt.x, y: pt.y, nums: [p.num] }); }
     renderRouteTop();
-    for (const g of groups) { const pt = map.project([g.lon, g.lat]); const d = document.createElement('div'); d.className = 'pin'; d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg; d.style.color = T.pinFg; d.textContent = g.nums.sort((a, b) => a - b).join(' · '); pinsEl.appendChild(d); }
+    for (const g of groups) { const pt = { x: g.x, y: g.y }; const d = document.createElement('div'); d.className = 'pin'; d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg; d.style.color = T.pinFg; d.textContent = g.nums.sort((a, b) => a - b).join(' · '); pinsEl.appendChild(d); }
   }
   // Route über dem Titelverlauf: immer aktiv, aber nur der Teil, der im abgedunkelten Bereich liegt – sonst verschwindet sie dort
   function renderRouteTop() {
@@ -1439,7 +1466,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   function renderProfile() {
     const svg = $('#profile'); const H = BH(); const ts = TS(), fz = v => (v * ts).toFixed(1); $('#band').style.height = H + 'px'; $('#band').hidden = $('#bandfade').hidden = !H; stage.style.setProperty('--bandH', H + 'px'); if (!H) { svg.innerHTML = ''; return; } svg.setAttribute('viewBox', `0 0 ${CW} ${H}`); if (!state.stages.length) { svg.innerHTML = ''; return; }
-    const { xs, ys, bounds, total } = profileData(); const x0 = 84, x1 = CW - 56, yt = (state.showPeaks !== false && state.peaks?.length) ? 52 : 40, yb = H - 25;
+    const { xs, ys, bounds, total: tot0 } = profileData(); const total = tot0 > 0 ? tot0 : 1; const x0 = 84, x1 = CW - 56, yt = (state.showPeaks !== false && state.peaks?.length) ? 52 : 40, yb = H - 25;
     // Rasterlinien: ca. alle 16 px eine, mindestens 3, höchstens 14 – Schrittweite passt sich der Höhe an
     const nLines = Math.max(3, Math.min(14, Math.floor((yb - yt) / 16)));
     const maxE = Math.max(...ys); const stepG = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000].find(st => (maxE * 1.15) / st <= nLines) || 2000; const ymax = Math.ceil((maxE * 1.15) / stepG) * stepG || 50;
@@ -1466,7 +1493,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       `<text x="${x0}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" font-family="Montserrat">${esc(state.places.find(p => p.key === 'start')?.text || 'Start')}</text>${(() => { const s = state.places.find(p => p.key === 'start')?.text, e = state.places.find(p => p.key === 'end')?.text;
         return sameName(s, e) ? '' : `<text x="${x1}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" text-anchor="end" font-family="Montserrat">${esc(e || 'Ziel')}</text>`; })()}`;
   }
-  const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
   // ------------------------------------------------------------ Drag / Resize / Einrasten / Bildausschnitt (aus dem Layouter)
   function applyCrop(img, t) { const z = t.zoom ?? 1, ax = t.ax ?? 50, ay = t.ay ?? 50; Object.assign(img.style, { width: z * 100 + '%', height: z * 100 + '%', left: -(z - 1) * ax + '%', top: -(z - 1) * ay + '%', objectPosition: `${ax}% ${ay}%` }); }
@@ -1518,7 +1545,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   let lastDown = { id: null, t: 0 };
   tilesEl.addEventListener('pointerdown', e => {
     const el = e.target.closest('.tile'); if (!el) return;
-    const t = state.photos.find(x => x.id === el.dataset.id);
+    const t = state.photos.find(x => x.id === el.dataset.id); if (!t) { el.remove(); return; }   // Kachel eines gelöschten Fotos
     // Doppelklick (eigene Erkennung, da render() die Elemente ersetzt): Ausschnitt-Modus an/aus
     if (!e.target.classList.contains('rs') && lastDown.id === t.id && performance.now() - lastDown.t < 350) {
       lastDown = { id: null, t: 0 }; cropMode = cropMode === t.id ? null : t.id; selected = new Set([t.id]); render(); return;
@@ -1601,7 +1628,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const g of (drag.mode === 'move' ? drag.group : [{ t }])) { const el = tilesEl.querySelector(`[data-id="${g.t.id}"]`); Object.assign(el.style, { left: g.t.x + 'px', top: g.t.y + 'px', width: g.t.w + 'px', height: g.t.h + 'px' }); }
   });
   tilesEl.addEventListener('pointerup', () => { if (drag) { const d = drag; drag = null; showGuides([]); if ((d.mode === 'move' || d.mode === 'resize') && Math.max(Math.abs(d.t.x - d.x), Math.abs(d.t.y - d.y), Math.abs(d.t.w - d.w), Math.abs(d.t.h - d.h)) >= 4) { for (const t of state.photos) if (isSel(t.id) || t.id === d.t.id) t.fixed = true; scheduleAuto('drag'); } render(); } });
-  tilesEl.addEventListener('wheel', e => { const el = e.target.closest('.tile'); if (!el) return; const t = state.photos.find(x => x.id === el.dataset.id); if (!(isSel(t.id) || cropMode === t.id)) return; e.preventDefault(); zoomTile(t, e.deltaY < 0 ? 1.08 : 1 / 1.08); render(); }, { passive: false });
+  tilesEl.addEventListener('wheel', e => { const el = e.target.closest('.tile'); if (!el) return; const t = state.photos.find(x => x.id === el.dataset.id); if (!t || !(isSel(t.id) || cropMode === t.id)) return; e.preventDefault(); zoomTile(t, e.deltaY < 0 ? 1.08 : 1 / 1.08); render(); }, { passive: false });
   // ---- Ausrichten
   const ICONS = {
     star: '<svg viewBox="0 0 24 24" width="13" height="13"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="currentColor"/></svg>',
@@ -1715,7 +1742,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     render();
   });
   document.addEventListener('keydown', e => { if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable) return; if (e.key === 'Escape') { cropMode = null; render(); } if ((e.key === '+' || e.key === '-') && selected.size) { for (const t of state.photos) if (isSel(t.id)) zoomTile(t, e.key === '+' ? 1.08 : 1 / 1.08); render(); } });
-  document.addEventListener('keydown', e => { if ((e.key === 'Delete' || e.key === 'Backspace') && selected.size && !document.activeElement.isContentEditable && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') { state.photos = state.photos.filter(x => !isSel(x.id)); selected = new Set(); render(); } });
+  document.addEventListener('keydown', e => { if ((e.key === 'Delete' || e.key === 'Backspace') && selected.size && !document.activeElement.isContentEditable && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') { dropPhotos(x => isSel(x.id)); selected = new Set(); render(); scheduleAuto('del'); } });
   // Höhenprofil in der Höhe ziehen (Oberkante), Skala passt sich an
   { const grip = $('#bandgrip'); let gd = null;
     grip.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); gd = { y: e.clientY, h: BH(), s: +stage.dataset.scale || 1 }; grip.classList.add('on'); grip.setPointerCapture(e.pointerId); });
@@ -1724,7 +1751,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
     grip.addEventListener('dblclick', () => { state.bandH = null; clampPhotos(); render(); scheduleAuto('band'); }); }
   stage.addEventListener('pointerdown', e => { if (e.target.id === 'overlay' || e.target.id === 'vig' || e.target.closest('#map')) { selected = new Set(); selPlace = null; cropMode = null; render(); } });
-  $('#reset').addEventListener('click', () => { if (!confirm('Alles zurücksetzen? Tour, Fotos und Texte werden aus dieser Seite und dem Browser-Speicher entfernt.')) return; try { localStorage.removeItem(KEY); } catch (e) {} location.reload(); });
+  $('#reset').addEventListener('click', async () => { if (!confirm('Alles zurücksetzen? Tour, Fotos und Texte werden aus dieser Seite und dem Browser-Speicher entfernt.')) return;
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    try { await idb.keep([]); } catch (e) {}   // auch die Fotos in Originalgröße löschen – sonst bleiben sie im Browser liegen
+    location.reload(); });
   function wireDrop(el, fn) {
     const input = el.querySelector('input');
     el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); });
@@ -1739,7 +1769,15 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   async function fontsReady() { try { await document.fonts.load('900 80px Montserrat'); await document.fonts.load('400 16px Montserrat'); } catch (e) {} }
   function F(w, px, small = true) { return `${w} ${Math.round(px * S * (small ? TS() : TT()))}px Montserrat, Arial, sans-serif`; }
   const P = v => v * S;
+  let printBusy = false, basePixelRatio = null;
   async function renderPrint(scaleOverride) {
+    // Nur ein Rendervorgang gleichzeitig: S (Druckfaktor) und der Pixel-Ratio der Karte sind global,
+    // zwei parallele Läufe würden sich gegenseitig verstellen (falsche Größen, Karte bleibt in Druckauflösung).
+    if (printBusy) throw new Error('Es läuft bereits ein Export – bitte kurz warten.');
+    printBusy = true;
+    try { return await renderPrintInner(scaleOverride); } finally { printBusy = false; }
+  }
+  async function renderPrintInner(scaleOverride) {
     await fontsReady();
     S = scaleOverride || paperPx(state.paper)[0] / 1123;
     const W = Math.round(CW * S), H = Math.round(CH * S);
@@ -1747,14 +1785,13 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     g.fillStyle = T.bg; g.fillRect(0, 0, W, H);
     // Karte in hoher Auflösung rendern
     if (map) {
-      const ratio = Math.min(S, 4); const old = map.getPixelRatio ? map.getPixelRatio() : window.devicePixelRatio;
+      const ratio = Math.min(S, 4); const old = basePixelRatio ?? (basePixelRatio = map.getPixelRatio ? map.getPixelRatio() : window.devicePixelRatio);
       say('Karte wird in Druckauflösung gerendert …');
       try { map.setPixelRatio(ratio); await new Promise(r => { map.once('idle', r); map.triggerRepaint(); setTimeout(r, 4000); }); g.drawImage(map.getCanvas(), 0, 0, W, H); }
       finally { map.setPixelRatio(old); }
     }
     // Vignette
     const vA = vigA(); const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const vg = g.createLinearGradient(0, 0, 0, P(vigH)); vg.addColorStop(0, `rgba(${T.vig},${vA})`); vg.addColorStop(.45, `rgba(${T.vig},${vA * .8})`); vg.addColorStop(1, `rgba(${T.vig},0)`); g.fillStyle = vg; g.fillRect(0, 0, W, P(vigH));
-    if (BH()) { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
     // Route über dem Verlauf: nach der Vignette erneut zeichnen, damit sie oben sichtbar bleibt
     if (map && state.stages.length) {
       const lim = vigH + 10; const seg = [];
@@ -1774,18 +1811,33 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(57), P(28), P(2));
     // Halo in Posterfarbe hinter allen Titeltexten (weicher Schatten + dünne Kontur) – lesbar auch über Kartenbeschriftung
     const textH = (t, x, y) => g.fillText(t, x, y); const spacedH = (t, x, y, gap) => spaced(g, t, x, y, gap);
-    g.font = F(700, 12); g.textBaseline = 'top'; spacedH(state.date || '', x0 + P(40), P(52), P(3.6));
+    g.font = F(700, 12); g.textBaseline = 'top'; spacedH(state.date || '', x0 + P(40), P(52), P(3.6 * TS()));
     g.fillStyle = T.text; g.font = F(900, 80, false); g.textBaseline = 'alphabetic';
     const tsz = 80 * TT(), tl = (state.title || '').split('\n'); tl.forEach((l, i) => textH(l, x0 - P(4), P(78 + tsz * .92 * .78 + i * tsz * .925)));
     const subY = 81 + tl.length * tsz * .92 + 14 + 17 * TS();   // wie im Bildschirm-Layout: Untertitel folgt dem Titel (Zeilenzahl, Größe)
-    g.fillStyle = T.sub; g.font = F(400, 16); (state.subline || '').split('\n').forEach((l, i) => textH(l, x0, P(subY + i * 22 * TS())));
-    let x = x0; const nSub = (state.subline || '').split('\n').filter(Boolean).length || 1;
+    g.fillStyle = T.sub; g.font = F(400, 16);
+    // wie am Bildschirm (#title .sub, max-width 420 px): zu lange Zeilen umbrechen statt über das Poster laufen zu lassen
+    const subLines = [];
+    for (const raw of (state.subline || '').split('\n')) { let line = '';
+      for (const w of raw.split(' ')) { const test = line ? line + ' ' + w : w;
+        if (line && g.measureText(test).width > P(420)) { subLines.push(line); line = w; } else line = test; }
+      subLines.push(line); }
+    subLines.forEach((l, i) => textH(l, x0, P(subY + i * 22 * TS())));
+    let x = x0; const nSub = subLines.filter(Boolean).length;
     const statsTop = subY - 17 * TS() + nSub * 22 * TS() + 24;   // wie am Bildschirm: 24 px unter dem Untertitel
-    for (const [n, l] of state.stats || []) {
+    const stats = state.stats || [];
+    stats.forEach(([n, l], si) => {
       g.fillStyle = T.text; g.font = F(800, 38, false); textH(n, x, P(statsTop + 34 * TT())); const wn = g.measureText(n).width;
-      g.fillStyle = T.muted; g.font = F(500, 11); g.textBaseline = 'top'; const lx = spacedH(l, x, P(statsTop + 44 * TT()), P(2.4)); g.textBaseline = 'alphabetic';
-      x += Math.max(wn, lx - x) + P(28); g.fillStyle = T.line; g.fillRect(x, P(statsTop + 4), P(1), P(44 * TT())); x += P(28);
-    }
+      g.fillStyle = T.muted; g.font = F(500, 11); g.textBaseline = 'top'; const lx = spacedH(l, x, P(statsTop + 44 * TT()), P(2.4 * TS())); g.textBaseline = 'alphabetic';
+      x += Math.max(wn, lx - x) + P(28);
+      if (si < stats.length - 1) { g.fillStyle = T.line; g.fillRect(x, P(statsTop + 4), P(1), P(44 * TT())); }   // am Bildschirm hat die letzte Kennzahl keinen Strich
+      x += P(28);
+    });
+    // Ortsnamen und Nummern-Pins: am Bildschirm liegen sie unter den Fotos – im Export war es umgekehrt
+    // Pins
+    if (map) for (const d of pinsEl.children) { const px = P(parseFloat(d.style.left)), py = P(parseFloat(d.style.top)); g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(8); g.shadowOffsetY = P(4); pill(g, px, py, d.textContent, T.pinBg, T.pinFg); g.restore(); }
+    // Ortsnamen
+    if (map) for (const p of shownPlaces()) { if (!p.text) continue; const pt = map.project([p.lon, p.lat]); const x = P(pt.x + p.dx), y = P(pt.y + p.dy); g.font = F(p.kind === 'night' ? 700 : 600, 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = T.halo; g.strokeText(p.text, x, y); g.fillStyle = T.cap; g.fillText(p.text, x, y); g.textBaseline = 'alphabetic'; }
     // Fotos
     for (const p of state.photos) {
       const src = originals.get(p.id); const im = await loadImg(src ? URL.createObjectURL(src) : p.thumb, !!src);
@@ -1806,14 +1858,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const gh = 70 * Math.max(1, TS()); const cg = o.createLinearGradient(0, bh - P(gh), 0, bh); cg.addColorStop(0, 'rgba(6,12,18,0)'); cg.addColorStop(1, 'rgba(6,12,18,.85)'); o.fillStyle = cg; o.fillRect(0, bh - P(gh), bw, P(gh));
       o.fillStyle = '#e6edf3'; let fs = 12; o.font = F(500, fs); const cap = p.caption ?? autoCaption(p); while (fs > 8.5 && o.measureText(cap).width > bw - P(28)) { fs -= .5; o.font = F(500, fs); }
       o.fillText(cap, P(14), bh - P(14));
-      pill(o, P(12 + 13 * TS()), P(12 + 13 * TS()), String(p.num), T.pill, '#fff');
+      pill(o, P(12 + 13 * TS()), P(12 + 13 * TS()), p.star ? p.num + ' ★' : String(p.num), p.star ? '#f2b632' : T.pill, p.star ? '#1c1a12' : '#fff');   // Highlight wie am Bildschirm
       if (fray > 0) { try { const mk = await loadImg('data:image/svg+xml;base64,' + btoa(frayMask(Math.round(bw), Math.round(bh), Math.round(fray), R, seedOf(p.id)))); o.globalCompositeOperation = 'destination-in'; o.drawImage(mk, 0, 0, bw, bh); o.globalCompositeOperation = 'source-over'; } catch (e) { console.warn('Maske', e); } }
       g.save(); if (!(fray > 0)) { rr(g, bx, by, bw, bh, R); g.clip(); } g.drawImage(off, bx, by, bw, bh); g.restore();
     }
-    // Pins
-    if (map) for (const d of pinsEl.children) { const px = P(parseFloat(d.style.left)), py = P(parseFloat(d.style.top)); g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(8); g.shadowOffsetY = P(4); pill(g, px, py, d.textContent, T.pinBg, T.pinFg); g.restore(); }
-    // Ortsnamen
-    if (map) for (const p of shownPlaces()) { if (!p.text) continue; const pt = map.project([p.lon, p.lat]); const x = P(pt.x + p.dx), y = P(pt.y + p.dy); g.font = F(p.kind === 'night' ? 700 : 600, 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = T.halo; g.strokeText(p.text, x, y); g.fillStyle = T.cap; g.fillText(p.text, x, y); g.textBaseline = 'alphabetic'; }
+    // Verlauf über dem Profilband liegt am Bildschirm über den Fotos – hier ebenso
+    if (BH()) { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
     // Höhenprofil-Band (SVG rastern)
     if (BH()) {
     const band = new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CW} ${BH()}" width="${W}" height="${P(BH())}"><style>text{font-family:Montserrat,Arial,sans-serif}</style>${$('#profile').innerHTML}</svg>`], { type: 'image/svg+xml' });
@@ -1846,11 +1896,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   async function saveOriginals() { try { const ids = state.photos.map(p => p.id); await idb.keep(ids); let n = 0; for (const p of state.photos) { const f = originals.get(p.id); if (f) { await idb.put(p.id, f); n++; } } return n; } catch (e) { console.warn('IndexedDB', e); return -1; } }
   async function loadOriginals() { let n = 0; for (const p of state.photos) { if (originals.has(p.id)) continue; try { const f = await idb.get(p.id); if (f) { originals.set(p.id, f); p.url = URL.createObjectURL(f); n++; } } catch (e) {} } return n; }
   const missingOriginals = () => state.photos.filter(p => !originals.has(p.id));
-  function serial() { return { ...state, photos: state.photos.map(({ url, ...p }) => p), map: map ? { center: map.getCenter().toArray(), zoom: map.getZoom() } : null }; }
+  function serial() { return { ...state, autoAdd: autoOn(), photos: state.photos.map(({ url, ...p }) => p), map: map ? { center: map.getCenter().toArray(), zoom: map.getZoom() } : null }; }
     // Projekt-ZIP: project.json (Tour, Layout, Texte) + photos/<id>_<name> in Originalgröße
   $('#exzip').addEventListener('click', async () => { try { if (typeof JSZip === 'undefined') throw new Error('ZIP-Bibliothek fehlt'); say('Packt Projekt …'); const z = new JSZip(); const obj = serial(); z.file('project.json', JSON.stringify(obj, null, 1));
       let n = 0; for (const p of state.photos) { const f = originals.get(p.id) || await idb.get(p.id).catch(() => null); if (f) { z.file(`photos/${p.id}_${p.name}`, f); n++; } }
-      const blob = await z.generateAsync({ type: 'blob', compression: 'STORE' }); download(blob, fname() + '.tourposter.zip'); say(`Projekt gesichert (${n} Foto(s) in Originalgröße, ${(blob.size / 1048576).toFixed(1)} MB).`, 'ok'); } catch (e) { say('Sichern fehlgeschlagen: ' + e.message, 'err'); } });
+      const blob = await z.generateAsync({ type: 'blob', compression: 'STORE' }); download(blob, fname() + '.tourposter.zip'); const miss = state.photos.length - n;
+      say(`Projekt gesichert (${n} Foto(s) in Originalgröße, ${(blob.size / 1048576).toFixed(1)} MB)${miss ? ` – Achtung: ${miss} Foto(s) liegen nur als Vorschau vor und sind im Archiv nicht in voller Auflösung enthalten.` : '.'}`, miss ? 'warn' : 'ok'); } catch (e) { say('Sichern fehlgeschlagen: ' + e.message, 'err'); } });
   // Schneller ZIP-Leser für unkomprimierte Einträge (unsere eigenen Projekte): Zentralverzeichnis lesen, Dateien per File.slice ohne Kopieren – JSZip nur als Fallback
   async function zipEntries(f) {
     const tail = new DataView(await f.slice(Math.max(0, f.size - 66000), f.size).arrayBuffer()); let eocd = -1;
@@ -1870,13 +1921,19 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       render(); say(`Projekt „${f.name}“ geladen – ${n} Foto(s) in Originalgröße.`, 'ok'); } catch (e) { say('Projekt nicht lesbar: ' + e.message, 'err'); } }
   $('#ldzip input').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadZipFile(f); });
   function restore(obj) {
-    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.showPhotoDots = obj.showPhotoDots !== false; $('#photodots').checked = state.showPhotoDots; state.peakThr = obj.peakThr ?? null; state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; $('#pscale').value = Math.round(state.photoScale * 100); state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
-    if (obj.map && map) map.once('load', () => map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }));
-    applyFrame(); render();
+    if (Array.isArray(obj.stages)) obj.stages = obj.stages.filter(s => s && Array.isArray(s.points) && s.points.length > 1);   // beschädigte Projektdatei nicht ungeprüft übernehmen
+    if (!Array.isArray(obj.photos)) obj.photos = [];
+    if (!Array.isArray(obj.places)) obj.places = [];
+    Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.showPhotoDots = obj.showPhotoDots !== false; $('#photodots').checked = state.showPhotoDots; state.peakThr = obj.peakThr ?? null; if ($('#peakthr') && state.peakThr != null) $('#peakthr').value = state.peakThr;
+    if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 60; $('#grade').value = state.grade; state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    if (obj.map && map) { keepView = true;   // gespeicherte Ansicht gehört zum gespeicherten Layout – nicht neu einpassen
+      const jump = () => { map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }); state.fitZoom = obj.map.zoom; setTimeout(() => { keepView = false; }, 1500); };
+      if (map.loaded() || map.isStyleLoaded()) setTimeout(jump, 0); else map.once('load', jump); }
+    applyFrame(); if (map) { terrainLayer(); peakLayer(); } render();
   }
   async function loadJsonFile(f) { try { restore(JSON.parse(await f.text())); afterTourChange(); say(`Layout „${f.name}“ geladen – Fotos in Originalgröße bitte erneut hinzufügen (werden anhand des Dateinamens zugeordnet).`, 'ok'); } catch (err) { say('JSON nicht lesbar: ' + err.message, 'err'); } }
   // JSON-Sicherung per Drop auf die Tour-Zone
-  dropfit.addEventListener('drop', e => { for (const f of e.dataTransfer.files) { if (/\.json$/i.test(f.name)) loadJsonFile(f); if (/\.zip$/i.test(f.name)) loadZipFile(f); } });
+
 
   // ------------------------------------------------------------ Start
   setFormat('portrait'); applyTheme('retro'); initMap(); applyFrame();
