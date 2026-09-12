@@ -14,10 +14,11 @@ fs.writeFileSync('heif.js', heif);
 const h = b => crypto.createHash('md5').update(b).digest('hex').slice(0, 8);
 const base0 = app.replace('/*MAPLIBRE_CSS*/', css);
 // Schriften liegen als eigene Dateien im Repo (kein Google-CDN): gehostet unter fonts/, in der Einzeldatei eingebettet
-const FONTS = [['montserrat', 'Montserrat'], ['inter', 'Inter'], ['oswald', 'Oswald'], ['space-grotesk', 'Space Grotesk'], ['playfair-display', 'Playfair Display'], ['lora', 'Lora']];
-const faces = embed => FONTS.map(([key, fam]) => {
+// Schlüssel, Familienname, tatsächliche Gewichtsachse der variablen Schrift
+const FONTS = [['montserrat', 'Montserrat', '100 900'], ['inter', 'Inter', '100 900'], ['oswald', 'Oswald', '200 700'], ['space-grotesk', 'Space Grotesk', '300 700'], ['playfair-display', 'Playfair Display', '400 900'], ['lora', 'Lora', '400 700']];
+const faces = embed => FONTS.map(([key, fam, rng]) => {
   const url = embed ? `data:font/woff2;base64,${fs.readFileSync(`fonts/${key}.woff2`).toString('base64')}` : `fonts/${key}.woff2`;
-  return `@font-face{font-family:'${fam}';font-style:normal;font-weight:100 900;font-display:swap;src:url(${url}) format('woff2')}`;
+  return `@font-face{font-family:'${fam}';font-style:normal;font-weight:${rng};font-display:swap;src:url(${url}) format('woff2')}`;
 }).join('\n');
 const fHead = base0.slice(0, base0.indexOf('/*FONTS*/')), fTail = base0.slice(base0.indexOf('/*FONTS_END*/') + '/*FONTS_END*/'.length);
 const base = fHead + faces(false) + fTail, baseSingle = fHead + faces(true) + fTail;
