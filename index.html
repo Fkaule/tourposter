@@ -122,6 +122,17 @@ input[type=range]:disabled::-webkit-slider-thumb { background:#4a5c6e; }
 .ibtn:hover { border-color:var(--accent); color:var(--accent); }
 .ibtn:disabled { opacity:.4; cursor:default; }
 select, input.t { width:100%; box-sizing:border-box; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:9px; padding:8px 10px; font:12px Montserrat, Arial, sans-serif; }
+/* Stil- und Schriftauswahl als Kacheln mit Vorschau */
+#themepick, #fontpick { display:grid; gap:6px; margin-top:2px; }
+#themepick { grid-template-columns:repeat(3, 1fr); }
+#fontpick { grid-template-columns:repeat(2, 1fr); }
+#themepick .gh, #fontpick .gh { grid-column:1 / -1; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:6px 0 -2px; }
+#themepick .gh:first-child, #fontpick .gh:first-child { margin-top:0; }
+.pcard { background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:5px; cursor:pointer; display:flex; flex-direction:column; align-items:stretch; gap:4px; text-align:center; color:var(--muted); font:600 10.5px Montserrat, Arial, sans-serif; transition:border-color .12s, color .12s; }
+.pcard:hover { border-color:var(--accent); color:var(--text); }
+.pcard[aria-pressed="true"] { border-color:var(--accent); color:var(--text); box-shadow:0 0 0 1px var(--accent) inset; }
+.pcard svg, .pcard .fp { display:block; width:100%; border-radius:5px; }
+.pcard .fp { height:38px; display:grid; place-items:center; background:#f4f1ea; color:#1a1a1a; font-size:20px; font-weight:700; line-height:1; overflow:hidden; }
 #status { font-size:11.5px; color:var(--muted); min-height:16px; padding:6px 16px 10px; }
 #status.ok { color:var(--ok); }
 #status.err { color:#ff8a70; }
@@ -332,25 +343,16 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <select id="paper"></select>
       <div class="hint" id="paperhint"></div>
       <label class="f">Stil</label>
-      <select id="theme">
-        <option value="nacht">Nacht – dunkle Karte, Koralle</option>
-        <option value="fjord">Fjord – blaue Karte, Bernstein</option>
-        <option value="hell">Hell – helle Karte, Rot</option>
-        <option value="retro">Retro – bunte Karte, Ziegel</option>
-        <option value="wald">Wald – helle Karte, Tannengrün</option>
-        <option value="kohle">Kohle – dunkle Karte, Bernsteingelb</option>
-        <option value="blaupause">Blaupause – dunkle Karte, Cyan</option>
-        <option value="mono">Mono – helle Karte, Schwarzweiß</option>
-        <option value="sand">Sand – bunte Karte, Salbei</option>
+      <div id="themepick"></div>
+      <select id="theme" hidden>
+        <option value="nacht"></option><option value="fjord"></option><option value="hell"></option><option value="retro"></option>
+        <option value="wald"></option><option value="kohle"></option><option value="blaupause"></option><option value="mono"></option><option value="sand"></option>
       </select>
       <label class="f">Schrift</label>
-      <select id="font">
-        <option value="montserrat">Montserrat – geometrisch, Standard</option>
-        <option value="inter">Inter – neutral, sehr gut lesbar</option>
-        <option value="oswald">Oswald – schmal, plakativ</option>
-        <option value="space">Space Grotesk – technisch, eigenwillig</option>
-        <option value="playfair">Playfair Display – Serif, elegant</option>
-        <option value="lora">Lora – Serif, warm</option>
+      <div id="fontpick"></div>
+      <select id="font" hidden>
+        <option value="montserrat"></option><option value="inter"></option><option value="oswald"></option>
+        <option value="space"></option><option value="playfair"></option><option value="lora"></option>
       </select>
       <label class="f">Geländerelief <span id="reliefval">60 %</span></label>
       <input type="range" id="relief" min="0" max="100" step="5" value="60" style="width:100%" title="Schummerung der Berge. 0 = aus, dann werden auch keine Höhendaten geladen. Im Flachland ist selbst bei hohem Wert wenig zu sehen. Höhendaten von AWS Terrain Tiles (zweiter Dienst neben der Karte)">
@@ -524,13 +526,64 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     playfair:   { css: '"Playfair Display"', g: 'Playfair+Display:wght@400;500;600;700;800;900' },
     lora:       { css: 'Lora', g: 'Lora:wght@400;500;600;700' },
   };
+  // ---- Auswahl mit Vorschau: Stile als Miniposter, Schriften als Schriftprobe
+  const THEME_META = {
+    nacht:     { name: 'Nacht',     desc: 'dunkle Karte, Koralle' },
+    fjord:     { name: 'Fjord',     desc: 'blaue Karte, Bernstein' },
+    kohle:     { name: 'Kohle',     desc: 'dunkle Karte, Bernsteingelb' },
+    blaupause: { name: 'Blaupause', desc: 'dunkle Karte, Cyan – technisch' },
+    hell:      { name: 'Hell',      desc: 'helle Karte, Rot' },
+    retro:     { name: 'Retro',     desc: 'bunte Karte, Ziegel' },
+    sand:      { name: 'Sand',      desc: 'bunte Karte, Salbei' },
+    wald:      { name: 'Wald',      desc: 'helle Karte, Tannengrün' },
+    mono:      { name: 'Mono',      desc: 'helle Karte, Schwarzweiß – Farbabstimmung zieht die Fotos nach Grau' },
+  };
+  const THEME_GROUPS = [['dunkel', ['nacht', 'fjord', 'kohle', 'blaupause']], ['hell', ['hell', 'retro', 'sand', 'wald', 'mono']]];
+  const FONT_META = {
+    montserrat: { name: 'Montserrat', desc: 'geometrisch, Standard' },
+    inter:      { name: 'Inter',      desc: 'neutral, sehr gut lesbar' },
+    oswald:     { name: 'Oswald',     desc: 'schmal, plakativ' },
+    space:      { name: 'Space Grotesk', desc: 'technisch, eigenwillig' },
+    playfair:   { name: 'Playfair',   desc: 'Serif, elegant' },
+    lora:       { name: 'Lora',       desc: 'Serif, warm' },
+  };
+  const FONT_GROUPS = [['ohne Serifen', ['montserrat', 'inter', 'oswald', 'space']], ['mit Serifen', ['playfair', 'lora']]];
+  // Miniposter: Grundfarbe, Karte angedeutet, Route im Akzent, Titelzeilen, Profilband
+  const themeSvg = t => `<svg viewBox="0 0 40 52" aria-hidden="true">
+    <rect width="40" height="52" fill="${t.bg}"/>
+    <g stroke="${t.line}" stroke-width=".6" opacity=".9"><path d="M0 20h40M0 31h40M12 0v52M27 0v52"/></g>
+    <path d="M1 30C8 22 12 28 19 20S31 12 39 15" fill="none" stroke="${t.accent}" stroke-width="1.8" stroke-linecap="round"/>
+    <rect x="4" y="5" width="21" height="4" rx="1.4" fill="${t.text}"/>
+    <rect x="4" y="11" width="13" height="2.4" rx="1.2" fill="${t.muted}"/>
+    <rect x="0" y="41" width="40" height="11" fill="${t.band}"/>
+    <path d="M2 50l6-3 5 2 6-4 5 1 6-3 6 2v5H2z" fill="${t.accent}" fill-opacity=".45"/>
+  </svg>`;
+  let pickersReady = false;
+  function buildPickers() {
+    if (pickersReady) return; pickersReady = true;
+    const mk = (host, groups, meta, prev, pick) => { host.innerHTML = '';
+      for (const [grp, keys] of groups) { const h = document.createElement('div'); h.className = 'gh'; h.textContent = grp; host.appendChild(h);
+        for (const k of keys) { const b = document.createElement('button'); b.type = 'button'; b.className = 'pcard'; b.dataset.k = k;
+          b.title = meta[k].name + ' – ' + meta[k].desc;
+          b.innerHTML = prev(k) + `<span>${meta[k].name}</span>`;
+          b.addEventListener('click', () => { pick(k); autosave(); });
+          host.appendChild(b); } } };
+    mk($('#themepick'), THEME_GROUPS, THEME_META, k => themeSvg(THEMES[k]), applyTheme);
+    mk($('#fontpick'), FONT_GROUPS, FONT_META, k => `<span class="fp" style="font-family:${FONTS[k].css}, Arial, sans-serif">Tour</span>`, applyFont);
+    for (const k of Object.keys(FONTS)) loadFontCss(k);   // Schriftproben brauchen die echten Schriften
+    syncPickers();
+  }
+  function syncPickers() {
+    for (const b of document.querySelectorAll('#themepick .pcard')) b.setAttribute('aria-pressed', b.dataset.k === state.theme);
+    for (const b of document.querySelectorAll('#fontpick .pcard')) b.setAttribute('aria-pressed', b.dataset.k === state.font);
+  }
   const fontStack = () => (FONTS[state.font]?.css || 'Montserrat') + ', Arial, sans-serif';
   const fontSvg = () => fontStack().replace(/"/g, '');   // SVG-Attribute vertragen keine Anführungszeichen
   const fontLoaded = new Set(['montserrat']);
+  function loadFontCss(f) { if (!FONTS[f] || fontLoaded.has(f)) return; fontLoaded.add(f);
+    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=' + FONTS[f].g + '&display=swap'; document.head.appendChild(l); }
   function applyFont(name) {
-    const f = FONTS[name] ? name : 'montserrat'; state.font = f; $('#font').value = f;
-    if (!fontLoaded.has(f)) { fontLoaded.add(f);
-      const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=' + FONTS[f].g + '&display=swap'; document.head.appendChild(l); }
+    const f = FONTS[name] ? name : 'montserrat'; state.font = f; $('#font').value = f; loadFontCss(f); syncPickers();
     stage.style.setProperty('--pfont', fontStack());
     (document.fonts?.ready || Promise.resolve()).then(() => render());
     render();
@@ -542,7 +595,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function applyGrade() { const v = gradeVals(); const st = stage.style; st.setProperty('--gsat', v.sat); st.setProperty('--gtint', v.tint); st.setProperty('--gta', v.ta); st.setProperty('--gcon', v.con); $('#gradeval').textContent = (state.grade ?? 0) + ' %'; }
   const vigA = () => state.vigA ?? (T.vigA ?? .9);
   function applyTheme(name) {
-    const prev = T; T = THEMES[name] || THEMES.nacht; state.theme = name; $('#theme').value = name;
+    const prev = T; T = THEMES[name] || THEMES.nacht; state.theme = name; $('#theme').value = name; syncPickers();
     if ($('#vigaval')) setTimeout(vigLabel, 0);
     const st = stage.style; st.setProperty('--pa', T.accent); st.setProperty('--pvigA', vigA()); applyGrade(); st.setProperty('--pbg', T.bg); st.setProperty('--pvig', T.vig); st.setProperty('--ptext', T.text); st.setProperty('--pcap', T.cap); st.setProperty('--psub', T.sub); st.setProperty('--pmuted', T.muted); st.setProperty('--pband', T.band); st.setProperty('--pline', T.line); st.setProperty('--phalo', T.halo); st.setProperty('--ppill', T.pill);
     if (map && prev.map !== T.map) { fallback = false; map.setStyle(T.map); map.once('styledata', () => setTimeout(() => { addRouteLayers(); terrainLayer(); peakLayer(); }, 300)); }
@@ -2015,7 +2068,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
 
   // ------------------------------------------------------------ Start
-  setFormat('portrait'); applyFont('montserrat'); applyTheme('retro'); initMap(); applyFrame();
+  buildPickers(); setFormat('portrait'); applyFont('montserrat'); applyTheme('retro'); initMap(); applyFrame();
   try { const s = localStorage.getItem(KEY); if (s) { restore(JSON.parse(s)); afterTourChange(); loadOriginals().then(n => { const miss = missingOriginals().length; say(`Gespeichertes Layout geladen${n ? `, ${n} Foto(s) in Originalgröße` : ''}${miss ? ` – ${miss} Foto(s) nur als Vorschau: Originale bitte erneut hinzufügen (Zuordnung per Dateiname)` : ''}.`, miss ? 'warn' : 'ok'); render(); }); } } catch (e) {}
   render();
 })();
