@@ -62,7 +62,12 @@ aside h1 { margin:0; font-size:21px; font-weight:900; letter-spacing:-.035em; li
 #stage.setpos #map { pointer-events:auto; }
 #stage.setpos #map, #stage.setpos #map * { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23000' stroke-width='3.5' opacity='.6'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23fff' stroke-width='1.5'/%3E%3Cg stroke='%23000' stroke-width='3.5' opacity='.6'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='1.5'%3E%3Cpath d='M20 1v10M20 29v10M1 20h10M29 20h10'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='1.6' fill='%23ff5a36'/%3E%3C/svg%3E") 20 20, crosshair !important; }
 #stage.setpos #tiles, #stage.setpos #pins, #stage.setpos #places { pointer-events:none; }
+#tsyms { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
+.tsym { position:absolute; transform:translate(-50%,-50%); width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); border-radius:50%; box-shadow:0 3px 10px rgba(0,0,0,.45); display:grid; place-items:center; }
+.tsym svg { width:68%; height:68%; }
 #stage.setpos #band { pointer-events:auto; cursor:crosshair; }
+#stage.tfmode::after { content:attr(data-tf); position:absolute; left:50%; top:14px; transform:translateX(-50%); z-index:6; background:var(--accent); color:#fff; font:700 12px Montserrat, Arial, sans-serif; padding:6px 12px; border-radius:14px; pointer-events:none; box-shadow:0 4px 14px rgba(0,0,0,.4); }
+#stage.tfmode #band { pointer-events:none; }
 #stage.setpos #band::after { content:'Klick ins Profil: Ort nach Streckenkilometer'; position:absolute; left:50%; top:-22px; transform:translateX(-50%); font:600 10px Montserrat, Arial, sans-serif; letter-spacing:.1em; color:var(--pmuted); pointer-events:none; }
 .tile .geos { display:flex; gap:4px; }
 .tile .num:hover { box-shadow:0 0 0 2px #f2b632; }
@@ -271,6 +276,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #maptools { position:absolute; right:16px; top:12px; display:flex; align-items:center; gap:10px; background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px 8px 6px 6px; font:600 11px Montserrat, Arial, sans-serif; color:var(--muted); }
 #mapbtn { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:7px 12px; font:600 12px Montserrat, Arial, sans-serif; cursor:pointer; }
 #mapbtn.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+#tfadd.on { border-color:var(--accent); color:var(--accent); }
 #mapzoom { display:flex; align-items:center; gap:8px; white-space:nowrap; }
 #autobtn { background:var(--panel); color:var(--muted); border:1px solid var(--line); border-radius:6px; padding:7px 10px; font:600 11px Montserrat, Arial, sans-serif; letter-spacing:.08em; cursor:pointer; white-space:nowrap; }
 #autobtn b { font-weight:800; }
@@ -321,6 +327,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <label class="f" style="margin-top:10px">Sportart</label>
       <select id="sport" title="Bestimmt Titelvorschlag, Untertitel und Kennzahlen"><option value="">automatisch (aus der Datei)</option><option value="bike">Rad</option><option value="hike">Wandern</option><option value="canoe">Kanu</option></select>
       <div class="list" id="stages"></div>
+      <label class="f" style="margin-top:12px">Anreise &amp; Transfer</label>
+      <div class="hint" style="margin-top:0">Strecken mit Zug, Bus, Fähre oder Auto – gestrichelt dargestellt und nicht in den Kennzahlen enthalten.</div>
+      <button class="btn" id="tfadd" title="Zwei Punkte auf der Karte anklicken: Abfahrt und Ankunft">Transfer einzeichnen <small>zwei Klicks</small></button>
+      <div class="list" id="transfers"></div>
     </div>
 
     <div class="step" data-t="fotos">
@@ -406,6 +416,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <svg id="rtop"></svg>
         <div id="title"><div class="date" contenteditable="true" spellcheck="false">DATUM</div><div class="h" contenteditable="true" spellcheck="false">Titel</div><div class="sub" contenteditable="true" spellcheck="false">Untertitel</div></div>
         <div id="stats"></div>
+        <div id="tsyms"></div>
         <div id="places"></div>
         <div id="pins"></div>
         <div id="tiles"></div>
@@ -466,6 +477,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="10" y="12" width="26" height="20" rx="3" class="ph sel"/><rect x="44" y="18" width="26" height="20" rx="3" class="ph sel"/><text x="40" y="52" class="t">Shift + Klick</text></svg><b>Mehrfachauswahl</b>Shift-Klick wählt mehrere Fotos, die dann zusammen verschoben und ausgerichtet werden.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><circle cx="18" cy="16" r="9" class="ico lock"/><rect x="14" y="15.5" width="8" height="6" rx="1" fill="#1c1a12"/><path d="M15.5 15.5v-2a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="#1c1a12" stroke-width="1.4"/><circle cx="40" cy="16" r="9" class="ico star"/><path d="M40 10l1.8 3.8 4.2.5-3.1 2.9.8 4.1-3.7-2-3.7 2 .8-4.1-3.1-2.9 4.2-.5z" fill="#1c1a12"/><circle cx="62" cy="16" r="9" class="ico gps"/><path d="M62 10a4 4 0 0 0-4 4c0 3 4 7 4 7s4-4 4-7a4 4 0 0 0-4-4z" fill="#fff"/><text x="40" y="46" class="t">Schloss · Stern · Ort</text></svg><b>Nummer &amp; Icons</b>Klick auf die Nummer = Highlight ★ (größer im Auto-Layout). Beim Überfahren: Schloss = fixiert (Automatik lässt es in Ruhe), Pin/Lupe = Aufnahmeort setzen oder suchen – setzen geht per Klick auf die Karte oder ins Höhenprofil.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 40c10-20 20 10 30-6s20-14 34 2" class="route"/><rect x="26" y="6" width="28" height="12" rx="6" class="btn"/><text x="40" y="15" class="tb">Karte</text></svg><b>Karte</b>Button „Karte“ oben rechts, dann verschieben/zoomen (Maus, Finger oder Slider). „Auf Route einpassen“ setzt zurück. Die Route bleibt auch hinter dem Titel sichtbar; wie stark die Umgebung dort abgedunkelt wird, regelt „Abdeckung hinter dem Titel“ im Poster-Block.</div>
+          <div class="hc"><svg viewBox="0 0 80 56"><path d="M6 40c10-6 18-6 28-10" class="route"/><path d="M34 30c12-5 22-12 40-16" class="dash2"/><circle cx="52" cy="21" r="7" class="ico lock"/><path d="M48 22.5h8l-1 2.5h-6zM49.5 22.5V19h3l1.7 1.7V22.5M51.5 19v-1.5h1" fill="none" stroke="#1c1a12" stroke-width="1.1" stroke-linejoin="round"/></svg><b>Anreise &amp; Transfer</b>Strecken mit Zug, Bus, Fähre oder Auto: im Tour-Feld „Transfer einzeichnen“, dann Abfahrt und Ankunft auf der Karte anklicken. Gestrichelt dargestellt, nicht in den Kennzahlen.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 30c14-10 30-12 64-8" class="route"/><text x="30" y="20" class="tl">Ortsname</text><circle cx="52" cy="26" r="2.5" fill="#fff"/><path d="M52 26L46 21" class="dash2"/></svg><b>Ortsnamen</b>Start, Ziel, Übernachtungen: ziehen = verschieben, Doppelklick = Text ändern, Entf = ausblenden.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Höhe richtet sich nach der Bergigkeit der Tour; Oberkante ziehen = Höhe, Doppelklick = zurück auf Automatik. Fotos erscheinen als nummerierte Punkte (im Poster-Block abschaltbar). Beim Ort setzen kann man statt auf die Karte auch ins Profil klicken; eine Markierung zeigt dabei live Kilometer und Höhe, nahe Gipfel rasten ein.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><text x="10" y="24" class="th">Titel</text><rect x="8" y="8" width="44" height="22" class="dash"/><text x="10" y="42" class="t2">Untertitel · 209 km</text></svg><b>Texte</b>Titel, Untertitel und Kennzahlen direkt im Poster anklicken und tippen (Enter = neue Zeile).</div>
@@ -505,7 +517,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${{ DIN: 'DIN', Poster: 'Posterdruck (cm)', Screen: 'Bildschirm / Handy (px)' }[grp]}"></optgroup>`); }
       sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${p[3]?.label || (grp === 'DIN' ? k + ' · ' : '') + (p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm')}</option>`); } }
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
-  const state = { terrain: true, relief: .6, format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 0, font: 'montserrat', photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, stages: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const state = { terrain: true, relief: .6, format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 0, font: 'montserrat', photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, stages: [], transfers: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; setFormat(state.format); });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
@@ -650,6 +662,42 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (state.stages.length) { const a = state.stages[0].points[0], b = state.stages.at(-1).points.at(-1); for (const p of [a, b]) f.push({ type: 'Feature', properties: { kind: 'end' }, geometry: { type: 'Point', coordinates: [p[1], p[0]] } }); }
     return { type: 'FeatureCollection', features: f };
   }
+  // ---------- Transfers: Anreise und Zwischenstücke mit Zug, Bus, Fähre, Auto
+  // Sie gehören nicht zur eigenen Leistung: gestrichelte Bogenlinie, eigenes Symbol,
+  // nicht in den Kennzahlen, nicht im Höhenprofil. Punkte setzt man von Hand auf der Karte.
+  // Symbole als Strichzeichnung in einem 24x24-Feld – dieselben Pfade am Bildschirm (SVG) und im Export (Path2D).
+  const TMODE = {
+    train: { name: 'Zug',   d: 'M7 4h10a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M5 10.5h14 M8.5 17l-2 3 M15.5 17l2 3' },
+    bus:   { name: 'Bus',   d: 'M5 6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z M5 11h14 M8 17v2.5 M16 17v2.5' },
+    ferry: { name: 'Fähre', d: 'M3.5 16h17l-2.2 4.6H5.7z M7 16V9.5h6l3.6 3.6V16 M10.5 9.5V6.5h2' },
+    car:   { name: 'Auto',  d: 'M4.5 15.5l1.7-5a2 2 0 0 1 1.9-1.4h7.8a2 2 0 0 1 1.9 1.4l1.7 5 M4.5 15.5h15v3.2h-2.6v-1.4H7.1v1.4H4.5z' },
+    plane: { name: 'Flug',  d: 'M21 4.5 3.5 11.5l6 2.2 2.2 6z M9.5 13.7 21 4.5' },
+    other: { name: 'Transfer', d: 'M4 12h13 M13.5 7.5 18 12l-4.5 4.5' },
+  };
+  const tfPts = t => [t.a, t.b];
+  // Leicht gewölbter Bogen, damit die Linie nie mit der echten Route verwechselt wird
+  function transferArc(t, n = 64) {
+    const [a, b] = tfPts(t); const cs = Math.cos((a[0] + b[0]) / 2 * Math.PI / 180) || 1;
+    const A = [a[1] * cs, a[0]], B = [b[1] * cs, b[0]];
+    const dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy) || 1;
+    const cx = (A[0] + B[0]) / 2 - dy * .14, cy = (A[1] + B[1]) / 2 + dx * .14;
+    const out = [];
+    for (let i = 0; i <= n; i++) { const s = i / n, u = 1 - s;
+      out.push([(u * u * A[0] + 2 * u * s * cx + s * s * B[0]) / cs, u * u * A[1] + 2 * u * s * cy + s * s * B[1]]); }
+    return out;
+  }
+  const tfMid = t => { const arc = transferArc(t, 32); return arc[16]; };
+  const tfLen = t => { const [a, b] = tfPts(t); return hav(a, b); };
+  const transferGeo = () => ({ type: 'FeatureCollection', features: (state.transfers || []).map(t => ({ type: 'Feature', properties: { mode: t.mode }, geometry: { type: 'LineString', coordinates: transferArc(t) } })) });
+  function transferLayers() {
+    if (!map || !map.getSource) return;
+    if (map.getSource('transfer')) { map.getSource('transfer').setData(transferGeo());
+      map.setPaintProperty('transfer-halo', 'line-color', T.halo); map.setPaintProperty('transfer', 'line-color', T.cap); return; }
+    map.addSource('transfer', { type: 'geojson', data: transferGeo() });
+    const before = map.getLayer('route-halo') ? 'route-halo' : undefined;
+    map.addLayer({ id: 'transfer-halo', type: 'line', source: 'transfer', paint: { 'line-color': T.halo, 'line-width': 6, 'line-opacity': .6 }, layout: { 'line-cap': 'round' } }, before);
+    map.addLayer({ id: 'transfer', type: 'line', source: 'transfer', paint: { 'line-color': T.cap, 'line-width': 2.6, 'line-opacity': .85, 'line-dasharray': [2, 2.2] } }, before);
+  }
   function calmMap() { try { for (const l of map.getStyle().layers || []) if (/poi|housenum|transit|aeroway_label|airport/i.test(l.id) && l.type === 'symbol') map.setLayoutProperty(l.id, 'visibility', 'none'); } catch (e) {} }
   // Kollisionsflächen: Titelblock, Ortsnamen (Start/Ziel/Übernachtung) und Nummern-Pins als unsichtbare Symbole –
   // MapLibre blendet Kartenbeschriftungen aus, die damit kollidieren (z. B. „Halle (Saale)“ der Karte neben unserem Ziel-Label)
@@ -670,7 +718,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   function addRouteLayers() {
     calmMap(); titleBlocker();
-    if (map.getSource('route')) { map.getSource('route').setData(routeGeo()); map.getSource('pts').setData(nightsGeo()); map.setPaintProperty('route', 'line-color', T.accent); map.setPaintProperty('route-halo', 'line-color', T.halo); map.setPaintProperty('pts-end', 'circle-color', T.bg); map.setPaintProperty('pts-end', 'circle-stroke-color', T.accent); map.setPaintProperty('pts-night', 'circle-color', T.accent); map.setPaintProperty('pts-night', 'circle-stroke-color', T.halo); return; }
+    if (map.getSource('route')) { map.getSource('route').setData(routeGeo()); map.getSource('pts').setData(nightsGeo()); map.setPaintProperty('route', 'line-color', T.accent); map.setPaintProperty('route-halo', 'line-color', T.halo); map.setPaintProperty('pts-end', 'circle-color', T.bg); map.setPaintProperty('pts-end', 'circle-stroke-color', T.accent); map.setPaintProperty('pts-night', 'circle-color', T.accent); map.setPaintProperty('pts-night', 'circle-stroke-color', T.halo); transferLayers(); return; }
     map.addSource('route', { type: 'geojson', data: routeGeo() });
     map.addSource('pts', { type: 'geojson', data: nightsGeo() });
     map.addLayer({ id: 'route-halo', type: 'line', source: 'route', paint: { 'line-color': T.halo, 'line-width': 9 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
@@ -678,7 +726,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     map.addLayer({ id: 'pts-end', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'end'], paint: { 'circle-radius': 7, 'circle-color': T.bg, 'circle-stroke-color': T.accent, 'circle-stroke-width': 3 } });
     map.addLayer({ id: 'pts-night', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'night'], paint: { 'circle-radius': 9.5, 'circle-color': T.accent, 'circle-stroke-color': T.halo, 'circle-stroke-width': 3.5 } });
     map.addLayer({ id: 'pts-night2', type: 'circle', source: 'pts', filter: ['==', ['get', 'kind'], 'night'], paint: { 'circle-radius': 3.4, 'circle-color': '#fff' } });
-    terrainLayer(); peakLayer();
+    transferLayers(); terrainLayer(); peakLayer();
   }
   // Geländeschummerung aus freien Höhenkacheln (AWS Open Data, terrarium-Kodierung) – nur wenn eingeschaltet
   // dunkles Thema? – aus der Helligkeit der Posterfarbe abgeleitet (die Themes führen kein eigenes Flag)
@@ -731,6 +779,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (keepView) return;   // beim Wiederherstellen zählt die gespeicherte Ansicht
     const pts = state.stages.flatMap(s => s.points); if (!pts.length) return;
     const b = new maplibregl.LngLatBounds(); pts.forEach(p => b.extend([p[1], p[0]]));
+    for (const t of state.transfers || []) for (const c of transferArc(t, 16)) b.extend(c);   // Anreise gehört mit ins Bild
     map.fitBounds(b, { padding: { top: 360, bottom: 40 + BH(), left: 80, right: 80 }, duration: 0 });
     state.fitZoom = map.getZoom();   // Bezugsgröße: so weit darf die Automatik höchstens herauszoomen (siehe autoLayout)
   }
@@ -1419,6 +1468,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     $('#stages').innerHTML = state.stages.map((s, i) => `<div class="row"><div class="n">${i + 1}</div><div><input value="${(s.name || '').replace(/"/g, '&quot;')}" data-i="${i}" aria-label="Etappenname"><div class="meta">${(s.distance / 1000).toFixed(0)} km · ${nf(s.gain)} Hm${s.hasEle ? '' : ' · keine Höhendaten'}</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
     $('#stages').querySelectorAll('input').forEach(inp => inp.addEventListener('change', e => { state.stages[+e.target.dataset.i].name = e.target.value; renderProfile(); }));
     $('#stages').querySelectorAll('button').forEach(b => b.addEventListener('click', e => { state.stages.splice(+e.target.dataset.del, 1); afterTourChange(); }));
+    renderTransferList();
     tilesEl.innerHTML = ''; $('#photos').innerHTML = '';
     for (const p of state.photos) {
       const el = document.createElement('div'); el.className = 'tile' + (isSel(p.id) ? ' sel' : '') + (cropMode === p.id ? ' crop' : ''); el.dataset.id = p.id;
@@ -1477,7 +1527,24 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const CLS_DE = { city: 'Stadt', town: 'Stadt', village: 'Dorf', hamlet: 'Weiler', suburb: 'Ortsteil', neighbourhood: 'Viertel', island: 'Insel', locality: 'Ort', peak: 'Gipfel', volcano: 'Berg', mountain_peak: 'Gipfel', water_name: 'Gewässer', lake: 'See', river: 'Fluss', park: 'Park', nature_reserve: 'Schutzgebiet', national_park: 'Nationalpark', museum: 'Museum', attraction: 'Sehenswürdigkeit', viewpoint: 'Aussichtspunkt', castle: 'Burg/Schloss', monument: 'Denkmal', memorial: 'Denkmal', ruins: 'Ruine', lighthouse: 'Leuchtturm', station: 'Bahnhof', railway: 'Bahn', hotel: 'Hotel', hostel: 'Hostel', guest_house: 'Pension', camp_site: 'Campingplatz', restaurant: 'Restaurant', cafe: 'Café', bakery: 'Bäckerei', alpine_hut: 'Hütte', shelter: 'Schutzhütte', bus_stop: 'Haltestelle', ferry_terminal: 'Fähre', tower: 'Turm', church: 'Kirche', place_of_worship: 'Kirche', bicycle: 'Fahrrad', information: 'Info', dam: 'Staumauer', bridge: 'Brücke', transportation_name: 'Straße/Weg' };
   function startSetPos(p) { clearHover(); if (setPosFor === p.id) { setPosFor = null; stage.classList.remove('setpos'); render(); return; } setPosFor = p.id; stage.classList.add('setpos'); say(`Foto ${p.num}: Aufnahmeort auf der Karte anklicken – oder ins Höhenprofil klicken, dort rasten Gipfel ein (Esc = abbrechen).`); render(); }
   function nearestOnRoute(lat, lon) { let best = null, bd = Infinity; for (const st of state.stages) for (let i = 0; i < st.points.length; i += 3) { const q = st.points[i]; const d = hav([lat, lon], [q[0], q[1]]); if (d < bd) { bd = d; best = q; } } return best && bd < 2000 ? [best[0], best[1]] : [lat, lon]; }
-  function mapClickSetPos(e) { if (!setPosFor) return; clearHover(); const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
+  // Transfer einzeichnen: erster Klick Abfahrt, zweiter Klick Ankunft
+  let tfDraft = null;
+  function startTransfer() {
+    if (tfDraft) { cancelTransfer(); return; }
+    if (!map) { say('Erst eine Tour laden.', 'warn'); return; }
+    tfDraft = { a: null }; stage.classList.add('setpos', 'tfmode'); stage.dataset.tf = 'Abfahrtspunkt auf der Karte anklicken · Esc bricht ab'; $('#tfadd').classList.add('on');
+    say('Transfer: Abfahrtspunkt auf der Karte anklicken (Esc = abbrechen).');
+  }
+  function cancelTransfer() { tfDraft = null; stage.classList.remove('setpos', 'tfmode'); delete stage.dataset.tf; $('#tfadd').classList.remove('on'); say(''); }
+  function mapClickTransfer(e) {
+    const c = [e.lngLat.lat, e.lngLat.lng];
+    if (!tfDraft.a) { tfDraft.a = c; stage.dataset.tf = 'Und jetzt den Ankunftspunkt anklicken'; say('Und jetzt den Ankunftspunkt anklicken.'); return; }
+    (state.transfers ||= []).push({ id: Math.random().toString(36).slice(2, 9), mode: 'ferry', a: tfDraft.a, b: c });
+    cancelTransfer(); transferLayers(); render(); autosave();
+    say('Transfer eingezeichnet – Verkehrsmittel in der Liste wählbar.', 'ok');
+  }
+  $('#tfadd').addEventListener('click', startTransfer);
+  function mapClickSetPos(e) { if (tfDraft) { mapClickTransfer(e); return; } if (!setPosFor) return; clearHover(); const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
     [p.lat, p.lon] = nearestOnRoute(e.lngLat.lat, e.lngLat.lng); p.place = ''; p.detailTried = false; fillPlaceNames(); say(`Aufnahmeort von Foto ${p.num} gesetzt.`, 'ok'); render(); if (autoOn()) autoLayout(null, { quiet: true }); }
   // Klick irgendwo außerhalb eines Textfeldes: Bearbeitung beenden und die Textauswahl aufheben.
   // Sonst bleibt die Auswahl im Titel sichtbar, weil viele Poster-Klicks preventDefault() aufrufen
@@ -1535,7 +1602,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       say(`Aufnahmeort von Foto ${p.num} auf Kilometer ${(d / 1000).toFixed(1)} gesetzt.`, 'ok'); }
     render(); if (autoOn()) autoLayout(null, { quiet: true });
   });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); clearHover(); say(''); render(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && tfDraft) { cancelTransfer(); return; } if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); clearHover(); say(''); render(); } });
   function renderPins() {
     pinsEl.innerHTML = ''; if (!map) { renderRouteTop(); return; }
     // Pins nur zusammenfassen, wenn sie sich auf dem Poster tatsächlich überlappen würden (Abstand in Pixeln).
@@ -1548,6 +1615,27 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       else groups.push({ x: pt.x, y: pt.y, nums: [p.num] }); }
     renderRouteTop();
     for (const g of groups) { const pt = { x: g.x, y: g.y }; const d = document.createElement('div'); d.className = 'pin'; d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg; d.style.color = T.pinFg; d.textContent = g.nums.sort((a, b) => a - b).join(' · '); pinsEl.appendChild(d); }
+    renderTransferSyms();
+  }
+  // Liste der Transfers im Bedienfeld: Verkehrsmittel wählen, Länge sehen, entfernen
+  function renderTransferList() {
+    const el = $('#transfers'); if (!el) return;
+    const ts = state.transfers || [];
+    el.innerHTML = ts.map((t, i) => `<div class="row"><div class="n">~</div><div>
+      <select data-i="${i}" aria-label="Verkehrsmittel">${Object.entries(TMODE).map(([k, m]) => `<option value="${k}"${k === t.mode ? ' selected' : ''}>${m.name}</option>`).join('')}</select>
+      <div class="meta">Luftlinie ${(tfLen(t) / 1000).toFixed(0)} km · zählt nicht zu den Kennzahlen</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
+    el.querySelectorAll('select').forEach(sel => sel.addEventListener('change', e => { state.transfers[+e.target.dataset.i].mode = e.target.value; renderTransferSyms(); autosave(); }));
+    el.querySelectorAll('button').forEach(b => b.addEventListener('click', e => { state.transfers.splice(+e.target.dataset.del, 1); transferLayers(); render(); autosave(); }));
+  }
+  // Verkehrsmittel-Symbol in der Mitte jeder Transferlinie
+  function renderTransferSyms() {
+    const el = $('#tsyms'); if (!el) return; el.innerHTML = '';
+    if (!map) return;
+    for (const t of state.transfers || []) { const m = TMODE[t.mode] || TMODE.other; const c = tfMid(t); const pt = map.project(c);
+      if (!(pt.x > -40 && pt.x < CW + 40 && pt.y > -40 && pt.y < CH + 40)) continue;
+      const d = document.createElement('div'); d.className = 'tsym'; d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg; d.title = m.name;
+      d.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="${T.pinFg}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${m.d}"/></svg>`;
+      el.appendChild(d); }
   }
   // Route über dem Titelverlauf: immer aktiv, aber nur der Teil, der im abgedunkelten Bereich liegt – sonst verschwindet sie dort
   function renderRouteTop() {
@@ -1565,7 +1653,13 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       pts += f.properties.kind === 'night'
         ? `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="9.5" fill="${T.accent}" stroke="${T.halo}" stroke-width="3.5"/><circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="3.4" fill="#fff"/>`
         : `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="7" fill="${T.bg}" stroke="${T.accent}" stroke-width="3"/>`; }
-    el.innerHTML = (d ? `<path d="${d}" fill="none" stroke="${T.halo}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><path d="${d}" fill="none" stroke="${T.accent}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : '') + pts;
+    // Transferbögen ebenso: im abgedunkelten Bereich würden sie sonst verschwinden
+    let tf = '';
+    for (const t of state.transfers || []) { let td = '', op = false;
+      for (const c of transferArc(t)) { const q = map.project(c);
+        if (q.y < lim && q.x > -50 && q.x < CW + 50) { td += (op ? 'L' : 'M') + q.x.toFixed(1) + ',' + q.y.toFixed(1) + ' '; op = true; } else op = false; }
+      if (td) tf += `<path d="${td}" fill="none" stroke="${T.halo}" stroke-width="6" stroke-linecap="round" opacity=".6"/><path d="${td}" fill="none" stroke="${T.cap}" stroke-width="2.6" stroke-dasharray="5.2 5.7" opacity=".85"/>`; }
+    el.innerHTML = tf + (d ? `<path d="${d}" fill="none" stroke="${T.halo}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><path d="${d}" fill="none" stroke="${T.accent}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : '') + pts;
   }
   // Punkte auf einer Achse so verschieben, dass sie mindestens gap auseinander liegen.
   // Überlappende Nachbarn werden zu Blöcken verschmolzen, jeder Block bleibt um seinen
@@ -1970,6 +2064,15 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     });
     // Ortsnamen und Nummern-Pins: am Bildschirm liegen sie unter den Fotos – im Export war es umgekehrt
     // Pins
+    // Transfer-Symbole (die gestrichelten Linien stecken schon im Kartenbild)
+    if (map) for (const t of state.transfers || []) { const m = TMODE[t.mode] || TMODE.other; const pt = map.project(tfMid(t));
+      const cx = P(pt.x), cy = P(pt.y), r = P(13 * TS());
+      g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = P(8); g.shadowOffsetY = P(3);
+      g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fillStyle = T.pinBg; g.fill(); g.restore();
+      g.save(); g.translate(cx - r, cy - r); const k = r * 2 / 24; g.scale(k, k);
+      g.strokeStyle = T.pinFg; g.lineWidth = 1.9; g.lineCap = 'round'; g.lineJoin = 'round';   // Skalierung folgt noch, deshalb der Wert aus dem 24er-Feld
+      g.translate(12, 12); g.scale(.68, .68); g.translate(-12, -12);   // wie am Bildschirm: Symbol füllt 68 % des Kreises
+      g.stroke(new Path2D(m.d)); g.restore(); }
     if (map) for (const d of pinsEl.children) { const px = P(parseFloat(d.style.left)), py = P(parseFloat(d.style.top)); g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(8); g.shadowOffsetY = P(4); pill(g, px, py, d.textContent, T.pinBg, T.pinFg); g.restore(); }
     // Ortsnamen
     if (map) for (const p of shownPlaces()) { if (!p.text) continue; const pt = map.project([p.lon, p.lat]); const x = P(pt.x + p.dx), y = P(pt.y + p.dy); g.font = F(p.kind === 'night' ? 700 : 600, 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = T.halo; g.strokeText(p.text, x, y); g.fillStyle = T.cap; g.fillText(p.text, x, y); g.textBaseline = 'alphabetic'; }
@@ -2060,7 +2163,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (!Array.isArray(obj.photos)) obj.photos = [];
     if (!Array.isArray(obj.places)) obj.places = [];
     Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.showPhotoDots = obj.showPhotoDots !== false; $('#photodots').checked = state.showPhotoDots; state.peakThr = obj.peakThr ?? null; if ($('#peakthr') && state.peakThr != null) $('#peakthr').value = state.peakThr;
-    if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 0; $('#grade').value = state.grade; applyFont(obj.font || 'montserrat'); state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 0; $('#grade').value = state.grade; state.transfers = Array.isArray(obj.transfers) ? obj.transfers : []; applyFont(obj.font || 'montserrat'); state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) { keepView = true;   // gespeicherte Ansicht gehört zum gespeicherten Layout – nicht neu einpassen
       const jump = () => { map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }); state.fitZoom = obj.map.zoom; setTimeout(() => { keepView = false; }, 1500); };
       if (map.loaded() || map.isStyleLoaded()) setTimeout(jump, 0); else map.once('load', jump); }
