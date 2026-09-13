@@ -33,7 +33,8 @@ aside header .logo { width:32px; height:32px; flex:none; display:grid; place-ite
 aside header .logo svg { display:block; }
 aside h1 { margin:0; font-size:21px; font-weight:900; letter-spacing:-.035em; line-height:1; }
 .step { background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:12px 14px 14px; }
-.step h2 { margin:0 0 10px; font-size:12px; letter-spacing:.04em; color:var(--text); font-weight:700; display:flex; align-items:center; gap:8px; }
+.step h2 { position:sticky; top:-12px; z-index:2; margin:0 0 10px; padding:10px 0 8px; background:var(--card); font-size:12px; letter-spacing:.04em; color:var(--text); font-weight:700; display:flex; align-items:center; gap:8px; }
+.step { padding-top:2px; }   /* die Überschrift bringt ihren Abstand selbst mit */
 .step h2 .no { width:20px; height:20px; border-radius:7px; background:var(--panel2); color:var(--muted); font-size:11px; display:grid; place-items:center; font-weight:800; }
 .step h2 .sub { margin-left:auto; font-size:10px; color:var(--muted); font-weight:500; letter-spacing:0; }
 .drop { display:block; box-sizing:border-box; border:1.5px dashed #34495e; border-radius:11px; padding:13px 12px; text-align:center; color:var(--muted); font-size:12.5px; cursor:pointer; background:rgba(255,255,255,.015); transition:border-color .15s, background .15s; }
@@ -149,6 +150,8 @@ input[type=range]:disabled::-webkit-slider-thumb { background:#4a5c6e; }
 .ibtn { flex:none; width:38px; height:38px; border-radius:10px; background:var(--panel2); border:1px solid var(--line); color:var(--text); display:grid; place-items:center; cursor:pointer; }
 .ibtn:hover { border-color:var(--accent); color:var(--accent); }
 .ibtn:disabled { opacity:.4; cursor:default; }
+.grp { margin:18px 0 2px; padding-top:12px; border-top:1px solid var(--line); font:700 10px Montserrat, Arial, sans-serif; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+.step > .grp:first-of-type { margin-top:6px; padding-top:0; border-top:0; }
 select, input.t { width:100%; box-sizing:border-box; background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:9px; padding:8px 10px; font:12px Montserrat, Arial, sans-serif; }
 /* Stil- und Schriftauswahl als Kacheln mit Vorschau */
 #themepick, #fontpick { display:grid; gap:6px; margin-top:2px; }
@@ -392,7 +395,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
   <aside>
     <button id="panelgrip" title="Menü ein- oder ausklappen" aria-label="Menü ein- oder ausklappen"><span class="ar"></span><span class="tx">Menü</span></button>
     <header><div class="logo"><svg viewBox="0 0 32 32" width="32" height="32"><rect x="1.5" y="1.5" width="29" height="29" rx="5.5" fill="#f6efe3" stroke="#d8ccb8"/><path d="M6 24c4-3 5-11 9-11s3 9 7 6 3-9 4-11" fill="none" stroke="#b8402c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="24" r="2.2" fill="#2b2118"/><circle cx="26" cy="8" r="2.2" fill="#f6efe3" stroke="#2b2118" stroke-width="1.6"/></svg></div><h1>Tourposter</h1></header>
-    <nav id="tabs"><button data-t="tour" class="on">Tour</button><button data-t="fotos">Fotos</button><button data-t="poster">Poster</button><button data-t="export">Export</button></nav>
+    <nav id="tabs"><button data-t="tour" class="on">Tour</button><button data-t="fotos">Fotos</button><button data-t="poster">Poster</button><button data-t="design">Design</button><button data-t="export">Export</button></nav>
     <div class="steps">
     <div class="step on" data-t="tour">
       <h2><span class="no">1</span>Tour <span class="sub" id="mapinfo"></span></h2>
@@ -429,13 +432,29 @@ main { position:relative; overflow:hidden; background:#08111a; }
 
     <div class="step" data-t="poster">
       <h2><span class="no">3</span>Poster</h2>
-      <label class="f">Ausrichtung</label>
+      <div class="grp">Blatt</div>
+<label class="f">Ausrichtung</label>
       <div class="seg" id="formatseg"><button data-v="portrait" class="on">Hochformat</button><button data-v="landscape">Querformat</button></div>
       <select id="format" hidden><option value="portrait">Hochformat</option><option value="landscape">Querformat</option></select>
       <label class="f">Größe</label>
       <select id="paper"></select>
       <div class="hint" id="paperhint"></div>
-      <label class="f">Stil</label>
+            <div class="grp">Höhenprofil</div>
+<label class="switch" style="margin-top:8px"><input type="checkbox" id="showband" checked><span class="kn"></span><span>Höhenprofil<small>Höhe automatisch nach Bergigkeit, per Ziehen der Oberkante änderbar</small></span></label>
+      <label class="switch" style="margin-top:6px"><input type="checkbox" id="showpeaks" checked><span class="kn"></span><span>Gipfel &amp; Pässe im Profil<small>Namen und Höhen aus den Kartendaten, wenn die Route darüber führt</small></span></label>
+      <label class="switch" style="margin-top:6px"><input type="checkbox" id="photodots" checked><span class="kn"></span><span>Fotonummern im Profil<small>zeigt, an welcher Stelle der Strecke die Fotos entstanden sind</small></span></label>
+            <div class="grp">Gipfel auf der Karte</div>
+<label class="switch" style="margin-top:6px"><input type="checkbox" id="peakmap"><span class="kn"></span><span>Gipfel auch auf der Karte<small>Dreieck mit Name und Höhe an der Route</small></span></label>
+      <label class="f">Gipfel ab Prominenz <span id="peakthrval">automatisch</span></label>
+      <input type="range" id="peakthr" min="30" max="600" step="10" value="150" style="width:100%" title="Wie stark ein Anstieg herausragen muss, um als Gipfel zu gelten – kleiner Wert findet mehr. Doppelklick = zurück auf Automatik">
+      <button class="btn" id="wallbtn" style="margin-top:12px" title="Maßstabsgetreue Vorschau im Wohnzimmer – zum Einschätzen von Größe und Wirkung">An der Wand ansehen <small>Größenvorschau</small></button>
+            <div class="hint">Titel, Untertitel und Kennzahlen direkt im Poster antippen und schreiben. Höhenprofil: Oberkante ziehen.</div>
+    </div>
+
+    <div class="step" data-t="design">
+      <h2><span class="no">4</span>Design</h2>
+      <div class="grp">Stil und Schrift</div>
+<label class="f">Stil</label>
       <div id="themepick"></div>
       <select id="theme" hidden>
         <option value="nacht"></option><option value="fjord"></option><option value="hell"></option><option value="retro"></option>
@@ -447,27 +466,22 @@ main { position:relative; overflow:hidden; background:#08111a; }
         <option value="montserrat"></option><option value="inter"></option><option value="oswald"></option>
         <option value="space"></option><option value="playfair"></option><option value="lora"></option>
       </select>
-      <label class="f">Geländerelief <span id="reliefval">60 %</span></label>
+            <div class="grp">Karte</div>
+<label class="f">Geländerelief <span id="reliefval">60 %</span></label>
       <input type="range" id="relief" min="0" max="100" step="5" value="60" style="width:100%" title="Schummerung der Berge. 0 = aus, dann werden auch keine Höhendaten geladen. Im Flachland ist selbst bei hohem Wert wenig zu sehen. Höhendaten von AWS Terrain Tiles (zweiter Dienst neben der Karte)">
-      <div class="grid2" style="margin-top:8px">
-        <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div><div style="grid-column:1 / -1"><label class="f">Ecken abrunden <span id="radval">scharf</span></label><input type="range" id="radsl" min="0" max="24" step="2" value="0" style="width:100%" title="Eckenradius der Fotos und des Passepartouts – 0 lässt sie scharfkantig"></div>
-      </div>
       <label class="f">Abdeckung hinter dem Titel <span id="vigaval">automatisch</span></label>
       <input type="range" id="viga" min="0" max="100" step="5" value="90" style="width:100%" title="Wie stark der Verlauf oben die Karte abdeckt – kleiner Wert zeigt Route und Umgebung, größerer macht den Titel ruhiger. Doppelklick = zurück auf den Stil-Wert">
-      <label class="switch" style="margin-top:8px"><input type="checkbox" id="showband" checked><span class="kn"></span><span>Höhenprofil<small>Höhe automatisch nach Bergigkeit, per Ziehen der Oberkante änderbar</small></span></label>
-      <label class="switch" style="margin-top:6px"><input type="checkbox" id="showpeaks" checked><span class="kn"></span><span>Gipfel &amp; Pässe im Profil<small>Namen und Höhen aus den Kartendaten, wenn die Route darüber führt</small></span></label>
-      <label class="switch" style="margin-top:6px"><input type="checkbox" id="photodots" checked><span class="kn"></span><span>Fotonummern im Profil<small>zeigt, an welcher Stelle der Strecke die Fotos entstanden sind</small></span></label>
-      <label class="switch" style="margin-top:6px"><input type="checkbox" id="peakmap"><span class="kn"></span><span>Gipfel auch auf der Karte<small>Dreieck mit Name und Höhe an der Route</small></span></label>
-      <label class="f">Gipfel ab Prominenz <span id="peakthrval">automatisch</span></label>
-      <input type="range" id="peakthr" min="30" max="600" step="10" value="150" style="width:100%" title="Wie stark ein Anstieg herausragen muss, um als Gipfel zu gelten – kleiner Wert findet mehr. Doppelklick = zurück auf Automatik">
-      <button class="btn" id="wallbtn" style="margin-top:12px" title="Maßstabsgetreue Vorschau im Wohnzimmer – zum Einschätzen von Größe und Wirkung">An der Wand ansehen <small>Größenvorschau</small></button>
+            <div class="grp">Fotos</div>
+<div class="grid2" style="margin-top:8px">
+        <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div><div style="grid-column:1 / -1"><label class="f">Ecken abrunden <span id="radval">scharf</span></label><input type="range" id="radsl" min="0" max="24" step="2" value="0" style="width:100%" title="Eckenradius der Fotos und des Passepartouts – 0 lässt sie scharfkantig"></div>
+      </div>
       <label class="f">Farbabstimmung der Fotos <span id="gradeval">0 %</span></label>
       <input type="range" id="grade" min="0" max="100" step="5" value="0" style="width:100%" title="Fotos an die Farbstimmung des Posters angleichen: Sättigung dämpfen, Tönung in der Themenfarbe">
-      <div class="hint">Titel, Untertitel und Kennzahlen direkt im Poster antippen und schreiben. Höhenprofil: Oberkante ziehen.</div>
+            <div class="hint">Der Abstand zwischen den Fotos steht oben in der Werkzeugleiste – dort sieht man ihn beim Verschieben gleich wirken.</div>
     </div>
 
     <div class="step" data-t="export">
-      <h2><span class="no">4</span>Export</h2>
+      <h2><span class="no">5</span>Export</h2>
       <button class="btn primary" id="expng">PNG herunterladen <small>in gewählter Größe</small></button>
       <button class="btn" id="expdf">PDF <small>für den Druck</small></button>
       <div class="btnrow"><button class="btn" id="exshare" title="Kleines JPEG für Nachrichten, Mail oder Web – nicht zum Drucken">Webvariante <small>klein, nicht zum Drucken</small></button><button class="btn ghost" id="exshare2" hidden title="Dasselbe Bild direkt über das Teilen-Menü des Geräts weitergeben">Teilen</button></div>
