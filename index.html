@@ -440,6 +440,11 @@ main { position:relative; overflow:hidden; background:#08111a; }
       <div class="toolrow">
         <button class="btn" id="autolay" title="Alle nicht fixierten Fotos neu um die Route anordnen">Neu anordnen <small>um die Route</small></button>
       </div>
+      <div id="clockrow" hidden class="f" style="margin-top:10px; line-height:1.5">
+        <b id="clockcount">0</b> Foto(s) ohne GPS über die Aufnahmezeit verortet.<br>
+        Zeitversatz der Kamera: <span id="clockval">automatisch</span>
+        <input type="number" id="clockoff" step="0.5" placeholder="auto" title="Abweichung der Kamerauhr gegenüber der GPS-Zeit in Stunden – leer lassen für die automatische Schätzung aus Fotos mit GPS" style="width:74px; margin-left:6px"> h
+      </div>
       <label class="f">Bildausschnitt-Zoom (markiertes Foto) <span id="zval">–</span></label>
       <input type="range" id="zoomsl" min="100" max="400" step="2" value="100" disabled style="width:100%">
       <div id="align">
@@ -1268,6 +1273,10 @@ main { position:relative; overflow:hidden; background:#08111a; }
   $('#matsl').addEventListener('input', e => { FR().mat = +e.target.value; applyFrame(); });
   $('#radsl').addEventListener('input', e => { FR().radius = +e.target.value; applyFrame(); autosave(); });
   $('#gapsl').addEventListener('input', e => { state.gap = +e.target.value; $('#gapval').textContent = state.gap; autosave(); });
+  $('#clockoff').addEventListener('change', e => { const v = e.target.value.trim();
+    state.clockOff = v === '' ? null : +v.replace(',', '.');
+    if (!isFinite(state.clockOff)) state.clockOff = null;
+    placeByTime(); render(); autosave(); if (autoOn()) autoLayout(null, { quiet: true }); });
   $('#gapsl').addEventListener('change', () => scheduleAuto('gap'));
   $('#matsl').addEventListener('change', () => scheduleAuto('mat'));
   $('#sport').addEventListener('change', e => { state.sport = e.target.value || null;
@@ -1357,6 +1366,66 @@ main { position:relative; overflow:hidden; background:#08111a; }
     for (const q of pts) { const dx = (q[0] - p.lat) * 111000, dy = (q[1] - p.lon) * 111000 * Math.cos(p.lat * d2r); const d = Math.hypot(dx, dy); if (d < bd) { bd = d; bp = q; } }
     return bp && bd < 5000 ? bp[3] : null; }
 
+  // ---------- Aufnahmeort aus der Aufnahmezeit (Fotos ohne GPS)
+  // Die Aufzeichnung liefert je Punkt einen Zeitstempel; ein Foto mit Aufnahmezeit lässt sich damit
+  // direkt auf der Route verorten. Der Versatz zwischen Kamerauhr und GPS-Zeit (falsch gestellte Uhr,
+  // andere Zeitzone) wird aus den Fotos geschätzt, die Ort UND Zeit mitbringen.
+  const ptTime = (st, p) => (st.start != null && p[4] != null) ? st.start + p[4] * 1000 : null;
+  const hasPointTimes = () => state.stages.some(st => st.start != null && st.points.some(p => p[4] != null));
+  function posAtTime(ms) {
+    for (const st of state.stages) {
+      const pts = st.points, first = ptTime(st, pts[0]), last = ptTime(st, pts.at(-1));
+      if (first == null || last == null) continue;
+      if (ms < first - 3e5 || ms > last + 3e5) continue;   // 5 Minuten Nachsicht an den Rändern
+      for (let i = 1; i < pts.length; i++) { const a = ptTime(st, pts[i - 1]), b = ptTime(st, pts[i]);
+        if (a == null || b == null || b < ms) continue;
+        if (a > ms) return [pts[i - 1][0], pts[i - 1][1]];
+        const f = b === a ? 0 : (ms - a) / (b - a);
+        return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f]; }
+      return [pts.at(-1)[0], pts.at(-1)[1]];
+    }
+    return null;
+  }
+  function timeAtPos(lat, lon) {
+    let bd = Infinity, bt = null;
+    for (const st of state.stages) { if (st.start == null) continue;
+      for (const p of st.points) { if (p[4] == null) continue;
+        const dx = (p[0] - lat) * 111000, dy = (p[1] - lon) * 111000 * Math.cos(lat * d2r); const d = Math.hypot(dx, dy);
+        if (d < bd) { bd = d; bt = st.start + p[4] * 1000; } } }
+    return bd < 2000 ? bt : null;
+  }
+  // Median der Abweichungen: unempfindlich gegen einzelne Ausreißer (Foto aus dem fahrenden Zug o. ä.)
+  function clockOffset() {
+    if (state.clockOff != null) return state.clockOff * 3600000;
+    const ds = [];
+    for (const p of state.photos) { if (!p.date || p.lat == null || p.timePos) continue;
+      const t = timeAtPos(p.lat, p.lon); if (t != null) ds.push(+new Date(p.date) - t); }
+    if (!ds.length) return 0;
+    ds.sort((a, b) => a - b); return ds[ds.length >> 1];
+  }
+  function placeByTime() {
+    if (!hasPointTimes()) return 0;
+    const off = clockOffset(); let n = 0;
+    for (const p of state.photos) {
+      if (!p.date || (p.lat != null && !p.timePos)) continue;
+      const pos = posAtTime(+new Date(p.date) - off); if (!pos) continue;
+      const same = p.lat != null && Math.abs(p.lat - pos[0]) < 1e-6 && Math.abs(p.lon - pos[1]) < 1e-6;
+      p.lat = pos[0]; p.lon = pos[1]; p.timePos = true;
+      if (!same && !p.placeEdited) { p.place = ''; p.detailTried = false; }
+      if (!same) n++; }
+    if (n && map) fillPlaceNames();
+    return n;
+  }
+  function clockInfo() {
+    const el = $('#clockrow'); if (!el) return;
+    const need = state.photos.some(p => p.timePos) || (hasPointTimes() && state.photos.some(p => p.date && p.lat == null));
+    el.hidden = !need; if (!need) return;
+    const h = clockOffset() / 3600000;
+    $('#clockval').textContent = state.clockOff != null ? 'von Hand' : (Math.abs(h) < .02 ? 'automatisch: kein Versatz' : `automatisch: ${h > 0 ? '+' : ''}${h.toFixed(1).replace('.', ',')} h`);
+    const inp = $('#clockoff'); if (inp && document.activeElement !== inp) inp.value = state.clockOff != null ? state.clockOff : '';
+    $('#clockcount').textContent = state.photos.filter(p => p.timePos).length;
+  }
+
   // Markante Anstiege der Route: lokale Maxima des geglätteten Profils mit 1D-Prominenz (Höhe über dem höheren der beiden Sattelpunkte bis zum nächsthöheren Punkt)
   function prominentMaxima() {
     const pts = []; let off = 0; for (const st of state.stages) { for (const p of st.points) pts.push([p[0], p[1], p[2] ?? 0, off + p[3]]); off += st.points.at(-1)[3]; }
@@ -1415,6 +1484,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
   }
   function afterTourChange() {
     tourSeq++;
+    placeByTime();
     const sp = sportOf(); if (!state.bandEdited) { state.showBand = sp.band; $('#showband').checked = sp.band; }   // Kanu: Höhenprofil ist ohne Aussage
     autoTransfers();
     findPeaks();
@@ -1441,7 +1511,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       new FitParser({ force: true, speedUnit: 'km/h', lengthUnit: 'm', temperatureUnit: 'celsius', elapsedRecordField: true, mode: 'list' }).parse(buf, (err, data) => {
         if (err) return rej(new Error(err));
         const recs = (data.records || []).filter(r => r.position_lat != null && r.position_long != null);
-        const pts = recs.map(r => [r.position_lat, r.position_long, r.altitude ?? r.enhanced_altitude ?? null, r.distance ?? null]);
+        const pts = recs.map(r => [r.position_lat, r.position_long, r.altitude ?? r.enhanced_altitude ?? null, r.distance ?? null, r.timestamp ? +new Date(r.timestamp) : null]);
         const ses = (data.sessions || [])[0] || {};
         res(finishStage(pts, { sport: SPORT_OF(ses.sport, ses.sub_sport), gain: ses.total_ascent, distance: ses.total_distance, time: ses.total_timer_time, start: recs[0]?.timestamp ? +new Date(recs[0].timestamp) : null, end: recs.at(-1)?.timestamp ? +new Date(recs.at(-1).timestamp) : null }));
       });
@@ -1450,7 +1520,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
   function parseGpx(txt) {
     const doc = new DOMParser().parseFromString(txt, 'application/xml');
     const tp = [...doc.getElementsByTagName('trkpt')]; if (!tp.length) throw new Error('keine trkpt');
-    const pts = tp.map(p => [+p.getAttribute('lat'), +p.getAttribute('lon'), p.getElementsByTagName('ele')[0] ? +p.getElementsByTagName('ele')[0].textContent : null, null]);
+    const pts = tp.map(p => [+p.getAttribute('lat'), +p.getAttribute('lon'), p.getElementsByTagName('ele')[0] ? +p.getElementsByTagName('ele')[0].textContent : null, null,
+      p.getElementsByTagName('time')[0] ? +new Date(p.getElementsByTagName('time')[0].textContent) : null]);
     const t = tp.map(p => p.getElementsByTagName('time')[0]?.textContent).filter(Boolean);
     const name = doc.getElementsByTagName('name')[0]?.textContent;
     return finishStage(pts, { start: t[0] ? +new Date(t[0]) : null, end: t.at(-1) ? +new Date(t.at(-1)) : null, name });
@@ -1458,7 +1529,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
   function parseTcx(txt) {
     const doc = new DOMParser().parseFromString(txt, 'application/xml');
     const tp = [...doc.getElementsByTagName('Trackpoint')].filter(p => p.getElementsByTagName('LatitudeDegrees')[0]);
-    const pts = tp.map(p => [+p.getElementsByTagName('LatitudeDegrees')[0].textContent, +p.getElementsByTagName('LongitudeDegrees')[0].textContent, p.getElementsByTagName('AltitudeMeters')[0] ? +p.getElementsByTagName('AltitudeMeters')[0].textContent : null, p.getElementsByTagName('DistanceMeters')[0] ? +p.getElementsByTagName('DistanceMeters')[0].textContent : null]);
+    const pts = tp.map(p => [+p.getElementsByTagName('LatitudeDegrees')[0].textContent, +p.getElementsByTagName('LongitudeDegrees')[0].textContent, p.getElementsByTagName('AltitudeMeters')[0] ? +p.getElementsByTagName('AltitudeMeters')[0].textContent : null, p.getElementsByTagName('DistanceMeters')[0] ? +p.getElementsByTagName('DistanceMeters')[0].textContent : null, p.getElementsByTagName('Time')[0] ? +new Date(p.getElementsByTagName('Time')[0].textContent) : null]);
     const t = tp.map(p => p.getElementsByTagName('Time')[0]?.textContent).filter(Boolean);
     return finishStage(pts, { start: t[0] ? +new Date(t[0]) : null, end: t.at(-1) ? +new Date(t.at(-1)) : null });
   }
@@ -1472,6 +1543,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
     if (gain == null && ele.length) { const sm = smooth(pts.map(p => p[2] ?? 0), 5); gain = 0; for (let i = 1; i < sm.length; i++) if (sm[i] > sm[i - 1]) gain += sm[i] - sm[i - 1]; }
     // auf ~600 Punkte ausdünnen (Karte + Profil)
     const step = Math.max(1, Math.floor(pts.length / 600)); const thin = pts.filter((_, i) => i % step === 0 || i === pts.length - 1);
+    // Aufnahmezeit je Punkt als Sekunden seit Etappenstart: kurze Zahlen in der Projektdatei, reicht fuer die Zuordnung von Fotos
+    if (meta.start != null) for (const p of thin) p[4] = p[4] != null ? Math.round((p[4] - meta.start) / 1000) : null;
+    else for (const p of thin) p[4] = null;
     return { name: meta.name, points: thin, distance: meta.distance ?? d, gain: gain ?? 0, time: meta.time, start: meta.start, end: meta.end, hasEle: ele.length > 0, sport: meta.sport || null };
   }
   const smooth = (a, k) => a.map((_, i) => { let s = 0, n = 0; for (let j = i - k; j <= i + k; j++) if (a[j] != null) { s += a[j]; n++; } return n ? s / n : 0; });
@@ -1546,6 +1620,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
       const ar = Math.min(2, Math.max(.5, dims[0] / dims[1])); const A = 232 * 310; const size = [Math.round(Math.sqrt(A * ar)), Math.round(Math.sqrt(A / ar))];
       state.photos.push({ id, name: f.name, x: slot[0], y: slot[1], w: size[0], h: size[1], ax: 50, ay: 50, lat, lon, date, url, thumb: await thumb(url) }); added.push(id);
     }
+    const nt = placeByTime();
+    if (nt) say(`${nt} Foto(s) ohne GPS über die Aufnahmezeit auf der Route verortet.`, 'ok');
     render();
     // Neue Fotos automatisch um die Route legen (bestehende bleiben, wo sie sind); ohne Ortsangabe erst nach „Ort setzen“ sinnvoll, dann trotzdem frei platziert
     if (added.length && autoOn() && map && state.stages.length) { await new Promise(r => setTimeout(r, 50)); autoLayout(null, { quiet: true, allowZoom: true }); }
@@ -1791,7 +1867,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     $('#stages').innerHTML = state.stages.map((s, i) => `<div class="row"><div class="n">${i + 1}</div><div><input value="${(s.name || '').replace(/"/g, '&quot;')}" data-i="${i}" aria-label="Etappenname"><div class="meta">${(s.distance / 1000).toFixed(0)} km · ${nf(s.gain)} Hm${s.hasEle ? '' : ' · keine Höhendaten'}</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
     $('#stages').querySelectorAll('input').forEach(inp => inp.addEventListener('change', e => { state.stages[+e.target.dataset.i].name = e.target.value; renderProfile(); }));
     $('#stages').querySelectorAll('button').forEach(b => b.addEventListener('click', e => { state.stages.splice(+e.target.dataset.del, 1); afterTourChange(); }));
-    renderTransferList();
+    renderTransferList(); clockInfo();
     tilesEl.innerHTML = ''; $('#photos').innerHTML = '';
     for (const p of state.photos) {
       const el = document.createElement('div'); el.className = 'tile' + (isSel(p.id) ? ' sel' : '') + (cropMode === p.id ? ' crop' : ''); el.dataset.id = p.id;
@@ -1836,7 +1912,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       row.addEventListener('click', e => { if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') { if (e.shiftKey) { isSel(p.id) ? selected.delete(p.id) : selected.add(p.id); } else selected = new Set([p.id]); render(); } });
       row.innerHTML = `<div class="n">${p.num}</div><img src="${p.thumb}"><div><input aria-label="Bildunterschrift"><div class="meta"></div></div><button title="Entfernen">×</button>`;
       row.querySelector('input').value = p.caption ?? autoCaption(p);
-      row.querySelector('.meta').textContent = `${p.name} · ${p.lat != null ? p.lat.toFixed(3) + ', ' + p.lon.toFixed(3) : 'kein GPS'}${originals.has(p.id) ? '' : ' · Original fehlt (für Export neu hinzufügen)'}`;
+      row.querySelector('.meta').textContent = `${p.name} · ${p.lat != null ? p.lat.toFixed(3) + ', ' + p.lon.toFixed(3) + (p.timePos ? ' (aus der Aufnahmezeit)' : '') : 'kein GPS'}${originals.has(p.id) ? '' : ' · Original fehlt (für Export neu hinzufügen)'}`;
       if (map) { const a = document.createElement('a'); a.href = '#'; a.textContent = setPosFor === p.id ? 'auf die Karte klicken …' : (p.lat != null ? ' Ort ändern' : ' Ort setzen'); a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); startSetPos(p); }); row.querySelector('.meta').append(' · ', a);
         const b2 = document.createElement('a'); b2.href = '#'; b2.textContent = searchFor === p.id ? 'Suche schließen' : 'Ort suchen'; b2.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); endSetPos(); searchFor = searchFor === p.id ? null : p.id; searchHits = null; render(); }); row.querySelector('.meta').append(' · ', b2);
         if (searchFor === p.id) { const box = document.createElement('div'); box.className = 'psearch'; box.innerHTML = `<input placeholder="Ort, Gipfel, Sehenswürdigkeit … nahe der Route"><button class="fine" title="Lädt die Detail-Kacheln (Zoom 14, alle POIs) rund um die bisherigen Treffer und den Kartenausschnitt">Genauer</button><div class="hits"></div>`;
@@ -1844,7 +1920,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
           const show = hs => { hitsEl.innerHTML = hs.length ? '' : '<span class="muted">nichts gefunden – gesucht bis 15 km neben der Route; „Genauer“ lädt alle POIs rund um Treffer/Kartenausschnitt, sonst „Ort setzen“</span>';
             for (const h of hs) { const d = document.createElement('a'); d.href = '#'; d.innerHTML = `<b>${esc(h.name)}</b> <span class="muted">${esc(CLS_DE[h.cls] || h.cls)} · ${(h.d / 1000).toFixed(1)} km von der Route</span>`;
               d.addEventListener('mouseenter', () => previewHit(h)); d.addEventListener('mouseleave', () => previewHit(null));
-              d.addEventListener('click', e => { e.preventDefault(); endSetPos(); [p.lat, p.lon] = nearestOnRoute(h.lat, h.lon); p.place = h.name; p.detailTried = true; searchFor = null; searchHits = null; previewHit(null); say(`Aufnahmeort von Foto ${p.num}: ${h.name}`, 'ok'); render(); if (autoOn()) autoLayout(null, { quiet: true }); }); hitsEl.appendChild(d); } };
+              d.addEventListener('click', e => { e.preventDefault(); endSetPos(); delete p.timePos; [p.lat, p.lon] = nearestOnRoute(h.lat, h.lon); p.place = h.name; p.detailTried = true; p.placeEdited = true; searchFor = null; searchHits = null; previewHit(null); say(`Aufnahmeort von Foto ${p.num}: ${h.name}`, 'ok'); render(); if (autoOn()) autoLayout(null, { quiet: true }); }); hitsEl.appendChild(d); } };
           const run = async fine => { const q = inp.value; searchQ = q; if (q.trim().length < 2) { hitsEl.innerHTML = ''; return; } const my = ++seq;
             hitsEl.innerHTML = '<span class="muted">suche …</span>';
             const hs = await searchPlace(q, fine, (a, b) => { if (my === seq) hitsEl.innerHTML = `<span class="muted">suche … ${a}/${b} Kacheln${fine ? ' (Zoom 14)' : ''}</span>`; });
@@ -1930,7 +2006,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     say('Transfer eingezeichnet – Verkehrsmittel wählbar, Punkte lassen sich ziehen.', 'ok');
   }
   $('#tfadd').addEventListener('click', startTransfer);
-  function mapClickSetPos(e) { if (tfDraft) { mapClickTransfer(e); return; } if (!setPosFor) return; clearHover(); const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return;
+  function mapClickSetPos(e) { if (tfDraft) { mapClickTransfer(e); return; } if (!setPosFor) return; clearHover(); const p = state.photos.find(x => x.id === setPosFor); setPosFor = null; stage.classList.remove('setpos'); if (!p) return; delete p.timePos;
     [p.lat, p.lon] = nearestOnRoute(e.lngLat.lat, e.lngLat.lng); p.place = ''; p.detailTried = false; fillPlaceNames(); say(`Aufnahmeort von Foto ${p.num} gesetzt.`, 'ok'); render(); if (autoOn()) autoLayout(null, { quiet: true }); }
   // Klick irgendwo außerhalb eines Textfeldes: Bearbeitung beenden und die Textauswahl aufheben.
   // Sonst bleibt die Auswahl im Titel sichtbar, weil viele Poster-Klicks preventDefault() aufrufen
@@ -2980,7 +3056,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
 
 
   // ------------------------------------------------------------ Start
-  window.__state = state; window.__snapMove = (t, ids) => snapMove(t, ids); window.__render = () => render();   // für Tests
+  window.__state = state; window.__snapMove = (t, ids) => snapMove(t, ids); window.__render = () => render(); window.__placeByTime = () => placeByTime();   // für Tests
   buildPickers(); setFormat('portrait'); applyFont('montserrat'); applyTheme('retro'); initMap(); applyFrame();
   try { const s = localStorage.getItem(KEY); if (s) { restore(JSON.parse(s)); afterTourChange(); loadOriginals().then(n => { const miss = missingOriginals().length; say(`Gespeichertes Layout geladen${n ? `, ${n} Foto(s) in Originalgröße` : ''}${miss ? ` – ${miss} Foto(s) nur als Vorschau: Originale bitte erneut hinzufügen (Zuordnung per Dateiname)` : ''}.`, miss ? 'warn' : 'ok'); render(); }); } } catch (e) {}
   render();
