@@ -167,8 +167,14 @@ select, input.t { width:100%; box-sizing:border-box; background:var(--panel2); c
 #status.err { color:#ff8a70; }
 #status.warn { color:#ffc857; }
 .hint { font-size:11px; color:#5f7288; margin-top:6px; }
-main { position:relative; overflow:hidden; display:grid; place-items:center; background:#08111a; }
+main { position:relative; overflow:auto; display:grid; place-items:safe center; background:#08111a; overscroll-behavior:contain; }
 #frame { position:relative; }
+/* Zoomleiste unten rechts über dem Poster */
+#zoombar { position:absolute; right:16px; bottom:14px; z-index:4; display:flex; align-items:center; gap:2px; background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:3px; font:700 11px Montserrat, Arial, sans-serif; color:var(--muted); box-shadow:0 6px 18px rgba(0,0,0,.45); }
+#zoombar button { background:none; border:0; color:var(--text); cursor:pointer; border-radius:6px; padding:5px 9px; font:inherit; font-size:13px; line-height:1; }
+#zoombar button:hover { background:var(--panel); color:var(--accent); }
+#zoombar .val { min-width:46px; text-align:center; cursor:pointer; }
+#zoombar .fitb { font-size:11px; padding:6px 8px; border-left:1px solid var(--line); margin-left:2px; }
 #stage { font-family:var(--pfont, Montserrat, Arial, sans-serif); --pa:#ff5a36; --pbg:#0d1a26; --pvig:13,26,38; --ptext:#ffffff; --pcap:#e6edf3; --psub:#b7c5d3; --pmuted:#8fa3b8; --pband:rgba(6,12,18,.8); --pline:#283440; --phalo:#0d1a26; --ppill:rgba(13,26,38,.85);
   position:absolute; left:0; top:0; width:1123px; height:1587px; transform-origin:top left; background:var(--pbg); box-shadow:0 30px 80px rgba(0,0,0,.6); user-select:none; overflow:hidden; }
 #map { position:absolute; inset:0; }
@@ -489,6 +495,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       </div>
     </div></div>
     <div id="maptools"><button id="mapbtn"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><div id="pscalebox" title="Alle Fotos gemeinsam größer/kleiner (fixierte behalten ihre Position)"><span class="w">FOTOS</span><span class="s">📷</span> <input type="range" id="pscale" min="50" max="160" step="5" value="100"> <span id="pscaleval">100 %</span></div><div id="gapbox" title="Fester Abstand zwischen benachbarten Fotos: darauf rasten sie ein (blauer Streifen mit Schloss); gilt auch für die automatische Anordnung"><span class="w">ABSTAND</span><span class="s">↔</span> <input type="range" id="gapsl" min="0" max="60" step="2" value="18"> <span id="gapval">18</span></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
+    <div id="zoombar"><button id="zoomout" title="Kleiner (Strg/Cmd + Mausrad)">−</button><span class="val" id="zoomval" title="Auf 100 % stellen">100 %</span><button id="zoomin" title="Größer (Strg/Cmd + Mausrad)">+</button><button class="fitb" id="zoomfit" title="Ganzes Poster zeigen">einpassen</button></div>
     <div id="hint"><span>Ziehen = verschieben · Ecken/Kanten = Größe · Doppelklick = Ausschnitt · Entf = entfernen</span><button id="helpbtn" title="Hilfe">?</button></div>
     <div id="wall" hidden>
       <div class="wallbox">
@@ -545,6 +552,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M6 40c10-6 18-6 28-10" class="route"/><path d="M34 30c12-5 22-12 40-16" class="dash2"/><circle cx="52" cy="21" r="7" class="ico lock"/><path d="M48 22.5h8l-1 2.5h-6zM49.5 22.5V19h3l1.7 1.7V22.5M51.5 19v-1.5h1" fill="none" stroke="#1c1a12" stroke-width="1.1" stroke-linejoin="round"/></svg><b>Anreise &amp; Transfer</b>Strecken mit Zug, Bus, Fähre oder Auto: im Tour-Feld anlegen – Abfahrt und Ankunft per Ortssuche oder Klick auf die Karte. Das Symbol im Poster anklicken, dann lassen sich die Punkte ziehen und Zwischenpunkte setzen (etwa damit die Fähre im Wasser bleibt). Gestrichelt dargestellt, nicht in den Kennzahlen.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 30c14-10 30-12 64-8" class="route"/><text x="30" y="20" class="tl">Ortsname</text><circle cx="52" cy="26" r="2.5" fill="#fff"/><path d="M52 26L46 21" class="dash2"/></svg><b>Ortsnamen</b>Start, Ziel, Übernachtungen: ziehen = verschieben, Doppelklick = Text ändern, Entf = ausblenden.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Höhe richtet sich nach der Bergigkeit der Tour; Oberkante ziehen = Höhe, Doppelklick = zurück auf Automatik. Fotos erscheinen als nummerierte Punkte (im Poster-Block abschaltbar). Beim Ort setzen kann man statt auf die Karte auch ins Profil klicken; eine Markierung zeigt dabei live Kilometer und Höhe, nahe Gipfel rasten ein.</div>
+          <div class="hc"><svg viewBox="0 0 80 56"><rect x="10" y="10" width="34" height="26" rx="3" class="dash"/><circle cx="46" cy="30" r="11" class="ring"/><path d="M41 30h10M46 25v10" class="ar"/><path d="M54 38l8 8" class="ar"/></svg><b>Detailansicht</b>Unten rechts − und + vergrößern das Poster (oder Strg/Cmd + Mausrad), „einpassen“ zeigt es wieder ganz. Im Zoom werden Karte und Fotos in voller Auflösung gezeigt.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><text x="10" y="24" class="th">Titel</text><rect x="8" y="8" width="44" height="22" class="dash"/><text x="10" y="42" class="t2">Untertitel · 209 km</text></svg><b>Texte</b>Titel, Untertitel und Kennzahlen direkt im Poster anklicken und tippen (Enter = neue Zeile).</div>
         </div>
         <div class="hfoot">Alles bleibt auf deinem Rechner. Die Sitzung wird automatisch im Browser gesichert – zum Archivieren oder Weitergeben „Projekt sichern (.zip)“.</div>
@@ -563,6 +571,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // ------------------------------------------------------------ Zustand
   const $ = s => document.querySelector(s);
   const stage = $('#stage'), tilesEl = $('#tiles'), pinsEl = $('#pins'), statusEl = $('#status');
+  let fitScale = 1, viewZoom = 1;   // Einpass-Maßstab und zusätzliche Vergrößerung der Ansicht
   let CW = 1123, CH = 1587;
   // Papierformate: [kurze Seite mm, lange Seite mm, Gruppe]. Pixel = mm / 25,4 · 300 dpi. Bildschirm-Raster: kurze Seite immer 1123 px.
   const PAPER = { A4: [210, 297, 'DIN'], A3: [297, 420, 'DIN'], A2: [420, 594, 'DIN'], A1: [594, 841, 'DIN'],
@@ -910,11 +919,52 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     // Auf schmalen Geräten bricht die Werkzeugleiste um – das Poster beginnt darunter
     if (window.innerWidth <= 900) m.style.paddingTop = (mini ? 10 : ($('#maptools').offsetHeight || 36) + 14) + 'px';
     else m.style.paddingTop = '';
-    const s = Math.min((m.clientWidth - (mini ? 16 : 40)) / CW, (m.clientHeight - (mini ? 20 : window.innerWidth <= 900 ? 24 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
+    fitScale = Math.min((m.clientWidth - (mini ? 16 : 40)) / CW, (m.clientHeight - (mini ? 20 : window.innerWidth <= 900 ? 24 : 80)) / CH);
+    const s = fitScale * viewZoom; stage.style.transform = `scale(${s})`; stage.dataset.scale = s;
+    fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px';
+    const z = $('#zoomval'); if (z) z.textContent = Math.round(s / fitScale * 100) + ' %';
+  }
+  // ---------- Zoomansicht: das Poster größer anschauen, der Bereich darunter wird scrollbar
+  function setZoom(z, anchor) {
+    const m = $('main'), before = viewZoom;
+    viewZoom = Math.max(1, Math.min(6, Math.round(z * 100) / 100));
+    if (viewZoom === before) return;
+    // Punkt unter dem Zeiger (oder die Mitte) behalten
+    const ax = anchor ? anchor.x : m.clientWidth / 2, ay = anchor ? anchor.y : m.clientHeight / 2;
+    const px = (m.scrollLeft + ax), py = (m.scrollTop + ay), k = viewZoom / before;
+    fit();
+    m.scrollLeft = px * k - ax; m.scrollTop = py * k - ay;
+    clearTimeout(zoomTmr); zoomTmr = setTimeout(sharpen, 250);   // erst wenn das Zoomen zur Ruhe kommt
+  }
+  // In der vergrößerten Ansicht soll auch der Inhalt scharf sein: die Karte bekommt ein höheres
+  // Pixelverhältnis, die Fotos werden aus den Originalen statt aus den Vorschauen gezeigt.
+  let zoomTmr = null; const hiUrl = new Map();
+  async function sharpen() {
+    if (map && map.setPixelRatio) { const base = basePixelRatio ?? (basePixelRatio = map.getPixelRatio ? map.getPixelRatio() : window.devicePixelRatio);
+      try { map.setPixelRatio(Math.min(4, base * Math.max(1, viewZoom))); } catch (e) {} }
+    if (viewZoom < 1.4) return;
+    let neu = false;
+    for (const p of state.photos) { if (hiUrl.has(p.id)) continue;
+      const f = originals.get(p.id) || await idb.get(p.id).catch(() => null); if (!f) continue;
+      hiUrl.set(p.id, URL.createObjectURL(f)); neu = true; }
+    for (const [id, url] of hiUrl) { const im = tilesEl.querySelector(`[data-id="${id}"] img`); if (im && im.src !== url) im.src = url; }   // Vorschau ist ebenfalls eine blob:-URL, deshalb genau vergleichen
+    if (neu) render();
+  }
   function setFormat(f) { state.format = f; syncSeg(); const pp = PAPER[state.paper] || PAPER.A3, L = Math.round(1123 * pp[1] / pp[0]); CW = f === 'landscape' ? L : 1123; CH = f === 'landscape' ? 1123 : L;
     stage.style.setProperty('--ts', TS().toFixed(3)); stage.style.setProperty('--tt', TT().toFixed(3)); const px = paperPx(state.paper); $('#paperhint').textContent = `${f === 'landscape' ? px[1] + ' × ' + px[0] : px[0] + ' × ' + px[1]} px${isPx(state.paper) ? '' : ' (300 dpi)'} · Seitenverhältnis ${(pp[1] / pp[0]).toFixed(2)} · Texte ×${TS().toFixed(2)} / Titel ×${TT().toFixed(2)}`;
     clampPhotos(); stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); scheduleAuto('format'); }
   window.addEventListener('resize', fit);
+  $('#zoomin').addEventListener('click', () => setZoom(viewZoom * 1.25));
+  $('#zoomout').addEventListener('click', () => setZoom(viewZoom / 1.25));
+  $('#zoomfit').addEventListener('click', () => setZoom(1));
+  $('#zoomval').addEventListener('click', () => setZoom(viewZoom > 1 ? 1 : 2));
+  // Strg/Cmd + Mausrad über dem Poster zoomt (ohne Taste bleibt das Rad für Karte und Bildausschnitt)
+  $('main').addEventListener('wheel', e => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    const r = $('main').getBoundingClientRect();
+    setZoom(viewZoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), { x: e.clientX - r.left, y: e.clientY - r.top });
+  }, { passive: false });
   // Mobil: Menü wegklappen, damit das Poster den ganzen Platz bekommt
   $('#panelgrip').addEventListener('click', () => {
     const on = $('#app').classList.toggle('mini');
@@ -1648,7 +1698,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       Object.assign(el.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px' });
       const clip = document.createElement('div'); clip.className = 'clip'; el.appendChild(clip);
       if (FR().fray > 0) { const m = 'url("data:image/svg+xml;base64,' + btoa(frayMask(p.w, p.h, FR().fray, frRadius(), seedOf(p.id))) + '")'; clip.style.webkitMaskImage = m; clip.style.maskImage = m; clip.style.webkitMaskSize = '100% 100%'; clip.style.maskSize = '100% 100%'; clip.style.borderRadius = '0'; }
-      const img = document.createElement('img'); img.src = p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
+      const img = document.createElement('img'); img.src = hiUrl.get(p.id) || p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
       const hud = document.createElement('div'); hud.className = 'hud'; clip.appendChild(hud);
       const n = document.createElement('div'); n.className = 'num' + (p.star ? ' star' : ''); n.textContent = p.num + (p.star ? ' ★' : ''); n.title = p.star ? 'Highlight – Klick entfernt es' : 'Klick = Highlight (größer im Auto-Layout)'; n.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); n.addEventListener('click', e => { e.stopPropagation(); p.star = !p.star; if (p.fixed) sizeForStar(p); render(); scheduleAuto('star'); }); hud.appendChild(n);
