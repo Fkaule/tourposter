@@ -735,7 +735,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
     map.on('idle', () => titleBlocker()); map.on('load', () => titleBlocker());
     map.on('move', () => { renderPins(); renderPlaces(); titleBlocker(); const z = map.getZoom(); $('#mapzoomsl').value = z; $('#mzval').textContent = z.toFixed(1); });
     $('#mapzoomsl').addEventListener('input', e => map.setZoom(+e.target.value));
-    $('#mapfit').addEventListener('click', e => { e.preventDefault(); fitRoute(); });
+    // ausdrücklicher Klick schlägt die gespeicherte Ansicht immer
+    $('#mapfit').addEventListener('click', e => { e.preventDefault(); keepView = false; fitRoute(); });
     map.on('idle', () => { if (fillPlaceNames()) render(); });
     let srcT = 0;   // sourcedata feuert beim Pannen/Zoomen laufend – gebündelt auswerten
     map.on('sourcedata', e => { if (!e.isSourceLoaded) return; clearTimeout(srcT); srcT = setTimeout(() => { if (fillPlaceNames()) render(); }, 400); });
@@ -926,7 +927,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       paint: { 'text-color': T.cap || '#1c1a12', 'text-halo-color': T.halo || '#fff', 'text-halo-width': 1.6 } });
     else { map.setPaintProperty('peaks', 'text-color', T.cap || '#1c1a12'); map.setPaintProperty('peaks', 'text-halo-color', T.halo || '#fff'); }
   }
-  let keepView = false;
+  let keepView = false;   // true = die Ansicht stammt aus einem geladenen Projekt und wird nicht automatisch neu eingepasst
   function fitRoute() {
     if (keepView) return;   // beim Wiederherstellen zählt die gespeicherte Ansicht
     const pts = state.stages.flatMap(s => s.points); if (!pts.length) return;
@@ -1030,7 +1031,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     $('#panelgrip').querySelector('.tx').textContent = on ? 'Menü zeigen' : 'Menü';
     fit(); clampPhotos?.(); render();
   });
-  $('#format').addEventListener('change', e => setFormat(e.target.value));
+  $('#format').addEventListener('change', e => { keepView = false; setFormat(e.target.value); });
   // ---------- Druckservice: zentrale Konfiguration (Preise, Partner, Bestellweg). Solange kein Server steht, läuft die Bestellung per E-Mail mit angehängter Druckdatei.
   const ORDER = { partner: '[Druckpartner]', email: 'bestellung@tourposter.online', endpoint: null,   // endpoint: später URL des Bestell-Servers (Upload + Bestelldaten)
     prices: { A3: 19.90, A2: 29.90, A1: 44.90, '30x45': 24.90, '40x60': 34.90, '50x70': 39.90, '60x90': 54.90, '70x100': 69.90 },
@@ -1288,7 +1289,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
   // Maske für den ausgefransten Rand (SVG mit Rauschen), Größe in px, Ausschlag a
   function frayMask(w, h, a, r, seed) { const inset = a + 1; return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><filter id="f" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="${(0.9 / Math.max(6, a)).toFixed(3)}" numOctaves="3" seed="${seed}"/><feDisplacementMap in="SourceGraphic" scale="${a * 2}" xChannelSelector="R" yChannelSelector="G"/></filter><rect x="${inset}" y="${inset}" width="${w - 2 * inset}" height="${h - 2 * inset}" rx="${Math.max(0, r - inset)}" fill="#fff" filter="url(#f)"/></svg>`; }
   const seedOf = id => [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 1000, 7);
-  $('#formatseg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('#format').value = b.dataset.v; setFormat(b.dataset.v); });
+  $('#formatseg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; keepView = false; $('#format').value = b.dataset.v; setFormat(b.dataset.v); });
   function syncSeg() { $('#formatseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === state.format)); }
   // Mobile Tabs
   $('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
@@ -1330,6 +1331,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       } catch (e) { say(`${f.name}: ${e.message}`, 'err'); console.error(e); }
     }
     state.stages.sort((a, b) => (a.start || 0) - (b.start || 0));
+    keepView = false;   // neue Tourdaten: Ausschnitt darf wieder automatisch passen
     afterTourChange(); if (window.innerWidth <= 900 && state.stages.length) showTab('fotos');
   }
   // Distanz entlang der gesamten Tour (über alle Etappen) <-> Punkt auf der Route
@@ -2294,7 +2296,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     // Liegen mehrere zu dicht beieinander, werden sie nebeneinander gestellt und
     // über der Kurve abgesetzt; ein dünner Stiel zeigt auf den echten Ort.
     let fo = ''; if (state.photos.length && state.showPhotoDots !== false) { const eleAt = d => { let i = 0; while (i < xs.length - 1 && xs[i + 1] < d) i++; return ys[i] ?? 0; };
-      const r = +fz(7.5), gap = r * 2 + 1.5;
+      const r = +fz(9.5), gap = r * 2 + 2;
       const its = state.photos.map(p => ({ num: p.num, d: photoDist(p) })).filter(o => o.d != null).sort((a, b) => a.d - b.d)
         .map(o => { const x = X(o.d), y = Y(Math.min(eleAt(o.d), ymax)); return { num: o.num, ax: x, ay: y }; });
       for (const b of spread(its.map(o => o.ax), gap, x0 + r, x1 - r)) {
@@ -2302,7 +2304,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
         const yTop = moved ? Math.max(yt + r, Math.min(...grp.map(o => o.ay)) - r - 6) : 0;
         grp.forEach((o, k) => { const cx = b.x[k], cy = moved ? yTop : o.ay;
           if (moved) fo += `<line x1="${cx.toFixed(1)}" y1="${(cy + r * .9).toFixed(1)}" x2="${o.ax.toFixed(1)}" y2="${o.ay.toFixed(1)}" stroke="${T.pinBg}" stroke-width="${(r * .22).toFixed(1)}" stroke-linecap="round" opacity=".85"/>`;
-          fo += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${T.pinBg}"/><text x="${cx.toFixed(1)}" y="${(cy + +fz(3.2)).toFixed(1)}" fill="${T.pinFg}" font-size="${fz(8.5)}" font-weight="700" text-anchor="middle" font-family="${fontSvg()}">${o.num}</text>`; }); } }
+          fo += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${T.pinBg}" stroke="${T.halo}" stroke-width="${(r * .12).toFixed(1)}"/><text x="${cx.toFixed(1)}" y="${(cy + +fz(4)).toFixed(1)}" fill="${T.pinFg}" font-size="${fz(11)}" font-weight="700" text-anchor="middle" font-family="${fontSvg()}">${o.num}</text>`; }); } }
     profGeom = { x0, x1, yt, yb, ymax, total, H, fz: +fz(1), eleAt: d => { let i = 0; while (i < xs.length - 1 && xs[i + 1] < d) i++; return ys[i] ?? 0; } };
     svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="${T.accent}" fill-opacity=".37"/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="1.6" stroke-linejoin="round"/>` + b + pk + fo +
       `<text x="${x0}" y="20" fill="${T.muted}" font-size="${fz(11)}" font-weight="700" letter-spacing="2.4" font-family="${fontSvg()}">HÖHENPROFIL</text><text x="${x1}" y="20" fill="${T.muted}" font-size="${fz(11)}" text-anchor="end" font-family="${fontSvg()}">Höchster Punkt ${nf(maxE)} m</text>` +
@@ -2862,8 +2864,10 @@ main { position:relative; overflow:hidden; background:#08111a; }
     Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.showPhotoDots = obj.showPhotoDots !== false; $('#photodots').checked = state.showPhotoDots; state.peakThr = obj.peakThr ?? null; if ($('#peakthr') && state.peakThr != null) $('#peakthr').value = state.peakThr;
     if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 0; $('#grade').value = state.grade; state.transfers = Array.isArray(obj.transfers) ? obj.transfers : []; state.gap = obj.gap ?? 18; $('#gapsl').value = state.gap; $('#gapval').textContent = state.gap; state.tfSeen = Array.isArray(obj.tfSeen) ? obj.tfSeen : []; applyFont(obj.font || 'montserrat'); state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0, radius: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) { keepView = true;   // gespeicherte Ansicht gehört zum gespeicherten Layout – nicht neu einpassen
-      const jump = () => { map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }); state.fitZoom = obj.map.zoom; setTimeout(() => { keepView = false; }, 1500); };
-      if (map.loaded() || map.isStyleLoaded()) setTimeout(jump, 0); else map.once('load', jump); }
+      // jumpTo wirkt auch, während der Stil noch lädt. Früher hing das an map.once('load') – das Ereignis kommt nach
+      // einem Stilwechsel aber nie wieder, dann blieb die alte Ansicht stehen und keepView sperrte „einpassen“ dauerhaft.
+      const jump = () => { map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }); state.fitZoom = obj.map.zoom; };
+      jump(); map.once('idle', jump); }   // keepView gilt, bis der Nutzer einpasst, das Format wechselt oder eine Tourdatei hinzufügt
     applyFrame(); if (map) { terrainLayer(); peakLayer(); } render();
   }
   async function loadJsonFile(f) { try { restore(JSON.parse(await f.text())); afterTourChange(); say(`Layout „${f.name}“ geladen – Fotos in Originalgröße bitte erneut hinzufügen (werden anhand des Dateinamens zugeordnet).`, 'ok'); } catch (err) { say('JSON nicht lesbar: ' + err.message, 'err'); } }
