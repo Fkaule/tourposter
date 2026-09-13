@@ -176,6 +176,11 @@ main { position:relative; overflow:hidden; background:#08111a; }
 #zoombar button:hover { background:var(--panel); color:var(--accent); }
 #zoombar .val { min-width:46px; text-align:center; cursor:pointer; }
 #zoombar .fitb { font-size:11px; padding:6px 8px; border-left:1px solid var(--line); margin-left:2px; }
+#app.full { grid-template-columns:1fr; grid-template-rows:1fr; }
+#app.full aside, #app.full #maptools, #app.full #hint, #app.full #panelgrip { display:none; }
+#app.full main { background:#06101a; }
+#app.full #zoombar { opacity:.35; transition:opacity .15s; }
+#app.full #zoombar:hover { opacity:1; }
 #stage { font-family:var(--pfont, Montserrat, Arial, sans-serif); --pa:#ff5a36; --pbg:#0d1a26; --pvig:13,26,38; --ptext:#ffffff; --pcap:#e6edf3; --psub:#b7c5d3; --pmuted:#8fa3b8; --pband:rgba(6,12,18,.8); --pline:#283440; --phalo:#0d1a26; --ppill:rgba(13,26,38,.85);
   position:absolute; left:0; top:0; width:1123px; height:1587px; transform-origin:top left; background:var(--pbg); box-shadow:0 30px 80px rgba(0,0,0,.6); user-select:none; overflow:hidden; }
 #map { position:absolute; inset:0; }
@@ -497,7 +502,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       </div>
     </div></div></div>
     <div id="maptools"><button id="mapbtn"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><div id="pscalebox" title="Alle Fotos gemeinsam größer/kleiner (fixierte behalten ihre Position)"><span class="w">FOTOS</span><span class="s">📷</span> <input type="range" id="pscale" min="50" max="160" step="5" value="100"> <span id="pscaleval">100 %</span></div><div id="gapbox" title="Fester Abstand zwischen benachbarten Fotos: darauf rasten sie ein (blauer Streifen mit Schloss); gilt auch für die automatische Anordnung"><span class="w">ABSTAND</span><span class="s">↔</span> <input type="range" id="gapsl" min="0" max="60" step="2" value="18"> <span id="gapval">18</span></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
-    <div id="zoombar"><button id="zoomout" title="Kleiner (Strg/Cmd + Mausrad)">−</button><span class="val" id="zoomval" title="Auf 100 % stellen">100 %</span><button id="zoomin" title="Größer (Strg/Cmd + Mausrad)">+</button><button class="fitb" id="zoomfit" title="Ganzes Poster zeigen">einpassen</button></div>
+    <div id="zoombar"><button id="zoomout" title="Kleiner (Strg/Cmd + Mausrad)">−</button><span class="val" id="zoomval" title="Auf 100 % stellen">100 %</span><button id="zoomin" title="Größer (Strg/Cmd + Mausrad)">+</button><button class="fitb" id="zoomfit" title="Ganzes Poster zeigen">einpassen</button><button class="fitb" id="zoomfull" title="Vollbild – nur das Poster (Esc beendet)">⛶</button></div>
     <div id="hint"><span>Ziehen = verschieben · Ecken/Kanten = Größe · Doppelklick = Ausschnitt · Entf = entfernen</span><button id="helpbtn" title="Hilfe">?</button></div>
     <div id="wall" hidden>
       <div class="wallbox">
@@ -554,7 +559,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M6 40c10-6 18-6 28-10" class="route"/><path d="M34 30c12-5 22-12 40-16" class="dash2"/><circle cx="52" cy="21" r="7" class="ico lock"/><path d="M48 22.5h8l-1 2.5h-6zM49.5 22.5V19h3l1.7 1.7V22.5M51.5 19v-1.5h1" fill="none" stroke="#1c1a12" stroke-width="1.1" stroke-linejoin="round"/></svg><b>Anreise &amp; Transfer</b>Strecken mit Zug, Bus, Fähre oder Auto: im Tour-Feld anlegen – Abfahrt und Ankunft per Ortssuche oder Klick auf die Karte. Das Symbol im Poster anklicken, dann lassen sich die Punkte ziehen und Zwischenpunkte setzen (etwa damit die Fähre im Wasser bleibt). Gestrichelt dargestellt, nicht in den Kennzahlen.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><path d="M8 30c14-10 30-12 64-8" class="route"/><text x="30" y="20" class="tl">Ortsname</text><circle cx="52" cy="26" r="2.5" fill="#fff"/><path d="M52 26L46 21" class="dash2"/></svg><b>Ortsnamen</b>Start, Ziel, Übernachtungen: ziehen = verschieben, Doppelklick = Text ändern, Entf = ausblenden.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><rect x="6" y="34" width="68" height="16" class="band"/><path d="M6 34h68" class="grip"/><path d="M40 30l-4-5h8zM40 24v-8" class="ar"/><path d="M10 46c8-6 14 2 22-4s16-2 24 0 8 2 12 0" class="prof"/></svg><b>Höhenprofil</b>Höhe richtet sich nach der Bergigkeit der Tour; Oberkante ziehen = Höhe, Doppelklick = zurück auf Automatik. Fotos erscheinen als nummerierte Punkte (im Poster-Block abschaltbar). Beim Ort setzen kann man statt auf die Karte auch ins Profil klicken; eine Markierung zeigt dabei live Kilometer und Höhe, nahe Gipfel rasten ein.</div>
-          <div class="hc"><svg viewBox="0 0 80 56"><rect x="10" y="10" width="34" height="26" rx="3" class="dash"/><circle cx="46" cy="30" r="11" class="ring"/><path d="M41 30h10M46 25v10" class="ar"/><path d="M54 38l8 8" class="ar"/></svg><b>Detailansicht</b>Unten rechts − und + vergrößern das Poster (oder Strg/Cmd + Mausrad), „einpassen“ zeigt es wieder ganz. Im Zoom werden Karte und Fotos in voller Auflösung gezeigt.</div>
+          <div class="hc"><svg viewBox="0 0 80 56"><rect x="10" y="10" width="34" height="26" rx="3" class="dash"/><circle cx="46" cy="30" r="11" class="ring"/><path d="M41 30h10M46 25v10" class="ar"/><path d="M54 38l8 8" class="ar"/></svg><b>Detailansicht</b>Unten rechts − und + vergrößern das Poster (oder Strg/Cmd + Mausrad), „einpassen“ zeigt es wieder ganz, ⛶ schaltet auf Vollbild (Esc beendet). Im Zoom werden Karte und Fotos in voller Auflösung gezeigt.</div>
           <div class="hc"><svg viewBox="0 0 80 56"><text x="10" y="24" class="th">Titel</text><rect x="8" y="8" width="44" height="22" class="dash"/><text x="10" y="42" class="t2">Untertitel · 209 km</text></svg><b>Texte</b>Titel, Untertitel und Kennzahlen direkt im Poster anklicken und tippen (Enter = neue Zeile).</div>
         </div>
         <div class="hfoot">Alles bleibt auf deinem Rechner. Die Sitzung wird automatisch im Browser gesichert – zum Archivieren oder Weitergeben „Projekt sichern (.zip)“.</div>
@@ -921,13 +926,14 @@ main { position:relative; overflow:hidden; background:#08111a; }
     // Oben und unten so viel Luft lassen, wie die schwebenden Leisten hoch sind – sonst verdecken sie
     // beim Hineinzoomen den Titelbereich und das Höhenprofil, weil man nicht dahinter scrollen kann.
     // zweimal messen: mit dem Scrollbalken kann die Werkzeugleiste umbrechen und höher werden
+    const full = $('#app').classList.contains('full');
     let pt = 0, pb = 0;
     for (let i = 0; i < 2; i++) {
-      pt = mini ? 10 : Math.round($('#maptools').getBoundingClientRect().height) + 20;
-      pb = mini ? 10 : Math.round($('#zoombar').getBoundingClientRect().height) + 18;
+      pt = mini || full ? 10 : Math.round($('#maptools').getBoundingClientRect().height) + 20;
+      pb = mini || full ? 10 : Math.round($('#zoombar').getBoundingClientRect().height) + 18;
       m.style.paddingTop = pt + 'px'; m.style.paddingBottom = pb + 'px';
     }
-    fitScale = Math.min((m.clientWidth - (mini ? 16 : 40)) / CW, (m.clientHeight - pt - pb) / CH);
+    fitScale = Math.min((m.clientWidth - (mini || full ? 16 : 40)) / CW, (m.clientHeight - pt - pb) / CH);
     const s = fitScale * viewZoom; stage.style.transform = `scale(${s})`; stage.dataset.scale = s;
     fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px';
     const z = $('#zoomval'); if (z) z.textContent = Math.round(s / fitScale * 100) + ' %';
@@ -966,6 +972,18 @@ main { position:relative; overflow:hidden; background:#08111a; }
   $('#zoomin').addEventListener('click', () => setZoom(viewZoom * 1.25));
   $('#zoomout').addEventListener('click', () => setZoom(viewZoom / 1.25));
   $('#zoomfit').addEventListener('click', () => setZoom(1));
+  // Vollbild: nur das Poster, ohne Bedienfeld und Werkzeugleiste. Wo die Vollbild-Funktion des
+  // Browsers fehlt (etwa auf dem iPhone), bleibt wenigstens die Oberfläche ausgeblendet.
+  function toggleFull(on) {
+    const app = $('#app');
+    const want = on === undefined ? !app.classList.contains('full') : on;
+    app.classList.toggle('full', want);
+    try { if (want) app.requestFullscreen?.().catch(() => {}); else if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); } catch (e) {}
+    setTimeout(fit, 60);
+  }
+  $('#zoomfull').addEventListener('click', () => toggleFull());
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) toggleFull(false); else setTimeout(fit, 60); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#app').classList.contains('full')) toggleFull(false); });
   $('#zoomval').addEventListener('click', () => setZoom(viewZoom > 1 ? 1 : 2));
   // Strg/Cmd + Mausrad über dem Poster zoomt (ohne Taste bleibt das Rad für Karte und Bildausschnitt)
   $('#scroller').addEventListener('wheel', e => {
