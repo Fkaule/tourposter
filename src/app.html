@@ -310,6 +310,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #mapzoom input { width:150px; margin:0; }
 #pscalebox { display:flex; align-items:center; gap:8px; white-space:nowrap; padding-left:10px; border-left:1px solid var(--line); }
 #pscalebox input { width:110px; margin:0; }
+#gapbox { display:flex; align-items:center; gap:8px; white-space:nowrap; padding-left:10px; border-left:1px solid var(--line); }
+#gapbox input { width:90px; margin:0; }
+#gapbox .s { display:none; }
 #mapzoom a { color:var(--accent); text-decoration:none; }
 .maplibregl-ctrl-attrib { font-size:9px !important; }
 #tabs { display:none; }
@@ -325,7 +328,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   #app.mini { grid-template-rows:1fr 30px; }
   #app.mini main { padding-top:10px; }
   #app.mini #tabs, #app.mini .steps, #app.mini #status { display:none; }
-  #app.mini #mapzoom, #app.mini #pscalebox { display:none; }   /* eingeklappt zählt der Platz fürs Poster */
+  #app.mini #mapzoom, #app.mini #pscalebox, #app.mini #gapbox { display:none; }   /* eingeklappt zählt der Platz fürs Poster */
 }
 
 @media (max-width: 900px) {
@@ -342,14 +345,16 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   aside { order:1; border-right:0; border-top:1px solid var(--line); }
   #hint { display:none; }
   #helpbtn { display:none; }
-  #maptools { right:8px; top:8px; gap:6px; padding:4px; }
+  #maptools { left:8px; right:8px; top:8px; gap:6px; padding:4px; flex-wrap:wrap; justify-content:flex-end; }
   #mapbtn { padding:6px 8px; font-size:11px; }
   #maptools .w { display:none; } #maptools .s { display:inline; }
   #autobtn { padding:6px 8px; }
   #mapzoom input { width:70px; }
   #pscalebox input { width:60px; } #pscalebox { padding-left:6px; gap:4px; }
+  #gapbox input { width:52px; } #gapbox { padding-left:6px; gap:4px; }
+  #gapbox .w { display:none; } #gapbox .s { display:inline; }
   #mapzoom a { display:none; }
-  main { padding-top:48px; box-sizing:border-box; }
+  main { box-sizing:border-box; }   /* Höhe kommt aus fit(), die Leiste kann mehrzeilig werden */
   .step { padding:10px 14px; }
 }
 @media (max-width: 900px) and (orientation: landscape) {
@@ -432,7 +437,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <label class="f">Geländerelief <span id="reliefval">60 %</span></label>
       <input type="range" id="relief" min="0" max="100" step="5" value="60" style="width:100%" title="Schummerung der Berge. 0 = aus, dann werden auch keine Höhendaten geladen. Im Flachland ist selbst bei hohem Wert wenig zu sehen. Höhendaten von AWS Terrain Tiles (zweiter Dienst neben der Karte)">
       <div class="grid2" style="margin-top:8px">
-        <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div><div style="grid-column:1 / -1"><label class="f">Abstand zwischen Fotos <span id="gapval">18</span></label><input type="range" id="gapsl" min="0" max="60" step="2" value="18" style="width:100%" title="Auf diesen Abstand rasten Fotos nebeneinander ein; er gilt auch für die automatische Anordnung"></div>
+        <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div>
       </div>
       <label class="f">Abdeckung hinter dem Titel <span id="vigaval">automatisch</span></label>
       <input type="range" id="viga" min="0" max="100" step="5" value="90" style="width:100%" title="Wie stark der Verlauf oben die Karte abdeckt – kleiner Wert zeigt Route und Umgebung, größerer macht den Titel ruhiger. Doppelklick = zurück auf den Stil-Wert">
@@ -452,7 +457,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <h2><span class="no">4</span>Export</h2>
       <button class="btn primary" id="expng">PNG herunterladen <small>in gewählter Größe</small></button>
       <button class="btn" id="expdf">PDF <small>für den Druck</small></button>
-      <button class="btn" id="exshare" title="Kleines JPEG zum Verschicken – auf dem Handy öffnet sich direkt das Teilen-Menü">Zum Verschicken <small>kleines JPEG</small></button>
+      <button class="btn" id="exshare" title="Kleines JPEG für Nachrichten, Mail oder Web – nicht zum Drucken; auf dem Handy öffnet sich direkt das Teilen-Menü">Webvariante <small>klein, nicht zum Drucken</small></button>
       <label class="f">Projekt (Tour + Layout + Fotos in Originalgröße)</label>
       <div class="btnrow"><button class="btn" id="exzip">Projekt sichern <small>.zip</small></button><label class="btn ghost" id="ldzip" style="cursor:pointer">Projekt laden<input type="file" accept=".zip,application/zip" style="display:none"></label></div>
       <div class="hint">Die Sitzung wird automatisch im Browser gesichert. Zum Archivieren oder auf einen anderen Rechner mitnehmen: Projekt sichern (.zip).</div>
@@ -483,7 +488,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         <div id="bandfade"></div><div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg><svg id="profhover" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg></div>
       </div>
     </div></div>
-    <div id="maptools"><button id="mapbtn"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><div id="pscalebox" title="Alle Fotos gemeinsam größer/kleiner (fixierte behalten ihre Position)"><span class="w">FOTOS</span><span class="s">📷</span> <input type="range" id="pscale" min="50" max="160" step="5" value="100"> <span id="pscaleval">100 %</span></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
+    <div id="maptools"><button id="mapbtn"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><div id="pscalebox" title="Alle Fotos gemeinsam größer/kleiner (fixierte behalten ihre Position)"><span class="w">FOTOS</span><span class="s">📷</span> <input type="range" id="pscale" min="50" max="160" step="5" value="100"> <span id="pscaleval">100 %</span></div><div id="gapbox" title="Fester Abstand zwischen benachbarten Fotos: darauf rasten sie ein (blauer Streifen mit Schloss); gilt auch für die automatische Anordnung"><span class="w">ABSTAND</span><span class="s">↔</span> <input type="range" id="gapsl" min="0" max="60" step="2" value="18"> <span id="gapval">18</span></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
     <div id="hint"><span>Ziehen = verschieben · Ecken/Kanten = Größe · Doppelklick = Ausschnitt · Entf = entfernen</span><button id="helpbtn" title="Hilfe">?</button></div>
     <div id="wall" hidden>
       <div class="wallbox">
@@ -901,7 +906,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const BH = () => state.showBand === false ? 0 : (state.bandH || autoBandH());
   function clampPhotos() { for (const p of state.photos) { p.w = Math.min(p.w, CW - 60); p.h = Math.min(p.h, CH - BH() - 60); p.x = Math.max(0, Math.min(CW - p.w, p.x)); p.y = Math.max(0, Math.min(CH - BH() - p.h, p.y)); } }
   function fit() { const m = $('main'), fr = $('#frame'); const mini = $('#app').classList.contains('mini');
-    const s = Math.min((m.clientWidth - (mini ? 16 : 40)) / CW, (m.clientHeight - (mini ? 20 : window.innerWidth <= 900 ? 60 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
+    // Auf schmalen Geräten bricht die Werkzeugleiste um – das Poster beginnt darunter
+    if (window.innerWidth <= 900) m.style.paddingTop = (mini ? 10 : ($('#maptools').offsetHeight || 36) + 14) + 'px';
+    else m.style.paddingTop = '';
+    const s = Math.min((m.clientWidth - (mini ? 16 : 40)) / CW, (m.clientHeight - (mini ? 20 : window.innerWidth <= 900 ? 24 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
   function setFormat(f) { state.format = f; syncSeg(); const pp = PAPER[state.paper] || PAPER.A3, L = Math.round(1123 * pp[1] / pp[0]); CW = f === 'landscape' ? L : 1123; CH = f === 'landscape' ? 1123 : L;
     stage.style.setProperty('--ts', TS().toFixed(3)); stage.style.setProperty('--tt', TT().toFixed(3)); const px = paperPx(state.paper); $('#paperhint').textContent = `${f === 'landscape' ? px[1] + ' × ' + px[0] : px[0] + ' × ' + px[1]} px${isPx(state.paper) ? '' : ' (300 dpi)'} · Seitenverhältnis ${(pp[1] / pp[0]).toFixed(2)} · Texte ×${TS().toFixed(2)} / Titel ×${TT().toFixed(2)}`;
     clampPhotos(); stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); scheduleAuto('format'); }
@@ -2630,7 +2638,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
   const fname = () => (state.title || 'Tourposter').replace(/\s+/g, '_').replace(/[^\wäöüÄÖÜß_-]/g, '');
   $('#expng').addEventListener('click', async () => { if (!exportOk()) return; try { say('Rendert …'); const c = await renderPrint(); c.toBlob(b => { download(b, fname() + '_' + state.paper + '.png'); say('PNG gespeichert.', 'ok'); }, 'image/png'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
-  // Kleines JPEG zum Verschicken: lange Kante 1600 px – ein paar hundert Kilobyte statt vieler Megabyte.
+  // Webvariante: lange Kante 1600 px als JPEG – ein paar hundert Kilobyte statt vieler Megabyte.
+  // Für Nachrichten, Mail und Web gedacht, zum Drucken taugt sie nicht.
   // Auf dem Handy bietet der Browser das Teilen-Menü an, sonst wird die Datei geladen.
   $('#exshare').addEventListener('click', async () => {
     if (!exportOk()) return;
