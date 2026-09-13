@@ -1538,7 +1538,22 @@ main { position:relative; overflow:hidden; background:#08111a; }
     if (added.length && autoOn() && map && state.stages.length) { await new Promise(r => setTimeout(r, 50)); autoLayout(null, { quiet: true, allowZoom: true }); }
   }
   function thumb(url) { return new Promise(r => { const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); const s = 360 / Math.max(im.width, im.height); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); r(c.toDataURL('image/jpeg', .72)); }; im.onerror = () => r(''); im.src = url; }); }
-  function renumber() { [...state.photos].sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.name.localeCompare(b.name)).forEach((p, i) => p.num = i + 1); }
+  // Nummerierung: nach Aufnahmezeit. Fotos ohne Datum (z. B. Screenshots oder bearbeitete Bilder ohne EXIF)
+  // werden über ihren Ort an der Route eingeordnet, nicht stumpf nach vorn gestellt.
+  function renumber() {
+    const dated = state.photos.filter(p => p.date).sort((a, b) => a.date.localeCompare(b.date) || a.name.localeCompare(b.name));
+    const undated = state.photos.filter(p => !p.date).sort((a, b) => a.name.localeCompare(b.name));
+    const out = dated.slice();
+    if (undated.length) {
+      const dd = dated.map(p => photoDist(p));
+      for (const p of undated) {
+        const d = photoDist(p); let at = out.length;
+        if (d != null) { at = 0; for (let i = 0; i < dated.length; i++) if (dd[i] != null && dd[i] <= d) at = out.indexOf(dated[i]) + 1; }
+        out.splice(at, 0, p);
+      }
+    }
+    out.forEach((p, i) => p.num = i + 1);
+  }
   // Eintagestour: Datum nur anzeigen, wenn das Foto nicht am Tourtag entstanden ist
   function tourDays() { const days = new Set(); for (const st of state.stages) for (const t of [st.start, st.end]) if (t) days.add(new Date(t).toDateString()); return days; }
   function autoCaption(p) { const d = p.date ? new Date(p.date) : null; const days = tourDays(); const showDate = d && (!p.place || !(days.size === 1 && days.has(d.toDateString()))); return [p.place, showDate ? `${d.getDate()}. ${MONk[d.getMonth()]}` : ''].filter(Boolean).join(' · '); }
@@ -1713,7 +1728,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
           const up = () => { g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); render(); autosave(); };
           g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); });
         g.addEventListener('dblclick', ev => { ev.stopPropagation(); delete p.w; render(); autosave(); });
-        const setGrip = () => { g.style.left = (place.offsetLeft + place.offsetWidth + 2) + 'px'; g.style.top = (place.offsetTop + place.offsetHeight / 2) + 'px'; };
+        // .place und .placegrip sind beide um -50% nach oben verschoben: der Bezugspunkt ist damit schon die Mitte des Namens
+        const setGrip = () => { g.style.left = (place.offsetLeft + place.offsetWidth + 2) + 'px'; g.style.top = place.offsetTop + 'px'; };
         placesEl.appendChild(g); setGrip(); }
     }
   }
