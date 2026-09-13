@@ -455,7 +455,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <h2><span class="no">4</span>Export</h2>
       <button class="btn primary" id="expng">PNG herunterladen <small>in gewählter Größe</small></button>
       <button class="btn" id="expdf">PDF <small>für den Druck</small></button>
-      <button class="btn" id="exshare" title="Kleines JPEG für Nachrichten, Mail oder Web – nicht zum Drucken; auf dem Handy öffnet sich direkt das Teilen-Menü">Webvariante <small>klein, nicht zum Drucken</small></button>
+      <div class="btnrow"><button class="btn" id="exshare" title="Kleines JPEG für Nachrichten, Mail oder Web – nicht zum Drucken">Webvariante <small>klein, nicht zum Drucken</small></button><button class="btn ghost" id="exshare2" hidden title="Dasselbe Bild direkt über das Teilen-Menü des Geräts weitergeben">Teilen</button></div>
       <label class="f">Projekt (Tour + Layout + Fotos in Originalgröße)</label>
       <div class="btnrow"><button class="btn" id="exzip">Projekt sichern <small>.zip</small></button><label class="btn ghost" id="ldzip" style="cursor:pointer">Projekt laden<input type="file" accept=".zip,application/zip" style="display:none"></label></div>
       <div class="hint">Die Sitzung wird automatisch im Browser gesichert. Zum Archivieren oder auf einen anderen Rechner mitnehmen: Projekt sichern (.zip).</div>
@@ -902,7 +902,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const k = Math.max(Math.min((hm / km) / 30, 1), Math.min(maxE / 2000, 1));          // 0 = flach … 1 = alpin
     return Math.round(110 + 120 * k); }
   const BH = () => state.showBand === false ? 0 : (state.bandH || autoBandH());
-  function clampPhotos() { for (const p of state.photos) { p.w = Math.min(p.w, CW - 60); p.h = Math.min(p.h, CH - BH() - 60); p.x = Math.max(0, Math.min(CW - p.w, p.x)); p.y = Math.max(0, Math.min(CH - BH() - p.h, p.y)); } }
+  function clampPhotos() { const mt = matPx();   // das Passepartout gehört mit ins Poster
+    for (const p of state.photos) { p.w = Math.min(p.w, CW - 60 - 2 * mt); p.h = Math.min(p.h, CH - BH() - 60 - 2 * mt); p.x = Math.max(mt, Math.min(CW - p.w - mt, p.x)); p.y = Math.max(mt, Math.min(CH - BH() - p.h - mt, p.y)); } }
   function fit() { const m = $('main'), fr = $('#frame'); const mini = $('#app').classList.contains('mini');
     // Auf schmalen Geräten bricht die Werkzeugleiste um – das Poster beginnt darunter
     if (window.innerWidth <= 900) m.style.paddingTop = (mini ? 10 : ($('#maptools').offsetHeight || 36) + 14) + 'px';
@@ -2194,17 +2195,20 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // anderen Achse überlappen, also wirklich Nachbarn sind. Mittellinien anderer Fotos sind kein Ziel;
   // mit so vielen Zielen rastet sonst überall etwas ein.
   const photoGap = () => state.gap ?? 18;
+  // Bezug ist immer die sichtbare Außenkante: das Passepartout, und ohne Passepartout das Foto selbst.
+  // Alle Ziele werden deshalb um die Passepartout-Breite versetzt (sie ist für alle Fotos gleich).
+  const matPx = () => FR().mat || 0;
   function snapTargets(exclude, t) {
-    const gp = photoGap();
-    const left = [56, CW - 56, CW / 2], right = [56, CW - 56, CW / 2], cx = [CW / 2];
-    const top = [56, CH - BH() - 12, CH / 2], bottom = [56, CH - BH() - 12, CH / 2], cy = [CH / 2];
+    const gp = photoGap(), mt = matPx(), d2 = gp + 2 * mt;
+    const left = [56 + mt, CW - 56 + mt, CW / 2], right = [56 - mt, CW - 56 - mt, CW / 2], cx = [CW / 2];
+    const top = [56 + mt, CH - BH() - 12 + mt, CH / 2], bottom = [56 - mt, CH - BH() - 12 - mt, CH / 2], cy = [CH / 2];
     const ovY = o => !t || (o.y < t.y + t.h && t.y < o.y + o.h);   // liegt in derselben Zeile
     const ovX = o => !t || (o.x < t.x + t.w && t.x < o.x + o.w);   // liegt in derselben Spalte
     for (const o of state.photos) if (!exclude.has(o.id)) {
       left.push(o.x); right.push(o.x + o.w);
       top.push(o.y); bottom.push(o.y + o.h);
-      if (ovY(o)) { left.push(o.x + o.w + gp); right.push(o.x - gp); }
-      if (ovX(o)) { top.push(o.y + o.h + gp); bottom.push(o.y - gp); }
+      if (ovY(o)) { left.push(o.x + o.w + d2); right.push(o.x - d2); }
+      if (ovX(o)) { top.push(o.y + o.h + d2); bottom.push(o.y - d2); }
     }
     return { xs: [...left, ...right], ys: [...top, ...bottom], left, right, cx, top, bottom, cy };
   }
@@ -2212,27 +2216,30 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const nearest = (list, v) => { let best = null, bd = SNAP + .001;
     for (const x of list) { const d = Math.abs(x - v); if (d <= bd) { bd = d; best = x; } }
     return best; }
+  // Gleiche Abstände: gemessen wird von Passepartout zu Passepartout, angezeigt ebenso.
+  // Die Streifen beginnen also um die Passepartout-Breite versetzt und sind um 2× schmaler.
   function equalGaps(t, ids, gs) {
     const others = state.photos.filter(o => !ids.has(o.id));
+    const mt = matPx(), sh = v => Math.max(2, v - 2 * mt);   // Abstand zwischen den Außenkanten
     const ovY = (a, b) => a.y < b.y + b.h && b.y < a.y + a.h, ovX = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w;
     // horizontal: Nachbarn in gleicher Zeile
     if (!gs.some(g => g.k === 'v')) {
       const row = others.filter(o => ovY(o, t)); let done = false;
       for (const A of row) for (const B of row) { if (done || A === B) continue;
-        const gap = A.x - (B.x + B.w); if (gap < 4) continue;                       // B links von A
+        const gap = A.x - (B.x + B.w); if (gap < 4 + 2 * mt) continue;              // B links von A
         for (const cand of [A.x + A.w + gap, B.x - gap - t.w]) {
           if (Math.abs(t.x - cand) <= SNAP) { t.x = Math.round(cand); const cy = Math.max(t.y, A.y, B.y), ch = Math.max(20, Math.min(t.y + t.h, A.y + A.h, B.y + B.h) - cy);
-            const own = cand > A.x ? [A.x + A.w, cy, gap, ch] : [B.x - gap, cy, gap, ch];
-            gs.push({ k: 'gap', dir: 'v', val: Math.round(gap), rects: [[B.x + B.w, cy, gap, ch], own] }); done = true; break; } } }
+            const own = cand > A.x ? [A.x + A.w + mt, cy, sh(gap), ch] : [B.x - gap + mt, cy, sh(gap), ch];
+            gs.push({ k: 'gap', dir: 'v', val: Math.round(sh(gap)), rects: [[B.x + B.w + mt, cy, sh(gap), ch], own] }); done = true; break; } } }
     }
     if (!gs.some(g => g.k === 'h')) {
       const col = others.filter(o => ovX(o, t)); let done = false;
       for (const A of col) for (const B of col) { if (done || A === B) continue;
-        const gap = A.y - (B.y + B.h); if (gap < 4) continue;                       // B über A
+        const gap = A.y - (B.y + B.h); if (gap < 4 + 2 * mt) continue;              // B über A
         for (const cand of [A.y + A.h + gap, B.y - gap - t.h]) {
           if (Math.abs(t.y - cand) <= SNAP) { t.y = Math.round(cand); const cx = Math.max(t.x, A.x, B.x), cw = Math.max(20, Math.min(t.x + t.w, A.x + A.w, B.x + B.w) - cx);
-            const own = cand > A.y ? [cx, A.y + A.h, cw, gap] : [cx, B.y - gap, cw, gap];
-            gs.push({ k: 'gap', dir: 'h', val: Math.round(gap), rects: [[cx, B.y + B.h, cw, gap], own] }); done = true; break; } } }
+            const own = cand > A.y ? [cx, A.y + A.h + mt, cw, sh(gap)] : [cx, B.y - gap + mt, cw, sh(gap)];
+            gs.push({ k: 'gap', dir: 'h', val: Math.round(sh(gap)), rects: [[cx, B.y + B.h + mt, cw, sh(gap)], own] }); done = true; break; } } }
     }
   }
   function snapMove(t, ids, off_) {
@@ -2247,17 +2254,18 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // in eigener Farbe mit Schloss, damit man ihn von den frei gemessenen Abständen unterscheidet.
   function fixedGapGuides(t, ids, gs) {
     const gp = photoGap(); if (!gp) return;
+    const mt = matPx(), d2 = gp + 2 * mt;
     const ovY = o => o.y < t.y + t.h && t.y < o.y + o.h, ovX = o => o.x < t.x + t.w && t.x < o.x + o.w;
     for (const o of state.photos) { if (ids.has(o.id)) continue;
       if (ovY(o)) {
         const cy = Math.max(t.y, o.y), ch = Math.max(14, Math.min(t.y + t.h, o.y + o.h) - cy);
-        if (Math.abs(t.x - (o.x + o.w + gp)) < .6) gs.push({ k: 'gapfix', dir: 'v', val: gp, rects: [[o.x + o.w, cy, gp, ch]] });
-        else if (Math.abs(o.x - (t.x + t.w + gp)) < .6) gs.push({ k: 'gapfix', dir: 'v', val: gp, rects: [[t.x + t.w, cy, gp, ch]] });
+        if (Math.abs(t.x - (o.x + o.w + d2)) < .6) gs.push({ k: 'gapfix', dir: 'v', val: gp, rects: [[o.x + o.w + mt, cy, gp, ch]] });
+        else if (Math.abs(o.x - (t.x + t.w + d2)) < .6) gs.push({ k: 'gapfix', dir: 'v', val: gp, rects: [[t.x + t.w + mt, cy, gp, ch]] });
       }
       if (ovX(o)) {
         const cx = Math.max(t.x, o.x), cw = Math.max(14, Math.min(t.x + t.w, o.x + o.w) - cx);
-        if (Math.abs(t.y - (o.y + o.h + gp)) < .6) gs.push({ k: 'gapfix', dir: 'h', val: gp, rects: [[cx, o.y + o.h, cw, gp]] });
-        else if (Math.abs(o.y - (t.y + t.h + gp)) < .6) gs.push({ k: 'gapfix', dir: 'h', val: gp, rects: [[cx, t.y + t.h, cw, gp]] });
+        if (Math.abs(t.y - (o.y + o.h + d2)) < .6) gs.push({ k: 'gapfix', dir: 'h', val: gp, rects: [[cx, o.y + o.h + mt, cw, gp]] });
+        else if (Math.abs(o.y - (t.y + t.h + d2)) < .6) gs.push({ k: 'gapfix', dir: 'h', val: gp, rects: [[cx, t.y + t.h + mt, cw, gp]] });
       }
     }
   }
@@ -2368,7 +2376,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (!map || !state.photos.length) return;
     layouting = true;
     try {
-      const M = photoGap() + (FR().mat || 0) + (FR().mat && FR().marks ? 8 : 0);   // Mindestabstand zu Route, Texten und Nachbarfotos (+ Passepartout/Eckmarken)
+      const M = photoGap() + 2 * (FR().mat || 0) + (FR().mat && FR().marks ? 8 : 0);   // Mindestabstand: eingestellter Abstand plus beide Passepartouts (+ Eckmarken)
       const movable = state.photos.filter(p => (only ? only.has(p.id) : !p.fixed) );
       const order = movable.sort((a, b) => (b.star ? 1 : 0) - (a.star ? 1 : 0) || a.num - b.num);
       const n = state.photos.length;
@@ -2639,18 +2647,25 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // Webvariante: lange Kante 1600 px als JPEG – ein paar hundert Kilobyte statt vieler Megabyte.
   // Für Nachrichten, Mail und Web gedacht, zum Drucken taugt sie nicht.
   // Auf dem Handy bietet der Browser das Teilen-Menü an, sonst wird die Datei geladen.
+  async function webJpeg() {
+    const c = await renderPrint(1600 / Math.max(CW, CH));
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .82));
+    return { blob, name: fname() + '_web.jpg', kb: Math.round(blob.size / 1024), w: c.width, h: c.height };
+  }
   $('#exshare').addEventListener('click', async () => {
     if (!exportOk()) return;
-    try { say('Rendert …');
-      const c = await renderPrint(1600 / Math.max(CW, CH));
-      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .82));
-      const name = fname() + '_klein.jpg', kb = Math.round(blob.size / 1024);
-      const file = new File([blob], name, { type: 'image/jpeg' });
-      if (navigator.canShare?.({ files: [file] })) {
-        try { await navigator.share({ files: [file], title: state.title || 'Tourposter' }); say(`Geteilt (${kb} KB).`, 'ok'); return; }
-        catch (e) { if (e.name === 'AbortError') { say(''); return; } }   // abgebrochen: nichts weiter tun
-      }
-      download(blob, name); say(`JPEG gespeichert (${kb} KB, ${c.width} × ${c.height} px).`, 'ok');
+    try { say('Rendert …'); const r = await webJpeg();
+      download(r.blob, r.name); say(`Webvariante gespeichert (${r.kb} KB, ${r.w} × ${r.h} px).`, 'ok');
+    } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); }
+  });
+  // Teilen nur anbieten, wenn das Gerät Dateien weitergeben kann (Handy, Safari)
+  try { if (navigator.canShare?.({ files: [new File([new Blob(['x'])], 'x.jpg', { type: 'image/jpeg' })] })) $('#exshare2').hidden = false; } catch (e) {}
+  $('#exshare2').addEventListener('click', async () => {
+    if (!exportOk()) return;
+    try { say('Rendert …'); const r = await webJpeg();
+      const file = new File([r.blob], r.name, { type: 'image/jpeg' });
+      try { await navigator.share({ files: [file], title: state.title || 'Tourposter' }); say(`Geteilt (${r.kb} KB).`, 'ok'); }
+      catch (e) { if (e.name === 'AbortError') { say(''); return; } download(r.blob, r.name); say(`Teilen nicht möglich – Datei gespeichert (${r.kb} KB).`, 'warn'); }
     } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); }
   });
   $('#expdf').addEventListener('click', async () => { if (!exportOk()) return; try { say('Rendert …'); const c = await renderPrint(); const land = state.format === 'landscape'; const pp = PAPER[state.paper] || PAPER.A3; const mm = isPx(state.paper) ? [pp[0] / 300 * 25.4, pp[1] / 300 * 25.4] : [pp[0], pp[1]]; const pdf = new jsPDF({ orientation: land ? 'landscape' : 'portrait', unit: 'mm', format: mm, compress: true }); pdf.addImage(c.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, land ? mm[1] : mm[0], land ? mm[0] : mm[1]); pdf.save(fname() + '_' + state.paper + '.pdf'); say('PDF gespeichert.', 'ok'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
