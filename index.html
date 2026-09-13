@@ -236,6 +236,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .tile.same { box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 2px var(--accent) !important; }
 .tile.same::after { content:"gleiche Größe"; position:absolute; left:50%; top:-22px; transform:translateX(-50%); background:var(--accent); color:#fff; font:700 10px/16px Montserrat, Arial, sans-serif; padding:0 6px; border-radius:8px; white-space:nowrap; }
 .gap { position:absolute; background:rgba(255,90,54,.22); border-left:1px solid var(--accent); border-right:1px solid var(--accent); pointer-events:none; display:grid; place-items:center; color:#fff; font:700 11px Montserrat, Arial, sans-serif; }
+.gap.fix { background:rgba(79,195,247,.3); border-left:1px solid #4fc3f7; border-right:1px solid #4fc3f7; }
+.gap.fix.h { border-left:0; border-right:0; border-top:1px solid #4fc3f7; border-bottom:1px solid #4fc3f7; }
+.gaplab { position:absolute; display:flex; align-items:center; gap:4px; padding:2px 6px; border-radius:9px; background:#4fc3f7; color:#0b1b2b; font:700 10px Montserrat, Arial, sans-serif; pointer-events:none; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.35); }
 .gap.h { border:0; border-top:1px solid var(--accent); border-bottom:1px solid var(--accent); }
 .guide { position:absolute; background:var(--accent); pointer-events:none; opacity:.9; }
 .guide.v { width:1px; top:0; height:100%; } .guide.h { height:1px; left:0; width:100%; }
@@ -2164,12 +2167,20 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   const guidesEl = document.createElement('div'); stage.appendChild(guidesEl);
   function showGuides(gs) { guidesEl.innerHTML = ''; tilesEl.querySelectorAll('.tile.same').forEach(el => el.classList.remove('same'));
     for (const g of gs) {
-      if (g.k === 'gap') { for (const r of g.rects) { const d = document.createElement('div'); d.className = 'gap ' + g.dir; Object.assign(d.style, { left: r[0] + 'px', top: r[1] + 'px', width: r[2] + 'px', height: r[3] + 'px' }); d.textContent = g.val; guidesEl.appendChild(d); } continue; }
+      if (g.k === 'gap' || g.k === 'gapfix') { const fix = g.k === 'gapfix';
+        for (const r of g.rects) { const d = document.createElement('div'); d.className = 'gap ' + g.dir + (fix ? ' fix' : '');
+          Object.assign(d.style, { left: r[0] + 'px', top: r[1] + 'px', width: r[2] + 'px', height: r[3] + 'px' });
+          if (!fix) d.textContent = g.val; guidesEl.appendChild(d); }
+        if (fix) { const r = g.rects[0]; const lab = document.createElement('div'); lab.className = 'gaplab';
+          // Schloss: zeigt, dass hier der eingestellte Abstand gilt und nicht irgendeine Kante
+          lab.innerHTML = `<svg viewBox="0 0 12 12" width="9" height="9"><rect x="2.5" y="5.2" width="7" height="5.3" rx="1.2" fill="currentColor"/><path d="M4.2 5.2V3.9a1.8 1.8 0 0 1 3.6 0v1.3" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><span>${g.val}</span>`;
+          Object.assign(lab.style, g.dir === 'v'
+            ? { left: (r[0] + r[2] / 2) + 'px', top: (r[1] - 9) + 'px', transform: 'translate(-50%,-100%)' }
+            : { left: (r[0] + r[2] + 9) + 'px', top: (r[1] + r[3] / 2) + 'px', transform: 'translate(0,-50%)' });
+          guidesEl.appendChild(lab); }
+        continue; }
       const d = document.createElement('div'); d.className = 'guide ' + g.k; d.style[g.k === 'v' ? 'left' : 'top'] = g.v + 'px'; guidesEl.appendChild(d);
       if (g.same) { const el = tilesEl.querySelector(`[data-id="${g.same.id}"]`); if (el) el.classList.add('same'); } } }
-  // Einrastziele je Kante. Zwischen zwei Fotos ist nicht die blanke Kante das Ziel, sondern der
-  // eingestellte Abstand – sonst liegen zwei fast gleiche Ziele nebeneinander (Bild an Bild und
-  // Passepartout an Passepartout) und man trifft immer das falsche.
   // Einrastziele je Kante – bewusst sparsam: Posterränder und Postermitte immer, von den anderen
   // Fotos nur die Flucht der gleichnamigen Kante, und der Abstand daneben nur von Fotos, die in der
   // anderen Achse überlappen, also wirklich Nachbarn sind. Mittellinien anderer Fotos sind kein Ziel;
@@ -2220,8 +2231,27 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const tg = snapTargets(ids, t); const gs = [];
     for (const [list, off] of [[tg.left, 0], [tg.cx, t.w / 2], [tg.right, t.w]]) { const m = nearest(list, t.x + off); if (m != null) { t.x = Math.round(m - off); gs.push({ k: 'v', v: m }); break; } }
     for (const [list, off] of [[tg.top, 0], [tg.cy, t.h / 2], [tg.bottom, t.h]]) { const m = nearest(list, t.y + off); if (m != null) { t.y = Math.round(m - off); gs.push({ k: 'h', v: m }); break; } }
+    fixedGapGuides(t, ids, gs);
     equalGaps(t, ids, gs);
     showGuides(gs);
+  }
+  // Ist das Foto auf den eingestellten Abstand eingerastet, wird der Streifen dazwischen gezeigt –
+  // in eigener Farbe mit Schloss, damit man ihn von den frei gemessenen Abständen unterscheidet.
+  function fixedGapGuides(t, ids, gs) {
+    const gp = photoGap(); if (!gp) return;
+    const ovY = o => o.y < t.y + t.h && t.y < o.y + o.h, ovX = o => o.x < t.x + t.w && t.x < o.x + o.w;
+    for (const o of state.photos) { if (ids.has(o.id)) continue;
+      if (ovY(o)) {
+        const cy = Math.max(t.y, o.y), ch = Math.max(14, Math.min(t.y + t.h, o.y + o.h) - cy);
+        if (Math.abs(t.x - (o.x + o.w + gp)) < .6) gs.push({ k: 'gapfix', dir: 'v', val: gp, rects: [[o.x + o.w, cy, gp, ch]] });
+        else if (Math.abs(o.x - (t.x + t.w + gp)) < .6) gs.push({ k: 'gapfix', dir: 'v', val: gp, rects: [[t.x + t.w, cy, gp, ch]] });
+      }
+      if (ovX(o)) {
+        const cx = Math.max(t.x, o.x), cw = Math.max(14, Math.min(t.x + t.w, o.x + o.w) - cx);
+        if (Math.abs(t.y - (o.y + o.h + gp)) < .6) gs.push({ k: 'gapfix', dir: 'h', val: gp, rects: [[cx, o.y + o.h, cw, gp]] });
+        else if (Math.abs(o.y - (t.y + t.h + gp)) < .6) gs.push({ k: 'gapfix', dir: 'h', val: gp, rects: [[cx, t.y + t.h, cw, gp]] });
+      }
+    }
   }
   let lastDown = { id: null, t: 0 };
   tilesEl.addEventListener('pointerdown', e => {
@@ -2302,6 +2332,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           if (hit) { h = hit.h; y = hit.y; const [cx, cw] = band(hit.A, { x, y, w, h }, false); const rect = k.includes('s') ? [cx, y + h, cw, hit.g] : [cx, hit.A.y + hit.A.h, cw, hit.g]; gs.push({ k: 'gap', dir: 'h', val: Math.round(hit.g), rects: [rect] }); }
         }
       }
+      fixedGapGuides({ x, y, w, h }, new Set([t.id]), gs);
       showGuides(gs);
       w = Math.max(90, w); h = Math.max(90, h);
       t.w = Math.round(w); t.h = Math.round(h); t.x = Math.round(x); t.y = Math.round(y);
@@ -2670,7 +2701,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
 
   // ------------------------------------------------------------ Start
-  window.__state = state; window.__snapMove = (t, ids) => snapMove(t, ids);   // für Tests
+  window.__state = state; window.__snapMove = (t, ids) => snapMove(t, ids); window.__render = () => render();   // für Tests
   buildPickers(); setFormat('portrait'); applyFont('montserrat'); applyTheme('retro'); initMap(); applyFrame();
   try { const s = localStorage.getItem(KEY); if (s) { restore(JSON.parse(s)); afterTourChange(); loadOriginals().then(n => { const miss = missingOriginals().length; say(`Gespeichertes Layout geladen${n ? `, ${n} Foto(s) in Originalgröße` : ''}${miss ? ` – ${miss} Foto(s) nur als Vorschau: Originale bitte erneut hinzufügen (Zuordnung per Dateiname)` : ''}.`, miss ? 'warn' : 'ok'); render(); }); } } catch (e) {}
   render();
