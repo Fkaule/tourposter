@@ -2649,9 +2649,11 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // Webvariante: lange Kante 1600 px als JPEG – ein paar hundert Kilobyte statt vieler Megabyte.
   // Für Nachrichten, Mail und Web gedacht, zum Drucken taugt sie nicht.
   // Auf dem Handy bietet der Browser das Teilen-Menü an, sonst wird die Datei geladen.
+  // Lange Kante 2200 px bei Qualität 88 – Fotos bleiben erkennbar, die Datei bleibt im Bereich
+  // weniger hundert Kilobyte bis gut ein Megabyte und damit verschickbar.
   async function webJpeg() {
-    const c = await renderPrint(1600 / Math.max(CW, CH));
-    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .82));
+    const c = await renderPrint(2200 / Math.max(CW, CH));
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .88));
     return { blob, name: fname() + '_web.jpg', kb: Math.round(blob.size / 1024), w: c.width, h: c.height };
   }
   $('#exshare').addEventListener('click', async () => {
