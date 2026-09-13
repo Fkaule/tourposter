@@ -167,10 +167,11 @@ select, input.t { width:100%; box-sizing:border-box; background:var(--panel2); c
 #status.err { color:#ff8a70; }
 #status.warn { color:#ffc857; }
 .hint { font-size:11px; color:#5f7288; margin-top:6px; }
-main { position:relative; overflow:auto; display:grid; place-items:safe center; background:#08111a; overscroll-behavior:contain; }
+main { position:relative; overflow:hidden; background:#08111a; }
+#scroller { position:absolute; inset:0; overflow:auto; display:grid; place-items:safe center; overscroll-behavior:contain; }
 #frame { position:relative; }
 /* Zoomleiste unten rechts über dem Poster */
-#zoombar { position:absolute; right:16px; bottom:14px; z-index:4; display:flex; align-items:center; gap:2px; background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:3px; font:700 11px Montserrat, Arial, sans-serif; color:var(--muted); box-shadow:0 6px 18px rgba(0,0,0,.45); }
+#zoombar { position:absolute; left:16px; top:12px; z-index:4; display:flex; align-items:center; gap:2px; background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:3px; font:700 11px Montserrat, Arial, sans-serif; color:var(--muted); box-shadow:0 6px 18px rgba(0,0,0,.45); }
 #zoombar button { background:none; border:0; color:var(--text); cursor:pointer; border-radius:6px; padding:5px 9px; font:inherit; font-size:13px; line-height:1; }
 #zoombar button:hover { background:var(--panel); color:var(--accent); }
 #zoombar .val { min-width:46px; text-align:center; cursor:pointer; }
@@ -304,7 +305,7 @@ main { position:relative; overflow:auto; display:grid; place-items:safe center; 
 .hc .band { fill:rgba(6,12,18,.9); stroke:#283440; } .hc .grip { stroke:#8fa3b8; stroke-width:1.5; } .hc .prof { fill:none; stroke:var(--accent); stroke-width:1.2; }
 .hc .th { fill:#fff; font:900 16px Montserrat, Arial, sans-serif; } .hc .t2 { fill:#b7c5d3; font:500 7px Montserrat, Arial, sans-serif; }
 .hfoot { padding:10px 18px 14px; font-size:11px; color:var(--muted); }
-#maptools { position:absolute; right:16px; top:12px; display:flex; align-items:center; gap:10px; background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px 8px 6px 6px; font:600 11px Montserrat, Arial, sans-serif; color:var(--muted); }
+#maptools { position:absolute; right:16px; top:12px; max-width:calc(100% - 200px); flex-wrap:wrap; justify-content:flex-end; display:flex; align-items:center; gap:10px; background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px 8px 6px 6px; font:600 11px Montserrat, Arial, sans-serif; color:var(--muted); }
 #mapbtn { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:7px 12px; font:600 12px Montserrat, Arial, sans-serif; cursor:pointer; }
 #mapbtn.on { background:var(--accent); border-color:var(--accent); color:#fff; }
 #tfadd.on { border-color:var(--accent); color:var(--accent); }
@@ -352,6 +353,7 @@ main { position:relative; overflow:auto; display:grid; place-items:safe center; 
   #hint { display:none; }
   #helpbtn { display:none; }
   #maptools { left:8px; right:8px; top:8px; gap:6px; padding:4px; flex-wrap:wrap; justify-content:flex-end; }
+  #zoombar { left:8px; top:auto; bottom:10px; }
   #mapbtn { padding:6px 8px; font-size:11px; }
   #maptools .w { display:none; } #maptools .s { display:inline; }
   #autobtn { padding:6px 8px; }
@@ -479,7 +481,7 @@ main { position:relative; overflow:auto; display:grid; place-items:safe center; 
     <div id="status"></div>
   </aside>
   <main>
-    <div id="frame"><div id="stage">
+    <div id="scroller"><div id="frame"><div id="stage">
       <div id="map" class="locked"></div>
       <div id="overlay">
         <div id="vig"></div>
@@ -493,7 +495,7 @@ main { position:relative; overflow:auto; display:grid; place-items:safe center; 
         <div id="tfhandles"></div>
         <div id="bandfade"></div><div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg><svg id="profhover" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg></div>
       </div>
-    </div></div>
+    </div></div></div>
     <div id="maptools"><button id="mapbtn"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit">auf Route einpassen</a></div><div id="pscalebox" title="Alle Fotos gemeinsam größer/kleiner (fixierte behalten ihre Position)"><span class="w">FOTOS</span><span class="s">📷</span> <input type="range" id="pscale" min="50" max="160" step="5" value="100"> <span id="pscaleval">100 %</span></div><div id="gapbox" title="Fester Abstand zwischen benachbarten Fotos: darauf rasten sie ein (blauer Streifen mit Schloss); gilt auch für die automatische Anordnung"><span class="w">ABSTAND</span><span class="s">↔</span> <input type="range" id="gapsl" min="0" max="60" step="2" value="18"> <span id="gapval">18</span></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)">AUTO-LAYOUT <b>AN</b></button></div>
     <div id="zoombar"><button id="zoomout" title="Kleiner (Strg/Cmd + Mausrad)">−</button><span class="val" id="zoomval" title="Auf 100 % stellen">100 %</span><button id="zoomin" title="Größer (Strg/Cmd + Mausrad)">+</button><button class="fitb" id="zoomfit" title="Ganzes Poster zeigen">einpassen</button></div>
     <div id="hint"><span>Ziehen = verschieben · Ecken/Kanten = Größe · Doppelklick = Ausschnitt · Entf = entfernen</span><button id="helpbtn" title="Hilfe">?</button></div>
@@ -915,7 +917,7 @@ main { position:relative; overflow:auto; display:grid; place-items:safe center; 
   const BH = () => state.showBand === false ? 0 : (state.bandH || autoBandH());
   function clampPhotos() { const mt = matPx();   // das Passepartout gehört mit ins Poster
     for (const p of state.photos) { p.w = Math.min(p.w, CW - 60 - 2 * mt); p.h = Math.min(p.h, CH - BH() - 60 - 2 * mt); p.x = Math.max(mt, Math.min(CW - p.w - mt, p.x)); p.y = Math.max(mt, Math.min(CH - BH() - p.h - mt, p.y)); } }
-  function fit() { const m = $('main'), fr = $('#frame'); const mini = $('#app').classList.contains('mini');
+  function fit() { const m = $('#scroller'), fr = $('#frame'); const mini = $('#app').classList.contains('mini');
     // Auf schmalen Geräten bricht die Werkzeugleiste um – das Poster beginnt darunter
     if (window.innerWidth <= 900) m.style.paddingTop = (mini ? 10 : ($('#maptools').offsetHeight || 36) + 14) + 'px';
     else m.style.paddingTop = '';
@@ -926,7 +928,7 @@ main { position:relative; overflow:auto; display:grid; place-items:safe center; 
   }
   // ---------- Zoomansicht: das Poster größer anschauen, der Bereich darunter wird scrollbar
   function setZoom(z, anchor) {
-    const m = $('main'), before = viewZoom;
+    const m = $('#scroller'), before = viewZoom;
     viewZoom = Math.max(1, Math.min(6, Math.round(z * 100) / 100));
     if (viewZoom === before) return;
     // Punkt unter dem Zeiger (oder die Mitte) behalten
@@ -959,10 +961,10 @@ main { position:relative; overflow:auto; display:grid; place-items:safe center; 
   $('#zoomfit').addEventListener('click', () => setZoom(1));
   $('#zoomval').addEventListener('click', () => setZoom(viewZoom > 1 ? 1 : 2));
   // Strg/Cmd + Mausrad über dem Poster zoomt (ohne Taste bleibt das Rad für Karte und Bildausschnitt)
-  $('main').addEventListener('wheel', e => {
+  $('#scroller').addEventListener('wheel', e => {
     if (!(e.ctrlKey || e.metaKey)) return;
     e.preventDefault();
-    const r = $('main').getBoundingClientRect();
+    const r = $('#scroller').getBoundingClientRect();
     setZoom(viewZoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), { x: e.clientX - r.left, y: e.clientY - r.top });
   }, { passive: false });
   // Mobil: Menü wegklappen, damit das Poster den ganzen Platz bekommt
