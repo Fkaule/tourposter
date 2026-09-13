@@ -1476,7 +1476,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       const key = A.map(v => v.toFixed(2)).join() + '>' + B.map(v => v.toFixed(2)).join();
       if ((state.tfSeen ||= []).includes(key)) continue;            // einmal angeboten reicht – gelöschte kommen nicht wieder
       state.tfSeen.push(key);
-      (state.transfers ||= []).push({ id: Math.random().toString(36).slice(2, 9), mode: 'other', pts: [A, B], auto: true });
+      (state.transfers ||= []).push({ id: Math.random().toString(36).slice(2, 9), mode: 'train', pts: [A, B], auto: true });
       added++;
     }
     if (added) say(`${added === 1 ? 'Eine Lücke' : added + ' Lücken'} am selben Tag als Transfer eingezeichnet – Verkehrsmittel im Tour-Feld wählbar.`, 'ok');
@@ -1983,7 +1983,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     const last = state.stages.at(-1)?.points.at(-1);
     const c = map.getCenter(), base = last ? [last[0], last[1]] : [c.lat, c.lng];
     const d = Math.max(.05, Math.abs(map.getBounds().getEast() - map.getBounds().getWest()) / 6);
-    const t = { id: Math.random().toString(36).slice(2, 9), mode: 'ferry', pts: [[base[0], base[1] - d / 2], [base[0], base[1] + d / 2]] };
+    const t = { id: Math.random().toString(36).slice(2, 9), mode: 'train', pts: [[base[0], base[1] - d / 2], [base[0], base[1] + d / 2]] };
     (state.transfers ||= []).push(t); tfEdit = t.id; tfSearch = { id: t.id, i: 0 };
     transferLayers(); render(); autosave();
     say('Transfer angelegt – Abfahrt und Ankunft suchen, auf der Karte setzen oder die Punkte im Poster ziehen.', 'ok');
@@ -2000,7 +2000,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       if (t) { const s = snapPoint(c, { t: t.id, i: tfPick.i }); tfPts(t)[tfPick.i] = s.p; if (s.n) say(`Eingerastet: ${s.n}`, 'ok'); }
       cancelTransfer(); transferLayers(); render(); autosave(); return; }
     if (!tfDraft.a) { tfDraft.a = snapPoint(c).p; stage.dataset.tf = 'Und jetzt den Ankunftspunkt anklicken'; say('Und jetzt den Ankunftspunkt anklicken.'); return; }
-    const t = { id: Math.random().toString(36).slice(2, 9), mode: 'ferry', pts: [tfDraft.a, snapPoint(c).p] };
+    const t = { id: Math.random().toString(36).slice(2, 9), mode: 'train', pts: [tfDraft.a, snapPoint(c).p] };
     (state.transfers ||= []).push(t); tfEdit = t.id;
     cancelTransfer(); transferLayers(); render(); autosave();
     say('Transfer eingezeichnet – Verkehrsmittel wählbar, Punkte lassen sich ziehen.', 'ok');
