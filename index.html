@@ -64,6 +64,9 @@ aside h1 { margin:0; font-size:21px; font-weight:900; letter-spacing:-.035em; li
 #tfhandles { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
 .tfh { position:absolute; transform:translate(-50%,-50%); width:16px; height:16px; border-radius:50%; background:var(--accent); border:2.5px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,.5); pointer-events:auto; cursor:grab; touch-action:none; }
 .tfh:active { cursor:grabbing; }
+.tfh.ghost { width:15px; height:15px; background:var(--accent); border-color:#fff; opacity:.6; box-shadow:0 1px 4px rgba(0,0,0,.35); display:grid; place-items:center; }
+.tfh.ghost::after { content:'+'; color:#fff; font:700 12px/1 Montserrat, Arial, sans-serif; margin-top:-1px; }
+.tfh.ghost:hover { opacity:1; width:19px; height:19px; }
 .tfpts { grid-column:1 / -1; margin-top:6px; display:flex; flex-direction:column; gap:4px; }
 .tfpt { display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--muted); }
 .tfpt .k { width:16px; text-align:center; color:var(--accent); font-weight:700; }
@@ -732,7 +735,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   }
   const tfMid = t => { const arc = transferArc(t, 32); return arc[Math.floor(arc.length / 2)] || [0, 0]; };
   const tfLen = t => { const pts = tfPts(t); let d = 0; for (let i = 1; i < pts.length; i++) d += hav(pts[i - 1], pts[i]); return d; };
-  const transferGeo = () => ({ type: 'FeatureCollection', features: (state.transfers || []).map(t => ({ type: 'Feature', properties: { mode: t.mode }, geometry: { type: 'LineString', coordinates: transferArc(t) } })) });
+  // beim Ziehen mit grober Auflösung rechnen – 24 Stützpunkte sehen bei der Strichlinie genauso aus
+  const transferGeo = () => ({ type: 'FeatureCollection', features: (state.transfers || []).map(t => ({ type: 'Feature', properties: { mode: t.mode, id: t.id }, geometry: { type: 'LineString', coordinates: transferArc(t, 64) } })) });
   function transferLayers() {
     if (!map || !map.getSource) return;
     if (map.getSource('transfer')) { map.getSource('transfer').setData(transferGeo());
@@ -741,6 +745,28 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const before = map.getLayer('route-halo') ? 'route-halo' : undefined;
     map.addLayer({ id: 'transfer-halo', type: 'line', source: 'transfer', paint: { 'line-color': T.halo, 'line-width': 6, 'line-opacity': .6 }, layout: { 'line-cap': 'round' } }, before);
     map.addLayer({ id: 'transfer', type: 'line', source: 'transfer', paint: { 'line-color': T.cap, 'line-width': 2.6, 'line-opacity': .85, 'line-dasharray': [2, 2.2] } }, before);
+  }
+  // Während des Ziehens wird die Kartenebene nicht angefasst: jedes setData zwingt MapLibre zu einem
+  // vollständigen Neuzeichnen des großen Posters (mit Geländeschummerung spürbar). Stattdessen wird die
+  // gezogene Linie aus der Karte ausgeblendet und solange als SVG über das Poster gelegt.
+  function tfDragStart(id) {
+    tfDragging = id;
+    try { for (const l of ['transfer', 'transfer-halo']) if (map.getLayer(l)) map.setFilter(l, ['!=', ['get', 'id'], id]); } catch (e) {}
+    routeTopTransfers(); tfDragOverlay();
+  }
+  function tfDragOverlay() {
+    const el = $('#rtop-drag'); if (!el) return;
+    const t = (state.transfers || []).find(x => x.id === tfDragging);
+    if (!t || !map) { el.innerHTML = ''; return; }
+    let d = '';
+    for (const c of transferArc(t, 28)) { const q = map.project(c); d += (d ? 'L' : 'M') + q.x.toFixed(1) + ',' + q.y.toFixed(1) + ' '; }
+    el.innerHTML = `<path d="${d}" fill="none" stroke="${T.halo}" stroke-width="6" stroke-linecap="round" opacity=".6"/><path d="${d}" fill="none" stroke="${T.cap}" stroke-width="2.6" stroke-dasharray="5.2 5.7" opacity=".9"/>`;
+  }
+  function tfDragEnd() {
+    const el = $('#rtop-drag'); if (el) el.innerHTML = '';
+    tfDragging = null;
+    try { for (const l of ['transfer', 'transfer-halo']) if (map.getLayer(l)) map.setFilter(l, null); } catch (e) {}
+    transferLayers();
   }
   function calmMap() { try { for (const l of map.getStyle().layers || []) if (/poi|housenum|transit|aeroway_label|airport/i.test(l.id) && l.type === 'symbol') map.setLayoutProperty(l.id, 'visibility', 'none'); } catch (e) {} }
   // Kollisionsflächen: Titelblock, Ortsnamen (Start/Ziel/Übernachtung) und Nummern-Pins als unsichtbare Symbole –
@@ -1614,7 +1640,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       if (d < 18 && (!best || d < best.d)) best = { d, p: [cand.p[0], cand.p[1]], n: cand.n }; }
     return best || { p: c };
   }
-  let tfDraft = null, tfEdit = null, tfPick = null, tfSearch = null, tfLastTap = null;   // Entwurf beim Anlegen / bearbeiteter Transfer / Punkt, der per Karte gesetzt wird
+  let tfDraft = null, tfEdit = null, tfPick = null, tfSearch = null, tfLastTap = null, tfDragging = null;   // Entwurf beim Anlegen / bearbeiteter Transfer / Punkt, der per Karte gesetzt wird
   // Anlegen per Klick auf die Karte …
   function startTransfer() {
     if (tfDraft || tfPick) { cancelTransfer(); return; }
@@ -1884,20 +1910,25 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const find = () => (state.transfers || []).find(x => x.id === id);
     d.addEventListener('pointerdown', e => { const t = find(); if (!t) return;
       e.preventDefault(); e.stopPropagation(); d.setPointerCapture(e.pointerId);
-      const x0 = e.clientX, y0 = e.clientY; let moved = false, idx = -1;
-      const move = ev => {
-        if (!moved && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 4) return;
-        const pts = tfPts(t);
-        if (!moved) { moved = true;
-          if (pts.length === 2) { const mid = tfMid(t); pts.splice(1, 0, [mid[1], mid[0]]); if (t.names) t.names.splice(1, 0, ''); idx = 1; }
-          else idx = Math.max(1, Math.min(pts.length - 2, Math.round((pts.length - 1) / 2))); }
+      const x0 = e.clientX, y0 = e.clientY; let moved = false, idx = -1, frame = 0;
+      tfDragStart(t.id);
+      const apply = ev => {
         const r = $('#map').getBoundingClientRect(), sc = r.width / CW;
         const c = map.unproject([(ev.clientX - r.left) / sc, (ev.clientY - r.top) / sc]);
         tfPts(t)[idx] = [c.lat, c.lng];
-        transferLayers(); renderRouteTop(); renderTfHandles();
+        tfDragOverlay();
         const q = map.project(tfMid(t)); d.style.left = q.x + 'px'; d.style.top = q.y + 'px'; };
+      const move = ev => {
+        if (!moved) { if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 4) return;
+          moved = true; const pts = tfPts(t);
+          if (pts.length === 2) { const mid = tfMid(t); pts.splice(1, 0, [mid[1], mid[0]]); if (t.names) t.names.splice(1, 0, ''); idx = 1; }
+          else idx = Math.max(1, Math.min(pts.length - 2, Math.round((pts.length - 1) / 2))); }
+        if (frame) return;
+        frame = requestAnimationFrame(() => { frame = 0; apply(ev); }); };
       const up = () => { d.removeEventListener('pointermove', move); d.removeEventListener('pointerup', up);
-        if (moved) { renderTransferList(); autosave(); return; }
+        if (frame) { cancelAnimationFrame(frame); frame = 0; }
+        tfDragEnd();
+        if (moved) { renderTfHandles(); routeTopTransfers(); renderTransferList(); autosave(); return; }
         tfEdit = tfEdit === id ? null : id; tfSearch = null; render();
         if (tfEdit) { const r = $('#transfers .tfopen'); if (r) r.scrollIntoView({ block: 'center', behavior: 'smooth' });
           say('Symbol ziehen biegt die Linie; Anfang und Ende lassen sich ziehen oder im Feld links suchen.'); } };
@@ -1908,39 +1939,80 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         transferLayers(); render(); autosave(); say('Linie wieder gerade.', 'ok'); } });
   }
   // Ziehbare Griffe an den Stützpunkten des gerade bearbeiteten Transfers
+  // Griffe des bearbeiteten Transfers: volle Punkte plus blasse „Geister" in der Mitte jedes Abschnitts.
+  // Zieht man einen Geist, wird daraus ein neuer Zwischenpunkt – dafür braucht es kein Menü.
   function renderTfHandles() {
     const el = $('#tfhandles'); if (!el) return; el.innerHTML = '';
     const t = (state.transfers || []).find(x => x.id === tfEdit); if (!t || !map) return;
-    tfPts(t).forEach((q, k) => {
+    const pts = tfPts(t);
+    pts.forEach((q, k) => {
       const pt = map.project([q[1], q[0]]);
       const h = document.createElement('div'); h.className = 'tfh'; h.style.left = pt.x + 'px'; h.style.top = pt.y + 'px';
-      h.title = k === 0 ? 'Abfahrt ziehen' : k === tfPts(t).length - 1 ? 'Ankunft ziehen' : 'Zwischenpunkt ziehen (Doppelklick entfernt ihn)';
-      h.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); h.setPointerCapture(e.pointerId);
-        const x0 = e.clientX, y0 = e.clientY; let moved = false;
-        const move = ev => { if (Math.hypot(ev.clientX - x0, ev.clientY - y0) > 3) moved = true; if (!moved) return;
-          const r = $('#map').getBoundingClientRect(); const sc = r.width / CW;
-          const c = map.unproject([(ev.clientX - r.left) / sc, (ev.clientY - r.top) / sc]);
-          const s = snapPoint([c.lat, c.lng], { t: t.id, i: k }); tfPts(t)[k] = s.p; if (t.names) t.names[k] = s.n || '';
-          transferLayers(); renderRouteTop();
-          const q = map.project([tfPts(t)[k][1], tfPts(t)[k][0]]); h.style.left = q.x + 'px'; h.style.top = q.y + 'px';
-          const sym = tsymEls.get(t.id); if (sym) { const m2 = map.project(tfMid(t)); sym.style.left = m2.x + 'px'; sym.style.top = m2.y + 'px'; } };
-        const up = () => { h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up);
-          if (moved) { render(); autosave(); return; }
-          // Zwei kurze Klicks auf denselben Zwischenpunkt entfernen ihn (die Griffe werden neu
-          // aufgebaut, ein echtes dblclick-Ereignis erreicht dasselbe Element deshalb nie)
-          const now = Date.now(), pts = tfPts(t);
-          if (tfLastTap && tfLastTap.id === t.id && tfLastTap.k === k && now - tfLastTap.at < 450 && k > 0 && k < pts.length - 1) {
-            pts.splice(k, 1); t.names?.splice(k, 1); tfLastTap = null; transferLayers(); render(); autosave(); say('Zwischenpunkt entfernt.', 'ok'); }
-          else tfLastTap = { id: t.id, k, at: now }; };
-        h.addEventListener('pointermove', move); h.addEventListener('pointerup', up); });
+      h.title = k === 0 ? 'Abfahrt ziehen' : k === pts.length - 1 ? 'Ankunft ziehen' : 'Zwischenpunkt ziehen (zwei kurze Klicks entfernen ihn)';
+      bindHandleDrag(h, t, () => k, { real: true });
       el.appendChild(h); });
+    // Geisterpunkte zwischen je zwei Punkten
+    for (let k = 1; k < pts.length; k++) {
+      const a = pts[k - 1], b = pts[k];
+      const arc = transferArc({ pts: [a, b] }, 16), mid = arc[Math.floor(arc.length / 2)];
+      const pt = map.project(mid);
+      const g = document.createElement('div'); g.className = 'tfh ghost'; g.style.left = pt.x + 'px'; g.style.top = pt.y + 'px';
+      g.title = 'Ziehen legt hier einen Zwischenpunkt an';
+      const at = k;
+      bindHandleDrag(g, t, () => at, { ghost: true, insertAt: at, seed: [mid[1], mid[0]] });
+      el.appendChild(g); }
+  }
+  // Ziehen eines Griffs. Bei einem Geist entsteht der Punkt erst beim ersten Ziehen.
+  function bindHandleDrag(h, t, getK, opt) {
+    h.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); h.setPointerCapture(e.pointerId);
+      const x0 = e.clientX, y0 = e.clientY; let moved = false, k = getK(), born = false, frame = 0;
+      tfDragStart(t.id);
+      const apply = ev => {
+        const r = $('#map').getBoundingClientRect(), sc = r.width / CW;
+        const c = map.unproject([(ev.clientX - r.left) / sc, (ev.clientY - r.top) / sc]);
+        const s = snapPoint([c.lat, c.lng], { t: t.id, i: k }); tfPts(t)[k] = s.p; if (t.names) t.names[k] = s.n || '';
+        tfDragOverlay();
+        const q = map.project([tfPts(t)[k][1], tfPts(t)[k][0]]); h.style.left = q.x + 'px'; h.style.top = q.y + 'px';
+        const sym = tsymEls.get(t.id); if (sym) { const m2 = map.project(tfMid(t)); sym.style.left = m2.x + 'px'; sym.style.top = m2.y + 'px'; } };
+      const move = ev => {
+        if (!moved) { if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 3) return; moved = true;
+          if (opt.ghost && !born) { born = true; tfPts(t).splice(opt.insertAt, 0, opt.seed); if (t.names) t.names.splice(opt.insertAt, 0, '');
+            h.classList.remove('ghost'); k = opt.insertAt; } }
+        // höchstens ein Nachziehen je Bild – sonst rechnet die Karte sich beim Ziehen müde
+        if (frame) return;
+        frame = requestAnimationFrame(() => { frame = 0; apply(ev); }); };
+      const up = () => { h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up);
+        if (frame) { cancelAnimationFrame(frame); frame = 0; }
+        tfDragEnd();
+        if (moved) { render(); autosave(); return; }
+        if (opt.ghost) return;
+        // Zwei kurze Klicks auf denselben Zwischenpunkt entfernen ihn
+        const now = Date.now(), pts = tfPts(t);
+        if (tfLastTap && tfLastTap.id === t.id && tfLastTap.k === k && now - tfLastTap.at < 450 && k > 0 && k < pts.length - 1) {
+          pts.splice(k, 1); t.names?.splice(k, 1); tfLastTap = null; transferLayers(); render(); autosave(); say('Zwischenpunkt entfernt.', 'ok'); }
+        else tfLastTap = { id: t.id, k, at: now }; };
+      h.addEventListener('pointermove', move); h.addEventListener('pointerup', up); });
   }
   // Route über dem Titelverlauf: immer aktiv, aber nur der Teil, der im abgedunkelten Bereich liegt – sonst verschwindet sie dort
+  // Zwei getrennte Gruppen im Overlay: die Route (teuer, ändert sich nur mit der Karte) und die
+  // Transferbögen (billig, ändern sich beim Ziehen laufend). So muss beim Ziehen nur die zweite neu.
+  function routeTopTransfers() {
+    const el = $('#rtop-tf'); if (!el || !map) return;
+    const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480, lim = vigH + 10;
+    let tf = '';
+    for (const t of state.transfers || []) { if (t.id === tfDragging) continue;   // die gezogene Linie liegt solange in #rtop-drag
+      let td = '', op = false;
+      for (const c of transferArc(t, 64)) { const q = map.project(c);
+        if (q.y < lim && q.x > -50 && q.x < CW + 50) { td += (op ? 'L' : 'M') + q.x.toFixed(1) + ',' + q.y.toFixed(1) + ' '; op = true; } else op = false; }
+      if (td) tf += `<path d="${td}" fill="none" stroke="${T.halo}" stroke-width="6" stroke-linecap="round" opacity=".6"/><path d="${td}" fill="none" stroke="${T.cap}" stroke-width="2.6" stroke-dasharray="5.2 5.7" opacity=".85"/>`; }
+    el.innerHTML = tf;
+  }
   function renderRouteTop() {
     const el = $('#rtop'); if (!el) return;
     el.setAttribute('viewBox', `0 0 ${CW} ${CH}`);
     if (!map || !state.stages.length) { el.innerHTML = ''; return; }
-    const CWv = CW;
+    if (!$('#rtop-tf')) el.innerHTML = '<g id="rtop-tf"></g><g id="rtop-route"></g><g id="rtop-drag"></g>';
+    const route = $('#rtop-route');
     const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const lim = vigH + 10;
     let d = '', open = false;
     for (const st of state.stages) { for (const p of st.points) { const q = map.project([p[1], p[0]]);
@@ -1951,13 +2023,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       pts += f.properties.kind === 'night'
         ? `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="9.5" fill="${T.accent}" stroke="${T.halo}" stroke-width="3.5"/><circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="3.4" fill="#fff"/>`
         : `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="7" fill="${T.bg}" stroke="${T.accent}" stroke-width="3"/>`; }
-    // Transferbögen ebenso: im abgedunkelten Bereich würden sie sonst verschwinden
-    let tf = '';
-    for (const t of state.transfers || []) { let td = '', op = false;
-      for (const c of transferArc(t)) { const q = map.project(c);
-        if (q.y < lim && q.x > -50 && q.x < CW + 50) { td += (op ? 'L' : 'M') + q.x.toFixed(1) + ',' + q.y.toFixed(1) + ' '; op = true; } else op = false; }
-      if (td) tf += `<path d="${td}" fill="none" stroke="${T.halo}" stroke-width="6" stroke-linecap="round" opacity=".6"/><path d="${td}" fill="none" stroke="${T.cap}" stroke-width="2.6" stroke-dasharray="5.2 5.7" opacity=".85"/>`; }
-    el.innerHTML = tf + (d ? `<path d="${d}" fill="none" stroke="${T.halo}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><path d="${d}" fill="none" stroke="${T.accent}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : '') + pts;
+    route.innerHTML = (d ? `<path d="${d}" fill="none" stroke="${T.halo}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/><path d="${d}" fill="none" stroke="${T.accent}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : '') + pts;
+    routeTopTransfers();
   }
   // Punkte auf einer Achse so verschieben, dass sie mindestens gap auseinander liegen.
   // Überlappende Nachbarn werden zu Blöcken verschmolzen, jeder Block bleibt um seinen
