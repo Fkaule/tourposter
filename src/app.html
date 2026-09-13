@@ -184,7 +184,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #titlegrip:hover::after, #titlegrip.on::after { opacity:.8; }
 #title .date { color:var(--pa); font-weight:700; font-size:calc(12px * var(--ts, 1)); letter-spacing:.32em; display:flex; align-items:center; gap:12px; }
 #title .date::before { content:""; width:28px; height:2px; background:var(--pa); display:inline-block; }
-#title .h { font-weight:900; font-size:calc(80px * var(--tt, 1)); line-height:.92; letter-spacing:-.02em; color:var(--ptext); margin-top:14px; white-space:pre-line; }
+#title .h { overflow-wrap:anywhere; font-weight:900; font-size:calc(80px * var(--tt, 1)); line-height:.92; letter-spacing:-.02em; color:var(--ptext); margin-top:14px; white-space:pre-line; }
 #title .sub { color:var(--psub); font-size:calc(16px * var(--ts, 1)); line-height:1.4; margin-top:14px; white-space:pre-line; }
 #stats { position:absolute; left:56px; top:var(--statsTop,322px); display:flex; gap:28px; }
 #stats div { display:flex; flex-direction:column; gap:4px; padding-right:28px; border-right:1px solid var(--pline); }
@@ -449,6 +449,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <h2><span class="no">4</span>Export</h2>
       <button class="btn primary" id="expng">PNG herunterladen <small>in gewählter Größe</small></button>
       <button class="btn" id="expdf">PDF <small>für den Druck</small></button>
+      <button class="btn" id="exshare" title="Kleines JPEG zum Verschicken – auf dem Handy öffnet sich direkt das Teilen-Menü">Zum Verschicken <small>kleines JPEG</small></button>
       <label class="f">Projekt (Tour + Layout + Fotos in Originalgröße)</label>
       <div class="btnrow"><button class="btn" id="exzip">Projekt sichern <small>.zip</small></button><label class="btn ghost" id="ldzip" style="cursor:pointer">Projekt laden<input type="file" accept=".zip,application/zip" style="display:none"></label></div>
       <div class="hint">Die Sitzung wird automatisch im Browser gesichert. Zum Archivieren oder auf einen anderen Rechner mitnehmen: Projekt sichern (.zip).</div>
@@ -2171,23 +2172,29 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   // Einrastziele je Kante. Zwischen zwei Fotos ist nicht die blanke Kante das Ziel, sondern der
   // eingestellte Abstand – sonst liegen zwei fast gleiche Ziele nebeneinander (Bild an Bild und
   // Passepartout an Passepartout) und man trifft immer das falsche.
+  // Einrastziele je Kante – bewusst sparsam: Posterränder und Postermitte immer, von den anderen
+  // Fotos nur die Flucht der gleichnamigen Kante, und der Abstand daneben nur von Fotos, die in der
+  // anderen Achse überlappen, also wirklich Nachbarn sind. Mittellinien anderer Fotos sind kein Ziel;
+  // mit so vielen Zielen rastet sonst überall etwas ein.
   const photoGap = () => state.gap ?? 18;
-  function snapTargets(exclude) {
+  function snapTargets(exclude, t) {
     const gp = photoGap();
-    const page = { x: [56, CW - 56, CW / 2], y: [56, CH - BH() - 12, CH / 2] };
-    const left = [...page.x], right = [...page.x], cx = [...page.x];
-    const top = [...page.y], bottom = [...page.y], cy = [...page.y];
+    const left = [56, CW - 56, CW / 2], right = [56, CW - 56, CW / 2], cx = [CW / 2];
+    const top = [56, CH - BH() - 12, CH / 2], bottom = [56, CH - BH() - 12, CH / 2], cy = [CH / 2];
+    const ovY = o => !t || (o.y < t.y + t.h && t.y < o.y + o.h);   // liegt in derselben Zeile
+    const ovX = o => !t || (o.x < t.x + t.w && t.x < o.x + o.w);   // liegt in derselben Spalte
     for (const o of state.photos) if (!exclude.has(o.id)) {
-      left.push(o.x, o.x + o.w + gp);      // linke Kanten in Flucht · rechts neben dem Nachbarn
-      right.push(o.x + o.w, o.x - gp);     // rechte Kanten in Flucht · links neben dem Nachbarn
-      cx.push(o.x + o.w / 2);
-      top.push(o.y, o.y + o.h + gp);
-      bottom.push(o.y + o.h, o.y - gp);
-      cy.push(o.y + o.h / 2);
+      left.push(o.x); right.push(o.x + o.w);
+      top.push(o.y); bottom.push(o.y + o.h);
+      if (ovY(o)) { left.push(o.x + o.w + gp); right.push(o.x - gp); }
+      if (ovX(o)) { top.push(o.y + o.h + gp); bottom.push(o.y - gp); }
     }
-    // xs/ys: alles zusammen, für Stellen die nur „irgendeine Kante“ brauchen
-    return { xs: [...left, ...right, ...cx], ys: [...top, ...bottom, ...cy], left, right, cx, top, bottom, cy };
+    return { xs: [...left, ...right], ys: [...top, ...bottom], left, right, cx, top, bottom, cy };
   }
+  // von mehreren Treffern gewinnt der nächstgelegene, nicht der erste in der Liste
+  const nearest = (list, v) => { let best = null, bd = SNAP + .001;
+    for (const x of list) { const d = Math.abs(x - v); if (d <= bd) { bd = d; best = x; } }
+    return best; }
   function equalGaps(t, ids, gs) {
     const others = state.photos.filter(o => !ids.has(o.id));
     const ovY = (a, b) => a.y < b.y + b.h && b.y < a.y + a.h, ovX = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w;
@@ -2211,10 +2218,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
             gs.push({ k: 'gap', dir: 'h', val: Math.round(gap), rects: [[cx, B.y + B.h, cw, gap], own] }); done = true; break; } } }
     }
   }
-  function snapMove(t, ids) {
-    const tg = snapTargets(ids); const gs = [];
-    for (const [list, off] of [[tg.left, 0], [tg.cx, t.w / 2], [tg.right, t.w]]) { const v = t.x + off; const m = list.find(x => Math.abs(x - v) <= SNAP); if (m != null) { t.x = Math.round(m - off); gs.push({ k: 'v', v: m }); break; } }
-    for (const [list, off] of [[tg.top, 0], [tg.cy, t.h / 2], [tg.bottom, t.h]]) { const v = t.y + off; const m = list.find(y => Math.abs(y - v) <= SNAP); if (m != null) { t.y = Math.round(m - off); gs.push({ k: 'h', v: m }); break; } }
+  function snapMove(t, ids, off_) {
+    const tg = snapTargets(ids, t); const gs = [];
+    for (const [list, off] of [[tg.left, 0], [tg.cx, t.w / 2], [tg.right, t.w]]) { const m = nearest(list, t.x + off); if (m != null) { t.x = Math.round(m - off); gs.push({ k: 'v', v: m }); break; } }
+    for (const [list, off] of [[tg.top, 0], [tg.cy, t.h / 2], [tg.bottom, t.h]]) { const m = nearest(list, t.y + off); if (m != null) { t.y = Math.round(m - off); gs.push({ k: 'h', v: m }); break; } }
     equalGaps(t, ids, gs);
     showGuides(gs);
   }
@@ -2247,7 +2254,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     }
     if (drag.mode === 'move') {
       t.x = Math.round(drag.x + dx); t.y = Math.round(drag.y + dy);
-      snapMove(t, selected);
+      if (e.ctrlKey || e.metaKey) showGuides([]); else snapMove(t, selected);   // Strg/Cmd hält das Einrasten an
       const ox = t.x - drag.x, oy = t.y - drag.y;
       for (const g of drag.group) { g.t.x = Math.max(0, Math.min(CW - g.t.w, g.x + ox)); g.t.y = Math.max(0, Math.min(CH - g.t.h, g.y + oy)); }
     } else {
@@ -2256,12 +2263,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       if (k.includes('s')) h = drag.h + dy; if (k.includes('n')) { h = drag.h - dy; y = drag.y + dy; }
       if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) h = w / drag.ratio; else w = h * drag.ratio; if (k.includes('w')) x = drag.x + drag.w - w; if (k.includes('n')) y = drag.y + drag.h - h; }
       // Einrasten der bewegten Kanten an Kanten anderer Fotos / Seitenrand + gleiche Breite/Höhe
-      const tg = snapTargets(new Set([t.id])); const gs = [];
-      if (!e.shiftKey) {
-        if (k.includes('e')) { const m = tg.right.find(v => Math.abs(v - (x + w)) <= SNAP); if (m != null) { w = m - x; gs.push({ k: 'v', v: m }); } }
-        if (k.includes('w')) { const m = tg.left.find(v => Math.abs(v - x) <= SNAP); if (m != null) { w = x + w - m; x = m; gs.push({ k: 'v', v: m }); } }
-        if (k.includes('s')) { const m = tg.bottom.find(v => Math.abs(v - (y + h)) <= SNAP); if (m != null) { h = m - y; gs.push({ k: 'h', v: m }); } }
-        if (k.includes('n')) { const m = tg.top.find(v => Math.abs(v - y) <= SNAP); if (m != null) { h = y + h - m; y = m; gs.push({ k: 'h', v: m }); } }
+      const tg = snapTargets(new Set([t.id]), { x, y, w, h }); const gs = [];
+      if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        if (k.includes('e')) { const m = nearest(tg.right, x + w); if (m != null) { w = m - x; gs.push({ k: 'v', v: m }); } }
+        if (k.includes('w')) { const m = nearest(tg.left, x); if (m != null) { w = x + w - m; x = m; gs.push({ k: 'v', v: m }); } }
+        if (k.includes('s')) { const m = nearest(tg.bottom, y + h); if (m != null) { h = m - y; gs.push({ k: 'h', v: m }); } }
+        if (k.includes('n')) { const m = nearest(tg.top, y); if (m != null) { h = y + h - m; y = m; gs.push({ k: 'h', v: m }); } }
         // gleiche Größe wie ein anderes Foto
         for (const o of state.photos) { if (o.id === t.id) continue;
           if (!gs.some(g => g.k === 'v') && Math.abs(o.w - w) <= SNAP) { if (k.includes('w')) x = x + w - o.w; w = o.w; gs.push({ k: 'v', v: k.includes('w') ? x : x + w, same: o }); }
@@ -2503,9 +2510,13 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     g.fillStyle = T.text; g.font = F(900, 80, false); g.textBaseline = 'alphabetic';
     // Zeilen wie am Bildschirm umbrechen: an eigenen Umbrüchen und an der eingestellten Textbreite
     const wrapT = (txt, maxW) => { const out = [];
+      const hard = w => { let cur = '';            // ein einzelnes Wort, das breiter ist als der Textkasten
+        for (const ch of w) { if (cur && g.measureText(cur + ch).width > maxW) { out.push(cur); cur = ch; } else cur += ch; }
+        return cur; };
       for (const raw of String(txt || '').split('\n')) { let line = '';
         for (const w of raw.split(' ')) { const test = line ? line + ' ' + w : w;
-          if (line && g.measureText(test).width > maxW) { out.push(line); line = w; } else line = test; }
+          if (line && g.measureText(test).width > maxW) { out.push(line); line = g.measureText(w).width > maxW ? hard(w) : w; }
+          else line = g.measureText(test).width > maxW ? hard(test) : test; }
         out.push(line); }
       return out; };
     const tsz = 80 * TT(), tl = wrapT(state.title, P(titleW())); tl.forEach((l, i) => textH(l, x0 - P(4), P(78 + tsz * .92 * .78 + i * tsz * .925)));
@@ -2588,6 +2599,22 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
   const fname = () => (state.title || 'Tourposter').replace(/\s+/g, '_').replace(/[^\wäöüÄÖÜß_-]/g, '');
   $('#expng').addEventListener('click', async () => { if (!exportOk()) return; try { say('Rendert …'); const c = await renderPrint(); c.toBlob(b => { download(b, fname() + '_' + state.paper + '.png'); say('PNG gespeichert.', 'ok'); }, 'image/png'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
+  // Kleines JPEG zum Verschicken: lange Kante 1600 px – ein paar hundert Kilobyte statt vieler Megabyte.
+  // Auf dem Handy bietet der Browser das Teilen-Menü an, sonst wird die Datei geladen.
+  $('#exshare').addEventListener('click', async () => {
+    if (!exportOk()) return;
+    try { say('Rendert …');
+      const c = await renderPrint(1600 / Math.max(CW, CH));
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .82));
+      const name = fname() + '_klein.jpg', kb = Math.round(blob.size / 1024);
+      const file = new File([blob], name, { type: 'image/jpeg' });
+      if (navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: state.title || 'Tourposter' }); say(`Geteilt (${kb} KB).`, 'ok'); return; }
+        catch (e) { if (e.name === 'AbortError') { say(''); return; } }   // abgebrochen: nichts weiter tun
+      }
+      download(blob, name); say(`JPEG gespeichert (${kb} KB, ${c.width} × ${c.height} px).`, 'ok');
+    } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); }
+  });
   $('#expdf').addEventListener('click', async () => { if (!exportOk()) return; try { say('Rendert …'); const c = await renderPrint(); const land = state.format === 'landscape'; const pp = PAPER[state.paper] || PAPER.A3; const mm = isPx(state.paper) ? [pp[0] / 300 * 25.4, pp[1] / 300 * 25.4] : [pp[0], pp[1]]; const pdf = new jsPDF({ orientation: land ? 'landscape' : 'portrait', unit: 'mm', format: mm, compress: true }); pdf.addImage(c.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, land ? mm[1] : mm[0], land ? mm[0] : mm[1]); pdf.save(fname() + '_' + state.paper + '.pdf'); say('PDF gespeichert.', 'ok'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
 
   // ------------------------------------------------------------ Projekt sichern (.zip) / Sitzung im Browser
