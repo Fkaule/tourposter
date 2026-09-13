@@ -232,7 +232,16 @@ main { position:relative; overflow:hidden; background:#08111a; }
 .tile img { position:absolute; left:0; top:0; width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)); }
 .tile .clip::after { content:''; position:absolute; inset:0; background:var(--gtint,transparent); mix-blend-mode:soft-light; opacity:var(--gta,0); pointer-events:none; }
 .tile.crop .clip { outline:2px dashed var(--accent); outline-offset:-2px; cursor:move; }
-.tile.crop::before { content:"Ausschnitt: ziehen = verschieben · Rad = zoomen · Doppelklick = fertig"; position:absolute; left:50%; top:-22px; transform:translateX(-50%); background:var(--accent); color:#fff; font:700 10px/16px Montserrat, Arial, sans-serif; padding:0 6px; border-radius:8px; white-space:nowrap; z-index:2; }
+/* Ausschnitt-Leiste: schwebt am Foto, wird gegen den Anzeigemaßstab skaliert und bleibt damit immer gleich groß */
+.croptool { position:absolute; left:50%; top:-14px; transform:translate(-50%,-100%) scale(calc(1 / var(--vs, 1))); transform-origin:50% 100%;
+  display:flex; align-items:center; gap:7px; background:var(--accent); color:#fff; border-radius:9px; padding:5px 7px; white-space:nowrap;
+  font:700 10px Montserrat, Arial, sans-serif; z-index:5; box-shadow:0 6px 16px rgba(0,0,0,.45); touch-action:none; }
+.croptool.below { top:auto; bottom:-14px; transform:translate(-50%,100%) scale(calc(1 / var(--vs, 1))); transform-origin:50% 0; }
+.croptool input[type=range] { width:118px; margin:0; accent-color:#fff; }
+.croptool .cb { width:22px; height:22px; border-radius:6px; background:rgba(255,255,255,.2); display:grid; place-items:center; font-size:13px; line-height:1; cursor:pointer; }
+.croptool .cb:hover { background:rgba(255,255,255,.38); }
+.croptool .cb.pan { cursor:grab; }
+.croptool .cv { min-width:36px; text-align:right; }
 .tile .z { position:absolute; right:10px; top:12px; height:22px; padding:0 7px; border-radius:11px; background:rgba(13,26,38,.85); color:#fff; font:600 11px/22px Montserrat, Arial, sans-serif; }
 .tile .hud { position:absolute; left:12px; top:12px; display:flex; align-items:center; gap:6px; }
 .tile .num { position:relative; cursor:pointer; min-width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); padding:0 calc(8px * var(--ts, 1)); box-sizing:border-box; border-radius:calc(13px * var(--ts, 1)); background:var(--ppill); color:#fff; font:700 13px/26px var(--pfont, Montserrat, Arial, sans-serif); font-size:calc(13px * var(--ts, 1)); line-height:calc(26px * var(--ts, 1)); text-align:center; }
@@ -483,7 +492,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       <input type="range" id="viga" min="0" max="100" step="5" value="90" style="width:100%" title="Wie stark der Verlauf oben die Karte abdeckt – kleiner Wert zeigt Route und Umgebung, größerer macht den Titel ruhiger. Doppelklick = zurück auf den Stil-Wert">
             <div class="grp">Fotos</div>
 <div class="grid2" style="margin-top:8px">
-        <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div><div style="grid-column:1 / -1"><label class="f">Ecken abrunden <span id="radval">scharf</span></label><input type="range" id="radsl" min="0" max="24" step="2" value="0" style="width:100%" title="Eckenradius der Fotos und des Passepartouts – 0 lässt sie scharfkantig"></div>
+        <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">8</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="8" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div><div style="grid-column:1 / -1"><label class="f">Ecken abrunden <span id="radval">scharf</span></label><input type="range" id="radsl" min="0" max="24" step="2" value="0" style="width:100%" title="Eckenradius der Fotos und des Passepartouts – 0 lässt sie scharfkantig"></div>
       </div>
       <label class="f">Farbabstimmung der Fotos <span id="gradeval">0 %</span></label>
       <input type="range" id="grade" min="0" max="100" step="5" value="0" style="width:100%" title="Fotos an die Farbstimmung des Posters angleichen: Sättigung dämpfen, Tönung in der Themenfarbe">
@@ -525,7 +534,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
         <div id="bandfade"></div><div id="band"><div id="bandgrip" title="Höhenprofil größer/kleiner ziehen"></div><svg id="profile" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg><svg id="profhover" viewBox="0 0 1123 100" preserveAspectRatio="none"></svg></div>
       </div>
     </div></div></div>
-    <div id="maptools"><button id="mapbtn" title="Karte verschieben / zoomen"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom" title="Zoomstufe der Karte im Poster">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit" title="Karte auf die Route einpassen">einpassen</a></div><div id="pscalebox" title="Alle Fotos gemeinsam größer/kleiner (fixierte behalten ihre Position)"><span class="w">FOTOS</span><span class="s">FOTOS</span> <input type="range" id="pscale" min="50" max="160" step="5" value="100"> <span id="pscaleval">100 %</span></div><div id="gapbox" title="Fester Abstand zwischen benachbarten Fotos: darauf rasten sie ein (blauer Streifen mit Schloss); gilt auch für die automatische Anordnung"><span class="w">ABSTAND</span><span class="s">ABST.</span> <input type="range" id="gapsl" min="0" max="60" step="2" value="18"> <span id="gapval">18</span></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)"><span class="w">AUTO-LAYOUT</span><span class="s">AUTO</span> <b>AN</b></button></div>
+    <div id="maptools"><button id="mapbtn" title="Karte verschieben / zoomen"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom" title="Zoomstufe der Karte im Poster">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit" title="Karte auf die Route einpassen">einpassen</a></div><div id="pscalebox" title="Alle Fotos gemeinsam größer/kleiner (fixierte behalten ihre Position)"><span class="w">FOTOS</span><span class="s">FOTOS</span> <input type="range" id="pscale" min="50" max="160" step="5" value="100"> <span id="pscaleval">100 %</span></div><div id="gapbox" title="Fester Abstand zwischen benachbarten Fotos: darauf rasten sie ein (blauer Streifen mit Schloss); gilt auch für die automatische Anordnung"><span class="w">ABSTAND</span><span class="s">ABST.</span> <input type="range" id="gapsl" min="0" max="60" step="2" value="20"> <span id="gapval">20</span></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)"><span class="w">AUTO-LAYOUT</span><span class="s">AUTO</span> <b>AN</b></button></div>
     <div id="zoombar"><button id="zoomout" title="Kleiner (Strg/Cmd + Mausrad)">−</button><span class="val" id="zoomval" title="Auf 100 % stellen">100 %</span><button id="zoomin" title="Größer (Strg/Cmd + Mausrad)">+</button><button class="fitb" id="zoomfit" title="Ganzes Poster zeigen">einpassen</button><button class="fitb" id="zoomwide" title="Poster auf volle Breite – der Rest wird gescrollt">Breite</button><button class="fitb" id="zoomfull" title="Vollbild – nur das Poster (Esc beendet)">⛶</button></div>
     <div id="hint"><span>Ziehen = verschieben · Ecken/Kanten = Größe · Doppelklick = Ausschnitt · Entf = entfernen</span><button id="helpbtn" title="Hilfe">?</button></div>
     <div id="wall" hidden>
@@ -622,7 +631,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${{ DIN: 'DIN', Poster: 'Posterdruck (cm)', Screen: 'Bildschirm / Handy (px)' }[grp]}"></optgroup>`); }
       sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${p[3]?.label || (grp === 'DIN' ? k + ' · ' : '') + (p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm')}</option>`); } }
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
-  const state = { terrain: true, relief: .6, format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 0, font: 'montserrat', photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, gap: 18, stages: [], transfers: [], tfSeen: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const state = { terrain: true, relief: .6, format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 0, font: 'montserrat', photoScale: 1, frame: { corners: 'sharp', mat: 8, marks: false, fray: 0 }, gap: 20, stages: [], transfers: [], tfSeen: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; setFormat(state.format); });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
@@ -959,7 +968,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       m.style.paddingTop = pt + 'px'; m.style.paddingBottom = pb + 'px';
     }
     fitScale = Math.min((m.clientWidth - (mini || full ? 16 : 40)) / CW, (m.clientHeight - pt - pb) / CH);
-    const s = fitScale * viewZoom; stage.style.transform = `scale(${s})`; stage.dataset.scale = s;
+    const s = fitScale * viewZoom; stage.style.transform = `scale(${s})`; stage.dataset.scale = s; stage.style.setProperty('--vs', s);
     fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px';
     const z = $('#zoomval'); if (z) z.textContent = Math.round(s / fitScale * 100) + ' %';
   }
@@ -1246,7 +1255,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#help').hidden) $('#help').hidden = true; if (e.key === '?' && !e.target.isContentEditable && e.target.tagName !== 'INPUT') $('#help').hidden = !$('#help').hidden; });
   $('#grade').addEventListener('input', e => { state.grade = +e.target.value; applyGrade(); });
   // Rahmen-Optionen
-  const FR = () => state.frame || (state.frame = { corners: 'sharp', mat: 9, marks: false, fray: 0 });
+  const FR = () => state.frame || (state.frame = { corners: 'sharp', mat: 8, marks: false, fray: 0 });
   // Eckenradius der Fotos (0 = scharfkantig). Ältere Projekte kannten nur corners: 'sharp' | 'round'.
   const frRadius = () => { const f = FR(); return f.radius ?? (f.corners === 'round' ? 10 : 0); };
   function applyFrame() { const f = FR(); f.fray = 0; f.marks = false; f.radius = frRadius();
@@ -1790,6 +1799,26 @@ main { position:relative; overflow:hidden; background:#08111a; }
       const img = document.createElement('img'); img.src = hiUrl.get(p.id) || p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
       const hud = document.createElement('div'); hud.className = 'hud'; clip.appendChild(hud);
+      // Ausschnitt-Modus: Regler zum Zoomen, Griff zum Verschieben, Zurücksetzen, Fertig
+      if (cropMode === p.id) {
+        const ct = document.createElement('div'); ct.className = 'croptool' + (p.y < 90 ? ' below' : '');
+        const btn = (cls, txt, title) => { const d = document.createElement('div'); d.className = 'cb ' + cls; d.textContent = txt; d.title = title; return d; };
+        const pan = btn('pan', '✥', 'Ausschnitt verschieben – hier oder im Bild ziehen');
+        const sl = document.createElement('input'); sl.type = 'range'; sl.min = 100; sl.max = 400; sl.step = 1; sl.value = Math.round((p.zoom ?? 1) * 100);
+        sl.title = 'Bildausschnitt vergrößern';
+        const val = document.createElement('span'); val.className = 'cv'; val.textContent = sl.value + ' %';
+        const rst = btn('rst', '⟲', 'Ausschnitt zurücksetzen'), done = btn('done', '✓', 'Fertig');
+        ct.append(pan, sl, val, rst, done); el.appendChild(ct);
+        // Regler wirkt sofort auf das Bild, ohne dass die Kachel neu aufgebaut wird (sonst ruckelt das Ziehen)
+        for (const ev of ['pointerdown', 'dblclick', 'click']) sl.addEventListener(ev, e => e.stopPropagation());
+        sl.addEventListener('input', e => { e.stopPropagation(); p.zoom = +sl.value / 100; if (p.zoom <= 1) delete p.zoom; applyCrop(img, p); val.textContent = sl.value + ' %'; $('#zoomsl').value = sl.value; $('#zval').textContent = sl.value + ' %'; });
+        sl.addEventListener('change', () => { render(); autosave(); });
+        for (const d of [rst, done]) d.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); });
+        rst.addEventListener('click', e => { e.stopPropagation(); delete p.zoom; delete p.ax; delete p.ay; render(); autosave(); });
+        done.addEventListener('click', e => { e.stopPropagation(); cropMode = null; render(); });
+        // Der Griff lässt die Ereignisse durch: darunter greift dieselbe Verschiebe-Logik wie im Bild
+        pan.addEventListener('dblclick', e => e.stopPropagation());
+      }
       const n = document.createElement('div'); n.className = 'num' + (p.star ? ' star' : ''); n.textContent = p.num + (p.star ? ' ★' : ''); n.title = p.star ? 'Highlight – Klick entfernt es' : 'Klick = Highlight (größer im Auto-Layout)'; n.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); }); n.addEventListener('click', e => { e.stopPropagation(); p.star = !p.star; if (p.fixed) sizeForStar(p); render(); scheduleAuto('star'); }); hud.appendChild(n);
 
       { const wrap = document.createElement('div'); wrap.className = 'geos'; hud.appendChild(wrap);
@@ -2340,7 +2369,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
   // Fotos nur die Flucht der gleichnamigen Kante, und der Abstand daneben nur von Fotos, die in der
   // anderen Achse überlappen, also wirklich Nachbarn sind. Mittellinien anderer Fotos sind kein Ziel;
   // mit so vielen Zielen rastet sonst überall etwas ein.
-  const photoGap = () => state.gap ?? 18;
+  const photoGap = () => state.gap ?? 20;
   // Bezug ist immer die sichtbare Außenkante: das Passepartout, und ohne Passepartout das Foto selbst.
   // Alle Ziele werden deshalb um die Passepartout-Breite versetzt (sie ist für alle Fotos gleich).
   const matPx = () => FR().mat || 0;
@@ -2502,7 +2531,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     for (const g of (drag.mode === 'move' ? drag.group : [{ t }])) { const el = tilesEl.querySelector(`[data-id="${g.t.id}"]`); Object.assign(el.style, { left: g.t.x + 'px', top: g.t.y + 'px', width: g.t.w + 'px', height: g.t.h + 'px' }); }
   });
   tilesEl.addEventListener('pointerup', () => { if (drag) { const d = drag; drag = null; showGuides([]); if ((d.mode === 'move' || d.mode === 'resize') && Math.max(Math.abs(d.t.x - d.x), Math.abs(d.t.y - d.y), Math.abs(d.t.w - d.w), Math.abs(d.t.h - d.h)) >= 4) { for (const t of state.photos) if (isSel(t.id) || t.id === d.t.id) t.fixed = true; scheduleAuto('drag'); } render(); } });
-  tilesEl.addEventListener('wheel', e => { const el = e.target.closest('.tile'); if (!el) return; const t = state.photos.find(x => x.id === el.dataset.id); if (!t || !(isSel(t.id) || cropMode === t.id)) return; e.preventDefault(); zoomTile(t, e.deltaY < 0 ? 1.08 : 1 / 1.08); render(); }, { passive: false });
+  tilesEl.addEventListener('wheel', e => { const el = e.target.closest('.tile'); if (!el) return; const t = state.photos.find(x => x.id === el.dataset.id); if (!t || !(isSel(t.id) || cropMode === t.id)) return; e.preventDefault(); zoomTile(t, e.deltaY < 0 ? 1.025 : 1 / 1.025); render(); }, { passive: false });
   // ---- Ausrichten
   const ICONS = {
     star: '<svg viewBox="0 0 24 24" width="13" height="13"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="currentColor"/></svg>',
@@ -2596,7 +2625,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
   $('#autobtn').addEventListener('click', () => { $('#autoadd').checked = !autoOn(); $('#autoadd').dispatchEvent(new Event('change')); });
   syncAuto();
   const zoomSl = $('#zoomsl');
-  zoomSl.addEventListener('input', () => { for (const t of state.photos) if (isSel(t.id)) { t.zoom = +zoomSl.value / 100; if (t.zoom <= 1) delete t.zoom; const img = tilesEl.querySelector(`[data-id="${t.id}"] img`); if (img) applyCrop(img, t); } $('#zval').textContent = zoomSl.value + ' %'; });
+  zoomSl.addEventListener('input', () => { for (const t of state.photos) if (isSel(t.id)) { t.zoom = +zoomSl.value / 100; if (t.zoom <= 1) delete t.zoom; const img = tilesEl.querySelector(`[data-id="${t.id}"] img`); if (img) applyCrop(img, t); } $('#zval').textContent = zoomSl.value + ' %';
+    const ct = tilesEl.querySelector('.croptool'); if (ct) { ct.querySelector('input').value = zoomSl.value; ct.querySelector('.cv').textContent = zoomSl.value + ' %'; } });
   zoomSl.addEventListener('change', () => render());
   function updateZoomSlider() { const sel = state.photos.filter(t => isSel(t.id)); zoomSl.disabled = !sel.length; if (sel.length) { zoomSl.value = Math.round((sel[0].zoom ?? 1) * 100); $('#zval').textContent = zoomSl.value + ' %'; } else $('#zval').textContent = '–'; }
   function updateAlignButtons() { updateZoomSlider(); $('#autolay').disabled = !state.photos.length || !map; const n = selected.size; alignEl.querySelectorAll('button').forEach(b => { const a = b.dataset.a; b.disabled = (a === 'hgap' || a === 'vgap') ? n < 3 : n < 2; }); }
@@ -2615,7 +2645,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     if (a === 'vgap') { const o = [...ts].sort((p, q) => p.y - q.y); const total = o.reduce((s, t) => s + t.h, 0); const gap = (maxY - minY - total) / (o.length - 1); let y = minY; o.forEach(t => { t.y = Math.round(y); y += t.h + gap; }); }
     render();
   });
-  document.addEventListener('keydown', e => { if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable) return; if (e.key === 'Escape') { cropMode = null; render(); } if ((e.key === '+' || e.key === '-') && selected.size) { for (const t of state.photos) if (isSel(t.id)) zoomTile(t, e.key === '+' ? 1.08 : 1 / 1.08); render(); } });
+  document.addEventListener('keydown', e => { if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable) return; if (e.key === 'Escape') { cropMode = null; render(); } if ((e.key === '+' || e.key === '-') && selected.size) { for (const t of state.photos) if (isSel(t.id)) zoomTile(t, e.key === '+' ? 1.03 : 1 / 1.03); render(); } });
   document.addEventListener('keydown', e => { if ((e.key === 'Delete' || e.key === 'Backspace') && selected.size && !document.activeElement.isContentEditable && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') { dropPhotos(x => isSel(x.id)); selected = new Set(); render(); scheduleAuto('del'); } });
   // Höhenprofil in der Höhe ziehen (Oberkante), Skala passt sich an
   { const grip = $('#bandgrip'); let gd = null;
@@ -2862,7 +2892,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     if (!Array.isArray(obj.photos)) obj.photos = [];
     if (!Array.isArray(obj.places)) obj.places = [];
     Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.showPhotoDots = obj.showPhotoDots !== false; $('#photodots').checked = state.showPhotoDots; state.peakThr = obj.peakThr ?? null; if ($('#peakthr') && state.peakThr != null) $('#peakthr').value = state.peakThr;
-    if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 0; $('#grade').value = state.grade; state.transfers = Array.isArray(obj.transfers) ? obj.transfers : []; state.gap = obj.gap ?? 18; $('#gapsl').value = state.gap; $('#gapval').textContent = state.gap; state.tfSeen = Array.isArray(obj.tfSeen) ? obj.tfSeen : []; applyFont(obj.font || 'montserrat'); state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0, radius: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 0; $('#grade').value = state.grade; state.transfers = Array.isArray(obj.transfers) ? obj.transfers : []; state.gap = obj.gap ?? 20; $('#gapsl').value = state.gap; $('#gapval').textContent = state.gap; state.tfSeen = Array.isArray(obj.tfSeen) ? obj.tfSeen : []; applyFont(obj.font || 'montserrat'); state.frame = Object.assign({ corners: 'sharp', mat: 8, marks: false, fray: 0, radius: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) { keepView = true;   // gespeicherte Ansicht gehört zum gespeicherten Layout – nicht neu einpassen
       // jumpTo wirkt auch, während der Stil noch lädt. Früher hing das an map.once('load') – das Ereignis kommt nach
       // einem Stilwechsel aber nie wieder, dann blieb die alte Ansicht stehen und keepView sperrte „einpassen“ dauerhaft.
