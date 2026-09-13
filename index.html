@@ -25,7 +25,7 @@ html, body { height:100%; }
 body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 Montserrat, "Segoe UI", Helvetica, Arial, sans-serif; overflow:hidden; }
 #app { display:grid; grid-template-columns:372px 1fr; height:100vh; }
 aside { background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; overflow:auto; scrollbar-width:thin; scrollbar-color:#2a3d50 transparent; }
-aside .steps { padding:10px 12px 12px; display:flex; flex-direction:column; gap:10px; }
+aside .steps { padding:10px 12px 40vh; display:flex; flex-direction:column; gap:10px; }   /* Luft unten, damit auch das letzte Feld nach oben springen kann */
 aside header { padding:14px 16px 10px; display:flex; align-items:center; gap:10px; position:sticky; top:0; background:var(--panel); z-index:3; border-bottom:1px solid var(--line); }
 aside header .logo { width:32px; height:32px; flex:none; display:grid; place-items:center; }
 aside header .logo svg { display:block; }
@@ -328,7 +328,11 @@ main { position:relative; overflow:hidden; background:#08111a; }
 #gapbox .s { display:none; }
 #mapzoom a { color:var(--accent); text-decoration:none; }
 .maplibregl-ctrl-attrib { font-size:9px !important; }
-#tabs { display:none; }
+#tabs { display:flex; position:sticky; top:56px; z-index:3; background:var(--panel); border-bottom:1px solid var(--line); }
+#tabs button { flex:1; background:none; border:0; border-bottom:2px solid transparent; color:var(--muted); padding:9px 4px; font:700 11px Montserrat, Arial, sans-serif; letter-spacing:.04em; cursor:pointer; }
+#tabs button:hover { color:var(--text); }
+#tabs button.on { color:var(--text); border-bottom-color:var(--accent); }
+.step { scroll-margin-top:96px; }
 #maptools .s { display:none; }
 /* Mobil: das Menü lässt sich wegklappen, damit das Poster den ganzen Platz bekommt */
 #panelgrip { display:none; }
@@ -1279,7 +1283,19 @@ main { position:relative; overflow:hidden; background:#08111a; }
   $('#formatseg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; $('#format').value = b.dataset.v; setFormat(b.dataset.v); });
   function syncSeg() { $('#formatseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === state.format)); }
   // Mobile Tabs
-  $('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; showTab(b.dataset.t); });
+  $('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
+    if (window.innerWidth <= 900) { showTab(b.dataset.t); return; }
+    document.querySelector(`.step[data-t="${b.dataset.t}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    markTab(b.dataset.t);
+  });
+  const markTab = t => $('#tabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  // Beim Scrollen zeigt die Leiste, in welchem Feld man gerade ist
+  $('aside').addEventListener('scroll', () => {
+    if (window.innerWidth <= 900) return;
+    let cur = null;
+    for (const st of document.querySelectorAll('.step')) if (st.getBoundingClientRect().top <= 140) cur = st.dataset.t;
+    if (cur) markTab(cur);
+  }, { passive: true });
   function showTab(t) { $('#tabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); document.querySelectorAll('.step').forEach(st => st.classList.toggle('on', st.dataset.t === t)); }
   // Etwas im Poster angeklickt? Dann im Bedienfeld den passenden Reiter zeigen und zur Zeile springen
   function revealInPanel(kind, id) {
