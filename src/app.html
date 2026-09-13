@@ -306,7 +306,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
 .hc .th { fill:#fff; font:900 16px Montserrat, Arial, sans-serif; } .hc .t2 { fill:#b7c5d3; font:500 7px Montserrat, Arial, sans-serif; }
 .hfoot { padding:10px 18px 14px; font-size:11px; color:var(--muted); }
 #maptools { position:absolute; right:16px; top:12px; display:flex; align-items:center; gap:10px; background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px 8px 6px 6px; font:600 11px Montserrat, Arial, sans-serif; color:var(--muted); }
-#mapbtn { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:7px 12px; font:600 12px Montserrat, Arial, sans-serif; cursor:pointer; }
+#mapbtn { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:7px 12px; font:600 12px Montserrat, Arial, sans-serif; cursor:pointer; white-space:nowrap; }
 #mapbtn.on { background:var(--accent); border-color:var(--accent); color:#fff; }
 #tfadd.on { border-color:var(--accent); color:var(--accent); }
 #mapzoom { display:flex; align-items:center; gap:8px; white-space:nowrap; }
@@ -918,10 +918,16 @@ main { position:relative; overflow:hidden; background:#08111a; }
   function clampPhotos() { const mt = matPx();   // das Passepartout gehört mit ins Poster
     for (const p of state.photos) { p.w = Math.min(p.w, CW - 60 - 2 * mt); p.h = Math.min(p.h, CH - BH() - 60 - 2 * mt); p.x = Math.max(mt, Math.min(CW - p.w - mt, p.x)); p.y = Math.max(mt, Math.min(CH - BH() - p.h - mt, p.y)); } }
   function fit() { const m = $('#scroller'), fr = $('#frame'); const mini = $('#app').classList.contains('mini');
-    // Auf schmalen Geräten bricht die Werkzeugleiste um – das Poster beginnt darunter
-    if (window.innerWidth <= 900) m.style.paddingTop = (mini ? 10 : ($('#maptools').offsetHeight || 36) + 14) + 'px';
-    else m.style.paddingTop = '';
-    fitScale = Math.min((m.clientWidth - (mini ? 16 : 40)) / CW, (m.clientHeight - (mini ? 20 : window.innerWidth <= 900 ? 24 : 80)) / CH);
+    // Oben und unten so viel Luft lassen, wie die schwebenden Leisten hoch sind – sonst verdecken sie
+    // beim Hineinzoomen den Titelbereich und das Höhenprofil, weil man nicht dahinter scrollen kann.
+    // zweimal messen: mit dem Scrollbalken kann die Werkzeugleiste umbrechen und höher werden
+    let pt = 0, pb = 0;
+    for (let i = 0; i < 2; i++) {
+      pt = mini ? 10 : Math.round($('#maptools').getBoundingClientRect().height) + 20;
+      pb = mini ? 10 : Math.round($('#zoombar').getBoundingClientRect().height) + 18;
+      m.style.paddingTop = pt + 'px'; m.style.paddingBottom = pb + 'px';
+    }
+    fitScale = Math.min((m.clientWidth - (mini ? 16 : 40)) / CW, (m.clientHeight - pt - pb) / CH);
     const s = fitScale * viewZoom; stage.style.transform = `scale(${s})`; stage.dataset.scale = s;
     fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px';
     const z = $('#zoomval'); if (z) z.textContent = Math.round(s / fitScale * 100) + ' %';
@@ -936,6 +942,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     const px = (m.scrollLeft + ax), py = (m.scrollTop + ay), k = viewZoom / before;
     fit();
     m.scrollLeft = px * k - ax; m.scrollTop = py * k - ay;
+    requestAnimationFrame(() => fit());   // Leistenhöhe kann sich mit dem Scrollbalken ändern
     clearTimeout(zoomTmr); zoomTmr = setTimeout(sharpen, 250);   // erst wenn das Zoomen zur Ruhe kommt
   }
   // In der vergrößerten Ansicht soll auch der Inhalt scharf sein: die Karte bekommt ein höheres
