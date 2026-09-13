@@ -178,13 +178,13 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 #rtop { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; }
 #vig { position:absolute; left:0; top:0; width:100%; height:var(--vigH,480px); background:linear-gradient(rgba(var(--pvig),var(--pvigA,.9)) 0%, rgba(var(--pvig),calc(var(--pvigA,.9) * .8)) 45%, rgba(var(--pvig),0) 100%); pointer-events:none; }
 #bandfade { position:absolute; left:0; bottom:var(--bandH,100px); width:100%; height:46px; background:linear-gradient(rgba(var(--pvig),0), rgba(var(--pvig),calc(var(--pvigA,.9) * .75))); pointer-events:none; }
-#title { position:absolute; left:56px; top:52px; width:var(--titleW, 560px); }
+#title { position:absolute; left:56px; top:48px; width:var(--titleW, 560px); }
 #titlegrip { position:absolute; right:-7px; top:0; width:14px; height:100%; cursor:ew-resize; pointer-events:auto; touch-action:none; }
 #titlegrip::after { content:''; position:absolute; top:50%; left:5px; width:4px; height:44px; margin-top:-22px; border-radius:2px; background:var(--pmuted); opacity:0; transition:opacity .15s; }
 #titlegrip:hover::after, #titlegrip.on::after { opacity:.8; }
 #title .date { color:var(--pa); font-weight:700; font-size:calc(12px * var(--ts, 1)); letter-spacing:.32em; display:flex; align-items:center; gap:12px; }
 #title .date::before { content:""; width:28px; height:2px; background:var(--pa); display:inline-block; }
-#title .h { overflow-wrap:anywhere; font-weight:900; font-size:calc(80px * var(--tt, 1)); line-height:.92; letter-spacing:-.02em; color:var(--ptext); margin-top:14px; white-space:pre-line; }
+#title .h { overflow-wrap:anywhere; font-weight:900; font-size:calc(80px * var(--tt, 1)); line-height:.92; letter-spacing:-.02em; color:var(--ptext); margin-top:26px; white-space:pre-line; }
 #title .sub { color:var(--psub); font-size:calc(16px * var(--ts, 1)); line-height:1.4; margin-top:14px; white-space:pre-line; }
 #stats { position:absolute; left:56px; top:var(--statsTop,322px); display:flex; gap:28px; }
 #stats div { display:flex; flex-direction:column; gap:4px; padding-right:28px; border-right:1px solid var(--pline); }
@@ -437,7 +437,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <label class="f">Geländerelief <span id="reliefval">60 %</span></label>
       <input type="range" id="relief" min="0" max="100" step="5" value="60" style="width:100%" title="Schummerung der Berge. 0 = aus, dann werden auch keine Höhendaten geladen. Im Flachland ist selbst bei hohem Wert wenig zu sehen. Höhendaten von AWS Terrain Tiles (zweiter Dienst neben der Karte)">
       <div class="grid2" style="margin-top:8px">
-        <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div>
+        <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div><div style="grid-column:1 / -1"><label class="f">Ecken abrunden <span id="radval">scharf</span></label><input type="range" id="radsl" min="0" max="24" step="2" value="0" style="width:100%" title="Eckenradius der Fotos und des Passepartouts – 0 lässt sie scharfkantig"></div>
       </div>
       <label class="f">Abdeckung hinter dem Titel <span id="vigaval">automatisch</span></label>
       <input type="range" id="viga" min="0" max="100" step="5" value="90" style="width:100%" title="Wie stark der Verlauf oben die Karte abdeckt – kleiner Wert zeigt Route und Umgebung, größerer macht den Titel ruhiger. Doppelklick = zurück auf den Stil-Wert">
@@ -1137,10 +1137,15 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   $('#grade').addEventListener('input', e => { state.grade = +e.target.value; applyGrade(); });
   // Rahmen-Optionen
   const FR = () => state.frame || (state.frame = { corners: 'sharp', mat: 9, marks: false, fray: 0 });
-  function applyFrame() { const f = FR(); f.corners = 'sharp'; f.fray = 0; f.marks = false; $('#matsl').value = f.mat; $('#matval').textContent = f.mat ? f.mat : 'aus';
-    const st = stage.style; st.setProperty('--fr', (f.corners === 'sharp' ? 0 : 10) + 'px'); st.setProperty('--mat', f.mat + 'px'); st.setProperty('--mat1', (f.mat + 1) + 'px'); st.setProperty('--mk', (f.mat + 7) + 'px');
+  // Eckenradius der Fotos (0 = scharfkantig). Ältere Projekte kannten nur corners: 'sharp' | 'round'.
+  const frRadius = () => { const f = FR(); return f.radius ?? (f.corners === 'round' ? 10 : 0); };
+  function applyFrame() { const f = FR(); f.fray = 0; f.marks = false; f.radius = frRadius();
+    $('#matsl').value = f.mat; $('#matval').textContent = f.mat ? f.mat : 'aus';
+    $('#radsl').value = f.radius; $('#radval').textContent = f.radius ? f.radius : 'scharf';
+    const st = stage.style; st.setProperty('--fr', f.radius + 'px'); st.setProperty('--mat', f.mat + 'px'); st.setProperty('--mat1', (f.mat + 1) + 'px'); st.setProperty('--mk', (f.mat + 7) + 'px');
     stage.classList.toggle('mat', f.mat > 0); stage.classList.toggle('marks', f.mat > 0 && !!f.marks); stage.classList.toggle('fray', f.fray > 0); render(); }
   $('#matsl').addEventListener('input', e => { FR().mat = +e.target.value; applyFrame(); });
+  $('#radsl').addEventListener('input', e => { FR().radius = +e.target.value; applyFrame(); autosave(); });
   $('#gapsl').addEventListener('input', e => { state.gap = +e.target.value; $('#gapval').textContent = state.gap; autosave(); });
   $('#gapsl').addEventListener('change', () => scheduleAuto('gap'));
   $('#matsl').addEventListener('change', () => scheduleAuto('mat'));
@@ -1642,7 +1647,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       const el = document.createElement('div'); el.className = 'tile' + (isSel(p.id) ? ' sel' : '') + (cropMode === p.id ? ' crop' : ''); el.dataset.id = p.id;
       Object.assign(el.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px' });
       const clip = document.createElement('div'); clip.className = 'clip'; el.appendChild(clip);
-      if (FR().fray > 0) { const m = 'url("data:image/svg+xml;base64,' + btoa(frayMask(p.w, p.h, FR().fray, FR().corners === 'sharp' ? 0 : 10, seedOf(p.id))) + '")'; clip.style.webkitMaskImage = m; clip.style.maskImage = m; clip.style.webkitMaskSize = '100% 100%'; clip.style.maskSize = '100% 100%'; clip.style.borderRadius = '0'; }
+      if (FR().fray > 0) { const m = 'url("data:image/svg+xml;base64,' + btoa(frayMask(p.w, p.h, FR().fray, frRadius(), seedOf(p.id))) + '")'; clip.style.webkitMaskImage = m; clip.style.maskImage = m; clip.style.webkitMaskSize = '100% 100%'; clip.style.maskSize = '100% 100%'; clip.style.borderRadius = '0'; }
       const img = document.createElement('img'); img.src = p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
       const hud = document.createElement('div'); hud.className = 'hud'; clip.appendChild(hud);
@@ -2550,10 +2555,10 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
         else { g.beginPath(); g.arc(x, y, P(7), 0, 7); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(3); g.strokeStyle = T.accent; g.stroke(); } }
     }
     // Titelblock
-    const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(57), P(28), P(2));
+    const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(53), P(28), P(2));
     // Halo in Posterfarbe hinter allen Titeltexten (weicher Schatten + dünne Kontur) – lesbar auch über Kartenbeschriftung
     const textH = (t, x, y) => g.fillText(t, x, y); const spacedH = (t, x, y, gap) => spaced(g, t, x, y, gap);
-    g.font = F(700, 12); g.textBaseline = 'top'; spacedH(state.date || '', x0 + P(40), P(52), P(3.6 * TS()));
+    g.font = F(700, 12); g.textBaseline = 'top'; spacedH(state.date || '', x0 + P(40), P(48), P(3.6 * TS()));
     g.fillStyle = T.text; g.font = F(900, 80, false); g.textBaseline = 'alphabetic';
     // Zeilen wie am Bildschirm umbrechen: an eigenen Umbrüchen und an der eingestellten Textbreite
     const wrapT = (txt, maxW) => { const out = [];
@@ -2566,8 +2571,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
           else line = g.measureText(test).width > maxW ? hard(test) : test; }
         out.push(line); }
       return out; };
-    const tsz = 80 * TT(), tl = wrapT(state.title, P(titleW())); tl.forEach((l, i) => textH(l, x0 - P(4), P(78 + tsz * .92 * .78 + i * tsz * .925)));
-    const subY = 81 + tl.length * tsz * .92 + 14 + 17 * TS();   // wie im Bildschirm-Layout: Untertitel folgt dem Titel (Zeilenzahl, Größe)
+    const tsz = 80 * TT(), tl = wrapT(state.title, P(titleW())); tl.forEach((l, i) => textH(l, x0 - P(4), P(90 + tsz * .92 * .78 + i * tsz * .925)));
+    const subY = 93 + tl.length * tsz * .92 + 14 + 17 * TS();   // wie im Bildschirm-Layout: Untertitel folgt dem Titel (Zeilenzahl, Größe)
     g.fillStyle = T.sub; g.font = F(400, 16);
     const subLines = wrapT(state.subline, P(titleW()));
     subLines.forEach((l, i) => textH(l, x0, P(subY + i * 22 * TS())));
@@ -2609,7 +2614,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const p of state.photos) {
       const src = originals.get(p.id); const im = await loadImg(src ? URL.createObjectURL(src) : p.thumb, !!src);
       const bx = P(p.x), by = P(p.y), bw = P(p.w), bh = P(p.h);
-      const fr = FR(), R = P(fr.corners === 'sharp' ? 0 : 10), mat = P(fr.mat), fray = P(fr.fray);
+      const fr = FR(), R = P(frRadius()), mat = P(fr.mat), fray = P(fr.fray);
       // Schatten (+ Passepartout mit Haarlinie und Eckmarken)
       g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(30); g.shadowOffsetY = P(14); rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, mat ? R * .4 : R); g.fillStyle = '#000'; g.fill(); g.restore();
       if (mat) { rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, R * .4); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(1); g.strokeStyle = T.line; g.stroke();
@@ -2718,7 +2723,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (!Array.isArray(obj.photos)) obj.photos = [];
     if (!Array.isArray(obj.places)) obj.places = [];
     Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.showPhotoDots = obj.showPhotoDots !== false; $('#photodots').checked = state.showPhotoDots; state.peakThr = obj.peakThr ?? null; if ($('#peakthr') && state.peakThr != null) $('#peakthr').value = state.peakThr;
-    if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 0; $('#grade').value = state.grade; state.transfers = Array.isArray(obj.transfers) ? obj.transfers : []; state.gap = obj.gap ?? 18; $('#gapsl').value = state.gap; $('#gapval').textContent = state.gap; state.tfSeen = Array.isArray(obj.tfSeen) ? obj.tfSeen : []; applyFont(obj.font || 'montserrat'); state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 0; $('#grade').value = state.grade; state.transfers = Array.isArray(obj.transfers) ? obj.transfers : []; state.gap = obj.gap ?? 18; $('#gapsl').value = state.gap; $('#gapval').textContent = state.gap; state.tfSeen = Array.isArray(obj.tfSeen) ? obj.tfSeen : []; applyFont(obj.font || 'montserrat'); state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0, radius: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) { keepView = true;   // gespeicherte Ansicht gehört zum gespeicherten Layout – nicht neu einpassen
       const jump = () => { map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }); state.fitZoom = obj.map.zoom; setTimeout(() => { keepView = false; }, 1500); };
       if (map.loaded() || map.isStyleLoaded()) setTimeout(jump, 0); else map.once('load', jump); }
