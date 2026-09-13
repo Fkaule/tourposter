@@ -222,7 +222,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
 .placegrip:hover { opacity:.95; }
 .place:hover, .place.sel { outline:1.5px dashed var(--accent); }
 .place[contenteditable="true"] { outline:2px solid var(--accent); cursor:text; }
-.pin { position:absolute; transform:translate(-50%,-50%); min-width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); padding:0 calc(8px * var(--ts, 1)); box-sizing:border-box; border-radius:calc(13px * var(--ts, 1)); background:#fff; color:#0d1a26; box-shadow:0 4px 12px rgba(0,0,0,.5); font:700 13px/26px var(--pfont, Montserrat, Arial, sans-serif); font-size:calc(13px * var(--ts, 1)); line-height:calc(26px * var(--ts, 1)); text-align:center; white-space:nowrap; pointer-events:none; }
+.pin { position:absolute; transform:translate(-50%,-50%); cursor:grab; touch-action:none; min-width:calc(26px * var(--ts, 1)); height:calc(26px * var(--ts, 1)); padding:0 calc(8px * var(--ts, 1)); box-sizing:border-box; border-radius:calc(13px * var(--ts, 1)); background:#fff; color:#0d1a26; box-shadow:0 4px 12px rgba(0,0,0,.5); font:700 13px/26px var(--pfont, Montserrat, Arial, sans-serif); font-size:calc(13px * var(--ts, 1)); line-height:calc(26px * var(--ts, 1)); text-align:center; white-space:nowrap; }
+#stage.mapmode .pin { pointer-events:none; }   /* beim Verschieben der Karte fangen die Marken nichts ab */
+.pin.moved { outline:1px solid rgba(127,127,127,.35); }
 .tile { position:absolute; border-radius:var(--fr,0px); overflow:hidden; box-shadow:0 24px 48px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); cursor:grab; touch-action:none; }
 #stage.mat .tile { box-shadow:0 0 0 var(--mat) var(--pbg), 0 0 0 var(--mat1) var(--pline), 0 24px 48px rgba(0,0,0,.45); }
 #stage.fray:not(.mat) .tile { box-shadow:none; filter:drop-shadow(0 18px 24px rgba(0,0,0,.5)); }
@@ -1993,20 +1995,85 @@ main { position:relative; overflow:hidden; background:#08111a; }
     render(); if (autoOn()) autoLayout(null, { quiet: true });
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && tfDraft) { cancelTransfer(); return; } if (e.key === 'Escape' && tfEdit) { tfEdit = null; tfSearch = null; render(); return; } if (e.key === 'Escape' && setPosFor) { setPosFor = null; stage.classList.remove('setpos'); clearHover(); say(''); render(); } });
+  // Fotomarken auf der Karte. Nur fast deckungsgleiche Marken werden zusammengefasst; alles Übrige
+  // rückt automatisch auseinander und bekommt einen Stiel zum echten Ort. Von Hand gezogene Marken
+  // bleiben, wo sie sind, und die Automatik weicht ihnen aus.
+  function pinStems() {
+    const g = $('#rtop-pins'); if (!g) return; const ts = TS(); let s = '';
+    for (const d of pinsEl.children) { const ax = +d.dataset.ax, ay = +d.dataset.ay;
+      const x = parseFloat(d.style.left), y = parseFloat(d.style.top);
+      if (!isFinite(ax) || Math.hypot(x - ax, y - ay) < 3 * ts) continue;
+      s += `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${T.pinBg}" stroke-width="${(2.2 * ts).toFixed(1)}" stroke-linecap="round" opacity=".85"/>`
+         + `<circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="${(3 * ts).toFixed(1)}" fill="${T.pinBg}" stroke="${T.halo}" stroke-width="${ts.toFixed(1)}"/>`; }
+    g.innerHTML = s;
+  }
+  // Überlappungen auflösen: jeweils in die Richtung ausweichen, die den kürzeren Weg braucht,
+  // dazu eine schwache Rückholkraft zum echten Ort, damit die Marken nicht davonwandern.
+  function spreadPins(items, pad) {
+    const free = items.filter(o => !o.fix); if (!free.length) return;
+    for (let k = 0; k < 140; k++) { let hit = false;
+      for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+        const a = items[i], b = items[j]; if (a.fix && b.fix) continue;
+        let dx = b.x - a.x, dy = b.y - a.y;
+        if (dx === 0 && dy === 0) { dx = (j - i) * .01; dy = .01; }
+        const ox = (a.w + b.w) / 2 + pad - Math.abs(dx), oy = (a.h + b.h) / 2 + pad - Math.abs(dy);
+        if (ox <= 0 || oy <= 0) continue;
+        hit = true; let mx = 0, my = 0;
+        if (ox < oy) mx = dx >= 0 ? ox : -ox; else my = dy >= 0 ? oy : -oy;
+        if (a.fix) { b.x += mx; b.y += my; }
+        else if (b.fix) { a.x -= mx; a.y -= my; }
+        else { a.x -= mx / 2; a.y -= my / 2; b.x += mx / 2; b.y += my / 2; } }
+      for (const o of free) { o.x += (o.ax - o.x) * .05; o.y += (o.ay - o.y) * .05; }
+      if (!hit) break; }
+  }
   function renderPins() {
     pinsEl.innerHTML = ''; if (!map) { renderRouteTop(); return; }
-    // Pins nur zusammenfassen, wenn sie sich auf dem Poster tatsächlich überlappen würden (Abstand in Pixeln).
-    // Eine feste Entfernung in Metern war falsch: bei einer 15-km-Wanderung lag die halbe Route innerhalb davon
-    // und alle Fotos landeten in einem einzigen Pin.
-    const lim = 30 * TS(), groups = [];
+    const ts = TS(), lim = 14 * ts, groups = [];
     for (const p of state.photos.filter(p => p.lat != null)) { const pt = map.project([p.lon, p.lat]);
       const g = groups.find(q => Math.hypot(q.x - pt.x, q.y - pt.y) < lim);
-      if (g) { g.nums.push(p.num); g.x = (g.x * (g.nums.length - 1) + pt.x) / g.nums.length; g.y = (g.y * (g.nums.length - 1) + pt.y) / g.nums.length; }
-      else groups.push({ x: pt.x, y: pt.y, nums: [p.num] }); }
+      if (g) { g.ps.push(p); g.x = (g.x * (g.ps.length - 1) + pt.x) / g.ps.length; g.y = (g.y * (g.ps.length - 1) + pt.y) / g.ps.length; }
+      else groups.push({ x: pt.x, y: pt.y, ps: [p] }); }
     renderRouteTop();
-    for (const g of groups) { const pt = { x: g.x, y: g.y }; const d = document.createElement('div'); d.className = 'pin'; d.style.left = pt.x + 'px'; d.style.top = pt.y + 'px'; d.style.background = T.pinBg; d.style.color = T.pinFg; d.textContent = g.nums.sort((a, b) => a - b).join(' · '); pinsEl.appendChild(d); }
+    // erst anlegen, dann messen: die Breite hängt davon ab, wie viele Nummern in der Marke stehen
+    const items = groups.map(g => {
+      const d = document.createElement('div'); d.className = 'pin';
+      d.textContent = g.ps.map(p => p.num).sort((a, b) => a - b).join(' · ');
+      d.title = 'Ziehen = Marke versetzen · Doppelklick = zurück an den Ort';
+      d.style.background = T.pinBg; d.style.color = T.pinFg; d.style.left = g.x + 'px'; d.style.top = g.y + 'px';
+      pinsEl.appendChild(d);
+      const hand = g.ps.find(p => p.pin);
+      return { g, d, ax: g.x, ay: g.y, x: g.x + (hand ? hand.pin.dx : 0), y: g.y + (hand ? hand.pin.dy : 0), fix: !!hand, w: 26 * ts, h: 26 * ts };
+    });
+    for (const it of items) { it.w = it.d.offsetWidth || it.w; it.h = it.d.offsetHeight || it.h; }
+    spreadPins(items, 3 * ts);
+    for (const it of items) {
+      it.d.style.left = it.x.toFixed(1) + 'px'; it.d.style.top = it.y.toFixed(1) + 'px';
+      it.d.dataset.ax = it.ax.toFixed(1); it.d.dataset.ay = it.ay.toFixed(1);
+      it.d.dataset.ids = it.g.ps.map(p => p.id).join(',');
+      if (it.fix) it.d.classList.add('moved'); }
+    pinStems();
     renderTransferSyms();
   }
+  // Marken von Hand versetzen (der Stiel folgt); Doppelklick setzt sie an den Aufnahmeort zurück
+  let pinDrag = null, lastPin = { el: null, t: 0 };
+  pinsEl.addEventListener('pointerdown', e => {
+    const d = e.target.closest('.pin'); if (!d) return; e.stopPropagation(); e.preventDefault();
+    if (lastPin.el === d.dataset.ids && performance.now() - lastPin.t < 350) {
+      lastPin = { el: null, t: 0 };
+      for (const id of (d.dataset.ids || '').split(',')) { const p = state.photos.find(x => x.id === id); if (p) delete p.pin; }
+      renderPins(); autosave(); return; }
+    lastPin = { el: d.dataset.ids, t: performance.now() };
+    pinDrag = { d, sx: e.clientX, sy: e.clientY, x: parseFloat(d.style.left), y: parseFloat(d.style.top), s: +stage.dataset.scale || 1 };
+    d.setPointerCapture(e.pointerId);
+  });
+  pinsEl.addEventListener('pointermove', e => { if (!pinDrag) return;
+    pinDrag.nx = pinDrag.x + (e.clientX - pinDrag.sx) / pinDrag.s; pinDrag.ny = pinDrag.y + (e.clientY - pinDrag.sy) / pinDrag.s;
+    pinDrag.d.style.left = pinDrag.nx.toFixed(1) + 'px'; pinDrag.d.style.top = pinDrag.ny.toFixed(1) + 'px'; pinStems(); });
+  pinsEl.addEventListener('pointerup', () => { if (!pinDrag) return; const p0 = pinDrag; pinDrag = null;
+    if (p0.nx == null) return;
+    const dx = Math.round(p0.nx - +p0.d.dataset.ax), dy = Math.round(p0.ny - +p0.d.dataset.ay);
+    for (const id of (p0.d.dataset.ids || '').split(',')) { const q = state.photos.find(x => x.id === id); if (q) q.pin = { dx, dy }; }
+    renderPins(); autosave(); });
   // Liste der Transfers im Bedienfeld: Verkehrsmittel wählen, Länge sehen, entfernen
   function renderTransferList() {
     const el = $('#transfers'); if (!el) return;
@@ -2266,7 +2333,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     const el = $('#rtop'); if (!el) return;
     el.setAttribute('viewBox', `0 0 ${CW} ${CH}`);
     if (!map || !state.stages.length) { el.innerHTML = ''; return; }
-    if (!$('#rtop-tf')) el.innerHTML = '<g id="rtop-tf"></g><g id="rtop-route"></g><g id="rtop-drag"></g>';
+    if (!$('#rtop-tf')) el.innerHTML = '<g id="rtop-tf"></g><g id="rtop-route"></g><g id="rtop-pins"></g><g id="rtop-drag"></g>';
     const route = $('#rtop-route');
     const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const lim = vigH + 10;
     let d = '', open = false;
@@ -2768,7 +2835,13 @@ main { position:relative; overflow:hidden; background:#08111a; }
       g.strokeStyle = T.pinFg; g.lineWidth = 1.9; g.lineCap = 'round'; g.lineJoin = 'round';   // Skalierung folgt noch, deshalb der Wert aus dem 24er-Feld
       g.translate(12, 12); g.scale(.68, .68); g.translate(-12, -12);   // wie am Bildschirm: Symbol füllt 68 % des Kreises
       g.stroke(new Path2D(m.d)); g.restore(); }
-    if (map) for (const d of pinsEl.children) { const px = P(parseFloat(d.style.left)), py = P(parseFloat(d.style.top)); g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(8); g.shadowOffsetY = P(4); pill(g, px, py, d.textContent, T.pinBg, T.pinFg); g.restore(); }
+    if (map) { const ts = TS();
+      for (const d of pinsEl.children) { const px = P(parseFloat(d.style.left)), py = P(parseFloat(d.style.top)), ax = P(+d.dataset.ax), ay = P(+d.dataset.ay);
+        if (!isFinite(ax) || Math.hypot(px - ax, py - ay) < P(3 * ts)) continue;   // Stiel zum echten Ort, wenn die Marke versetzt steht
+        g.strokeStyle = T.pinBg; g.lineWidth = P(2.2 * ts); g.lineCap = 'round'; g.globalAlpha = .85; g.beginPath(); g.moveTo(ax, ay); g.lineTo(px, py); g.stroke(); g.globalAlpha = 1;
+        g.beginPath(); g.arc(ax, ay, P(3 * ts), 0, 7); g.fillStyle = T.pinBg; g.fill(); g.lineWidth = P(ts); g.strokeStyle = T.halo; g.stroke(); }
+      for (const d of pinsEl.children) { const px = P(parseFloat(d.style.left)), py = P(parseFloat(d.style.top));
+        g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(8); g.shadowOffsetY = P(4); pill(g, px, py, d.textContent, T.pinBg, T.pinFg); g.restore(); } }
     // Ortsnamen
     if (map) for (const p of shownPlaces()) { if (!p.text) continue; const pt = map.project([p.lon, p.lat]); const x = P(pt.x + p.dx), y = P(pt.y + p.dy);
       g.font = F(p.kind === 'night' ? 700 : 600, 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = T.halo;
