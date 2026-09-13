@@ -311,6 +311,20 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 .maplibregl-ctrl-attrib { font-size:9px !important; }
 #tabs { display:none; }
 #maptools .s { display:none; }
+/* Mobil: das Menü lässt sich wegklappen, damit das Poster den ganzen Platz bekommt */
+#panelgrip { display:none; }
+@media (max-width: 900px) {
+  #panelgrip { display:flex; align-items:center; justify-content:center; gap:8px; position:sticky; top:0; z-index:4; width:100%; height:30px; border:0; border-bottom:1px solid var(--line);
+    background:var(--panel2); color:var(--muted); font:700 10px Montserrat, Arial, sans-serif; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; }
+  #panelgrip .ar { width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:6px solid var(--muted); }
+  #app.mini #panelgrip .ar { border-top:0; border-bottom:6px solid var(--accent); }
+  #app.mini #panelgrip { color:var(--accent); }
+  #app.mini { grid-template-rows:1fr 30px; }
+  #app.mini main { padding-top:10px; }
+  #app.mini #tabs, #app.mini .steps, #app.mini #status { display:none; }
+  #app.mini #mapzoom, #app.mini #pscalebox { display:none; }   /* eingeklappt zählt der Platz fürs Poster */
+}
+
 @media (max-width: 900px) {
   #app { grid-template-columns:1fr; grid-template-rows:56vh 1fr; }
   #tabs { display:flex; position:sticky; top:0; z-index:3; background:var(--panel); border-bottom:1px solid var(--line); }
@@ -335,11 +349,27 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
   main { padding-top:48px; box-sizing:border-box; }
   .step { padding:10px 14px; }
 }
+@media (max-width: 900px) and (orientation: landscape) {
+  /* quer ist Höhe knapp: Menü an die Seite statt nach unten */
+  #app { grid-template-columns:1fr 300px; grid-template-rows:1fr; }
+  #app.mini { grid-template-columns:1fr 30px; grid-template-rows:1fr; }
+  #app.mini main { padding-top:10px; }
+  aside { order:1; border-top:0; border-left:1px solid var(--line); overflow:auto; }
+  main { order:0; padding-top:40px; }   /* Platz für die Werkzeugleiste oben rechts */
+  #app.mini aside { overflow:hidden; }
+  #panelgrip { height:100%; width:30px; position:absolute; left:0; top:0; flex-direction:column; border-bottom:0; border-right:1px solid var(--line); }
+  #panelgrip .ar { border-top:0; border-bottom:0; border-left:6px solid var(--muted); border-right:0; border-top:6px solid transparent; border-bottom:6px solid transparent; }
+  #app.mini #panelgrip .ar { border-left:0; border-right:6px solid var(--accent); border-top:6px solid transparent; border-bottom:6px solid transparent; }
+  #panelgrip .tx { writing-mode:vertical-rl; }
+  aside { padding-left:30px; box-sizing:border-box; position:relative; }
+  #app.mini #tabs, #app.mini .steps { display:none; }
+}
 </style>
 </head>
 <body>
 <div id="app">
   <aside>
+    <button id="panelgrip" title="Menü ein- oder ausklappen" aria-label="Menü ein- oder ausklappen"><span class="ar"></span><span class="tx">Menü</span></button>
     <header><div class="logo"><svg viewBox="0 0 32 32" width="32" height="32"><rect x="1.5" y="1.5" width="29" height="29" rx="5.5" fill="#f6efe3" stroke="#d8ccb8"/><path d="M6 24c4-3 5-11 9-11s3 9 7 6 3-9 4-11" fill="none" stroke="#b8402c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="24" r="2.2" fill="#2b2118"/><circle cx="26" cy="8" r="2.2" fill="#f6efe3" stroke="#2b2118" stroke-width="1.6"/></svg></div><h1>Tourposter</h1></header>
     <nav id="tabs"><button data-t="tour" class="on">Tour</button><button data-t="fotos">Fotos</button><button data-t="poster">Poster</button><button data-t="export">Export</button></nav>
     <div class="steps">
@@ -399,7 +429,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       <label class="f">Geländerelief <span id="reliefval">60 %</span></label>
       <input type="range" id="relief" min="0" max="100" step="5" value="60" style="width:100%" title="Schummerung der Berge. 0 = aus, dann werden auch keine Höhendaten geladen. Im Flachland ist selbst bei hohem Wert wenig zu sehen. Höhendaten von AWS Terrain Tiles (zweiter Dienst neben der Karte)">
       <div class="grid2" style="margin-top:8px">
-        <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div>
+        <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">9</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="9" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div><div style="grid-column:1 / -1"><label class="f">Abstand zwischen Fotos <span id="gapval">18</span></label><input type="range" id="gapsl" min="0" max="60" step="2" value="18" style="width:100%" title="Auf diesen Abstand rasten Fotos nebeneinander ein; er gilt auch für die automatische Anordnung"></div>
       </div>
       <label class="f">Abdeckung hinter dem Titel <span id="vigaval">automatisch</span></label>
       <input type="range" id="viga" min="0" max="100" step="5" value="90" style="width:100%" title="Wie stark der Verlauf oben die Karte abdeckt – kleiner Wert zeigt Route und Umgebung, größerer macht den Titel ruhiger. Doppelklick = zurück auf den Stil-Wert">
@@ -543,7 +573,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     for (const [k, p] of Object.entries(PAPER)) { if (p[2] !== grp) { grp = p[2]; sel.insertAdjacentHTML('beforeend', `<optgroup label="${{ DIN: 'DIN', Poster: 'Posterdruck (cm)', Screen: 'Bildschirm / Handy (px)' }[grp]}"></optgroup>`); }
       sel.lastElementChild.insertAdjacentHTML('beforeend', `<option value="${k}"${k === 'A3' ? ' selected' : ''}>${p[3]?.label || (grp === 'DIN' ? k + ' · ' : '') + (p[0] % 10 || p[1] % 10 ? p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm')}</option>`); } }
   let S = 3508 / 1123;                         // Druckfaktor (Canvas-px -> Druck-px), je nach Papiergröße
-  const state = { terrain: true, relief: .6, format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 0, font: 'montserrat', photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, stages: [], transfers: [], tfSeen: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
+  const state = { terrain: true, relief: .6, format: 'portrait', paper: 'A3', bandH: null, showBand: true, grade: 0, font: 'montserrat', photoScale: 1, frame: { corners: 'sharp', mat: 9, marks: false, fray: 0 }, gap: 18, stages: [], transfers: [], tfSeen: [], photos: [], places: [], date: '', title: '', subline: '', stats: [] };
   $('#paper').addEventListener('change', e => { state.paper = e.target.value; setFormat(state.format); });
   const originals = new Map();                 // photo.id -> File
   let selected = new Set(); const isSel = id => selected.has(id);
@@ -866,11 +896,18 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     return Math.round(110 + 120 * k); }
   const BH = () => state.showBand === false ? 0 : (state.bandH || autoBandH());
   function clampPhotos() { for (const p of state.photos) { p.w = Math.min(p.w, CW - 60); p.h = Math.min(p.h, CH - BH() - 60); p.x = Math.max(0, Math.min(CW - p.w, p.x)); p.y = Math.max(0, Math.min(CH - BH() - p.h, p.y)); } }
-  function fit() { const m = $('main'), fr = $('#frame'); const s = Math.min((m.clientWidth - 40) / CW, (m.clientHeight - (window.innerWidth <= 900 ? 60 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
+  function fit() { const m = $('main'), fr = $('#frame'); const mini = $('#app').classList.contains('mini');
+    const s = Math.min((m.clientWidth - (mini ? 16 : 40)) / CW, (m.clientHeight - (mini ? 20 : window.innerWidth <= 900 ? 60 : 80)) / CH); stage.style.transform = `scale(${s})`; stage.dataset.scale = s; fr.style.width = CW * s + 'px'; fr.style.height = CH * s + 'px'; }
   function setFormat(f) { state.format = f; syncSeg(); const pp = PAPER[state.paper] || PAPER.A3, L = Math.round(1123 * pp[1] / pp[0]); CW = f === 'landscape' ? L : 1123; CH = f === 'landscape' ? 1123 : L;
     stage.style.setProperty('--ts', TS().toFixed(3)); stage.style.setProperty('--tt', TT().toFixed(3)); const px = paperPx(state.paper); $('#paperhint').textContent = `${f === 'landscape' ? px[1] + ' × ' + px[0] : px[0] + ' × ' + px[1]} px${isPx(state.paper) ? '' : ' (300 dpi)'} · Seitenverhältnis ${(pp[1] / pp[0]).toFixed(2)} · Texte ×${TS().toFixed(2)} / Titel ×${TT().toFixed(2)}`;
     clampPhotos(); stage.style.width = CW + 'px'; stage.style.height = CH + 'px'; fit(); map && map.resize(); map && map.loaded() && fitRoute(); render(); scheduleAuto('format'); }
   window.addEventListener('resize', fit);
+  // Mobil: Menü wegklappen, damit das Poster den ganzen Platz bekommt
+  $('#panelgrip').addEventListener('click', () => {
+    const on = $('#app').classList.toggle('mini');
+    $('#panelgrip').querySelector('.tx').textContent = on ? 'Menü zeigen' : 'Menü';
+    fit(); clampPhotos?.(); render();
+  });
   $('#format').addEventListener('change', e => setFormat(e.target.value));
   // ---------- Druckservice: zentrale Konfiguration (Preise, Partner, Bestellweg). Solange kein Server steht, läuft die Bestellung per E-Mail mit angehängter Druckdatei.
   const ORDER = { partner: '[Druckpartner]', email: 'bestellung@tourposter.online', endpoint: null,   // endpoint: später URL des Bestell-Servers (Upload + Bestelldaten)
@@ -1091,6 +1128,8 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     const st = stage.style; st.setProperty('--fr', (f.corners === 'sharp' ? 0 : 10) + 'px'); st.setProperty('--mat', f.mat + 'px'); st.setProperty('--mat1', (f.mat + 1) + 'px'); st.setProperty('--mk', (f.mat + 7) + 'px');
     stage.classList.toggle('mat', f.mat > 0); stage.classList.toggle('marks', f.mat > 0 && !!f.marks); stage.classList.toggle('fray', f.fray > 0); render(); }
   $('#matsl').addEventListener('input', e => { FR().mat = +e.target.value; applyFrame(); });
+  $('#gapsl').addEventListener('input', e => { state.gap = +e.target.value; $('#gapval').textContent = state.gap; autosave(); });
+  $('#gapsl').addEventListener('change', () => scheduleAuto('gap'));
   $('#matsl').addEventListener('change', () => scheduleAuto('mat'));
   $('#sport').addEventListener('change', e => { state.sport = e.target.value || null;
     const sp = sportOf(); if (!state.bandEdited && !sp.band && state.showBand) { state.showBand = false; $('#showband').checked = false; }
@@ -2129,10 +2168,25 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       if (g.k === 'gap') { for (const r of g.rects) { const d = document.createElement('div'); d.className = 'gap ' + g.dir; Object.assign(d.style, { left: r[0] + 'px', top: r[1] + 'px', width: r[2] + 'px', height: r[3] + 'px' }); d.textContent = g.val; guidesEl.appendChild(d); } continue; }
       const d = document.createElement('div'); d.className = 'guide ' + g.k; d.style[g.k === 'v' ? 'left' : 'top'] = g.v + 'px'; guidesEl.appendChild(d);
       if (g.same) { const el = tilesEl.querySelector(`[data-id="${g.same.id}"]`); if (el) el.classList.add('same'); } } }
+  // Einrastziele je Kante. Zwischen zwei Fotos ist nicht die blanke Kante das Ziel, sondern der
+  // eingestellte Abstand – sonst liegen zwei fast gleiche Ziele nebeneinander (Bild an Bild und
+  // Passepartout an Passepartout) und man trifft immer das falsche.
+  const photoGap = () => state.gap ?? 18;
   function snapTargets(exclude) {
-    const xs = [56, CW - 56, CW / 2], ys = [56, CH - BH() - 12, CH / 2];
-    for (const o of state.photos) if (!exclude.has(o.id)) { xs.push(o.x, o.x + o.w, o.x + o.w / 2); ys.push(o.y, o.y + o.h, o.y + o.h / 2); }
-    return { xs, ys };
+    const gp = photoGap();
+    const page = { x: [56, CW - 56, CW / 2], y: [56, CH - BH() - 12, CH / 2] };
+    const left = [...page.x], right = [...page.x], cx = [...page.x];
+    const top = [...page.y], bottom = [...page.y], cy = [...page.y];
+    for (const o of state.photos) if (!exclude.has(o.id)) {
+      left.push(o.x, o.x + o.w + gp);      // linke Kanten in Flucht · rechts neben dem Nachbarn
+      right.push(o.x + o.w, o.x - gp);     // rechte Kanten in Flucht · links neben dem Nachbarn
+      cx.push(o.x + o.w / 2);
+      top.push(o.y, o.y + o.h + gp);
+      bottom.push(o.y + o.h, o.y - gp);
+      cy.push(o.y + o.h / 2);
+    }
+    // xs/ys: alles zusammen, für Stellen die nur „irgendeine Kante“ brauchen
+    return { xs: [...left, ...right, ...cx], ys: [...top, ...bottom, ...cy], left, right, cx, top, bottom, cy };
   }
   function equalGaps(t, ids, gs) {
     const others = state.photos.filter(o => !ids.has(o.id));
@@ -2158,9 +2212,9 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     }
   }
   function snapMove(t, ids) {
-    const { xs, ys } = snapTargets(ids); const gs = [];
-    for (const [edge, off] of [['l', 0], ['c', t.w / 2], ['r', t.w]]) { const v = t.x + off; const m = xs.find(x => Math.abs(x - v) <= SNAP); if (m != null) { t.x = Math.round(m - off); gs.push({ k: 'v', v: m }); break; } }
-    for (const [edge, off] of [['t', 0], ['c', t.h / 2], ['b', t.h]]) { const v = t.y + off; const m = ys.find(y => Math.abs(y - v) <= SNAP); if (m != null) { t.y = Math.round(m - off); gs.push({ k: 'h', v: m }); break; } }
+    const tg = snapTargets(ids); const gs = [];
+    for (const [list, off] of [[tg.left, 0], [tg.cx, t.w / 2], [tg.right, t.w]]) { const v = t.x + off; const m = list.find(x => Math.abs(x - v) <= SNAP); if (m != null) { t.x = Math.round(m - off); gs.push({ k: 'v', v: m }); break; } }
+    for (const [list, off] of [[tg.top, 0], [tg.cy, t.h / 2], [tg.bottom, t.h]]) { const v = t.y + off; const m = list.find(y => Math.abs(y - v) <= SNAP); if (m != null) { t.y = Math.round(m - off); gs.push({ k: 'h', v: m }); break; } }
     equalGaps(t, ids, gs);
     showGuides(gs);
   }
@@ -2202,12 +2256,12 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
       if (k.includes('s')) h = drag.h + dy; if (k.includes('n')) { h = drag.h - dy; y = drag.y + dy; }
       if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) h = w / drag.ratio; else w = h * drag.ratio; if (k.includes('w')) x = drag.x + drag.w - w; if (k.includes('n')) y = drag.y + drag.h - h; }
       // Einrasten der bewegten Kanten an Kanten anderer Fotos / Seitenrand + gleiche Breite/Höhe
-      const { xs, ys } = snapTargets(new Set([t.id])); const gs = [];
+      const tg = snapTargets(new Set([t.id])); const gs = [];
       if (!e.shiftKey) {
-        if (k.includes('e')) { const m = xs.find(v => Math.abs(v - (x + w)) <= SNAP); if (m != null) { w = m - x; gs.push({ k: 'v', v: m }); } }
-        if (k.includes('w')) { const m = xs.find(v => Math.abs(v - x) <= SNAP); if (m != null) { w = x + w - m; x = m; gs.push({ k: 'v', v: m }); } }
-        if (k.includes('s')) { const m = ys.find(v => Math.abs(v - (y + h)) <= SNAP); if (m != null) { h = m - y; gs.push({ k: 'h', v: m }); } }
-        if (k.includes('n')) { const m = ys.find(v => Math.abs(v - y) <= SNAP); if (m != null) { h = y + h - m; y = m; gs.push({ k: 'h', v: m }); } }
+        if (k.includes('e')) { const m = tg.right.find(v => Math.abs(v - (x + w)) <= SNAP); if (m != null) { w = m - x; gs.push({ k: 'v', v: m }); } }
+        if (k.includes('w')) { const m = tg.left.find(v => Math.abs(v - x) <= SNAP); if (m != null) { w = x + w - m; x = m; gs.push({ k: 'v', v: m }); } }
+        if (k.includes('s')) { const m = tg.bottom.find(v => Math.abs(v - (y + h)) <= SNAP); if (m != null) { h = m - y; gs.push({ k: 'h', v: m }); } }
+        if (k.includes('n')) { const m = tg.top.find(v => Math.abs(v - y) <= SNAP); if (m != null) { h = y + h - m; y = m; gs.push({ k: 'h', v: m }); } }
         // gleiche Größe wie ein anderes Foto
         for (const o of state.photos) { if (o.id === t.id) continue;
           if (!gs.some(g => g.k === 'v') && Math.abs(o.w - w) <= SNAP) { if (k.includes('w')) x = x + w - o.w; w = o.w; gs.push({ k: 'v', v: k.includes('w') ? x : x + w, same: o }); }
@@ -2270,7 +2324,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (!map || !state.photos.length) return;
     layouting = true;
     try {
-      const M = 18 + (FR().mat || 0) + (FR().mat && FR().marks ? 8 : 0);   // Mindestabstand zu Route, Texten und Nachbarfotos (+ Passepartout/Eckmarken)
+      const M = photoGap() + (FR().mat || 0) + (FR().mat && FR().marks ? 8 : 0);   // Mindestabstand zu Route, Texten und Nachbarfotos (+ Passepartout/Eckmarken)
       const movable = state.photos.filter(p => (only ? only.has(p.id) : !p.fixed) );
       const order = movable.sort((a, b) => (b.star ? 1 : 0) - (a.star ? 1 : 0) || a.num - b.num);
       const n = state.photos.length;
@@ -2580,7 +2634,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
     if (!Array.isArray(obj.photos)) obj.photos = [];
     if (!Array.isArray(obj.places)) obj.places = [];
     Object.assign(state, obj); state.bandH = obj.bandH || null; state.showBand = obj.showBand !== false; $('#showband').checked = state.showBand; state.showPeaks = obj.showPeaks !== false; $('#showpeaks').checked = state.showPeaks; state.sport = obj.sport || null; $('#sport').value = state.sport || ''; state.showPeakMap = !!obj.showPeakMap; $('#peakmap').checked = state.showPeakMap; state.showPhotoDots = obj.showPhotoDots !== false; $('#photodots').checked = state.showPhotoDots; state.peakThr = obj.peakThr ?? null; if ($('#peakthr') && state.peakThr != null) $('#peakthr').value = state.peakThr;
-    if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 0; $('#grade').value = state.grade; state.transfers = Array.isArray(obj.transfers) ? obj.transfers : []; state.tfSeen = Array.isArray(obj.tfSeen) ? obj.tfSeen : []; applyFont(obj.font || 'montserrat'); state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
+    if (obj.autoAdd !== undefined) { $('#autoadd').checked = !!obj.autoAdd; syncAuto(); } state.relief = obj.relief ?? .6; state.terrain = obj.terrain !== false && state.relief > 0; $('#relief').value = Math.round(state.relief * 100); $('#reliefval').textContent = state.relief > 0 ? Math.round(state.relief * 100) + ' %' : 'aus'; state.vigA = obj.vigA ?? null; state.photoScale = obj.photoScale || 1; lastScale = state.photoScale; $('#pscale').value = Math.round(state.photoScale * 100); $('#pscaleval').textContent = Math.round(state.photoScale * 100) + ' %'; state.grade = obj.grade ?? 0; $('#grade').value = state.grade; state.transfers = Array.isArray(obj.transfers) ? obj.transfers : []; state.gap = obj.gap ?? 18; $('#gapsl').value = state.gap; $('#gapval').textContent = state.gap; state.tfSeen = Array.isArray(obj.tfSeen) ? obj.tfSeen : []; applyFont(obj.font || 'montserrat'); state.frame = Object.assign({ corners: 'sharp', mat: 9, marks: false, fray: 0 }, obj.frame || {}); applyTheme(state.theme || 'retro'); $('#format').value = state.format || 'portrait'; if (!PAPER[state.paper]) state.paper = 'A3'; $('#paper').value = state.paper; setFormat(state.format || 'portrait');
     if (obj.map && map) { keepView = true;   // gespeicherte Ansicht gehört zum gespeicherten Layout – nicht neu einpassen
       const jump = () => { map.jumpTo({ center: obj.map.center, zoom: obj.map.zoom }); state.fitZoom = obj.map.zoom; setTimeout(() => { keepView = false; }, 1500); };
       if (map.loaded() || map.isStyleLoaded()) setTimeout(jump, 0); else map.once('load', jump); }
@@ -2591,7 +2645,7 @@ main { position:relative; overflow:hidden; display:grid; place-items:center; bac
 
 
   // ------------------------------------------------------------ Start
-  window.__state = state;   // für Tests
+  window.__state = state; window.__snapMove = (t, ids) => snapMove(t, ids);   // für Tests
   buildPickers(); setFormat('portrait'); applyFont('montserrat'); applyTheme('retro'); initMap(); applyFrame();
   try { const s = localStorage.getItem(KEY); if (s) { restore(JSON.parse(s)); afterTourChange(); loadOriginals().then(n => { const miss = missingOriginals().length; say(`Gespeichertes Layout geladen${n ? `, ${n} Foto(s) in Originalgröße` : ''}${miss ? ` – ${miss} Foto(s) nur als Vorschau: Originale bitte erneut hinzufügen (Zuordnung per Dateiname)` : ''}.`, miss ? 'warn' : 'ok'); render(); }); } } catch (e) {}
   render();
