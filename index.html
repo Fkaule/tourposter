@@ -218,8 +218,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
 #stage.ink #stats div { border-right-color:var(--pmuted); }
 #stage.ink .place { font-style:italic; font-weight:500; text-shadow:0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff; }
 #stage.ink .place.night { font-weight:600; }
-#stage.ink .tile { box-shadow:0 0 0 1px var(--pa), 0 10px 22px rgba(0,0,0,.18); border-radius:0; }
-#stage.ink.mat .tile { box-shadow:0 0 0 var(--mat) #fff, 0 0 0 var(--mat1) var(--pa), 0 10px 22px rgba(0,0,0,.18); }
+/* Tusche: Rahmen wie gezeichnet – feine Linie ums Foto, weißes Passepartout mit Tuschekontur, harter versetzter Schatten statt Weichzeichner */
+#stage.ink .tile { box-shadow:0 0 0 1px var(--pa), 3px 3px 0 0 rgba(43,33,24,.16); border-radius:0; }
+#stage.ink.mat .tile { box-shadow:0 0 0 1px var(--pa), 0 0 0 var(--mat) #fff, 0 0 0 var(--mat1) var(--pa), 3px 3px 0 var(--mat1) rgba(43,33,24,.16); }
 #stage.ink.inkbw .tile img { filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)) grayscale(1) contrast(1.06); }
 #stage.ink .tile .z { font-family:Montserrat, Arial, sans-serif; }
 #stage.ink .pin { box-shadow:0 0 0 1.5px #fff, 0 3px 8px rgba(0,0,0,.25); }
@@ -3260,8 +3261,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
       const bx = P(p.x), by = P(p.y), bw = P(p.w), bh = P(p.h);
       const fr = FR(), R = P(frRadius()), mat = P(fr.mat), fray = P(fr.fray);
       // Schatten (+ Passepartout mit Haarlinie und Eckmarken)
-      g.save(); g.shadowColor = T.ink ? 'rgba(0,0,0,.18)' : 'rgba(0,0,0,.5)'; g.shadowBlur = P(T.ink ? 22 : 30); g.shadowOffsetY = P(T.ink ? 10 : 14); rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, mat ? R * .4 : R); g.fillStyle = '#000'; g.fill(); g.restore();
-      if (mat) { rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, R * .4); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(1); g.strokeStyle = T.ink ? T.accent : T.line; g.stroke();
+      if (T.ink) { const o = mat + P(1), d = P(3); g.fillStyle = 'rgba(43,33,24,.16)'; g.fillRect(bx - o + d, by - o + d, bw + 2 * o, bh + 2 * o); }   // harter Versatzschatten wie am Bildschirm
+      else { g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(30); g.shadowOffsetY = P(14); rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, mat ? R * .4 : R); g.fillStyle = '#000'; g.fill(); g.restore(); }
+      if (mat) { rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, T.ink ? 0 : R * .4); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(1); g.strokeStyle = T.ink ? T.accent : T.line; g.stroke();
         if (fr.marks) { const k = P(12), o = mat + P(7); g.strokeStyle = T.accent; g.lineWidth = P(1.5); g.beginPath(); g.moveTo(bx - o, by - o + k); g.lineTo(bx - o, by - o); g.lineTo(bx - o + k, by - o); g.moveTo(bx + bw + o - k, by + bh + o); g.lineTo(bx + bw + o, by + bh + o); g.lineTo(bx + bw + o, by + bh + o - k); g.stroke(); } }
       // Foto samt Farbabstimmung, Bildunterschrift und Nummer in eine Zwischenfläche zeichnen – dann ggf. ausgefranst maskieren
       const off = document.createElement('canvas'); off.width = Math.round(bw); off.height = Math.round(bh); const o = off.getContext('2d');
@@ -3274,7 +3276,6 @@ main { position:relative; overflow:hidden; background:#08111a; }
           o.globalCompositeOperation = 'saturation'; o.globalAlpha = 1; o.fillStyle = '#808080'; o.fillRect(0, 0, bw, bh);
           o.globalCompositeOperation = 'overlay'; o.globalAlpha = .15; o.drawImage(im, ox, oy, iw, ih); }
         o.globalAlpha = 1; o.globalCompositeOperation = 'source-over'; }
-      if (T.ink && !mat) { g.lineWidth = P(1); g.strokeStyle = T.accent; g.strokeRect(bx - P(.5), by - P(.5), bw + P(1), bh + P(1)); }
       const gh = 70 * Math.max(1, TS()); const cg = o.createLinearGradient(0, bh - P(gh), 0, bh); cg.addColorStop(0, 'rgba(6,12,18,0)'); cg.addColorStop(1, 'rgba(6,12,18,.85)'); o.fillStyle = cg; o.fillRect(0, bh - P(gh), bw, P(gh));
       const Fc = px => (T.ink ? 'italic ' : '') + F(500, px);
       o.fillStyle = '#e6edf3'; let fs = 12; o.font = Fc(fs); const cap = p.caption ?? autoCaption(p); while (fs > 8.5 && o.measureText(cap).width > bw - P(28)) { fs -= .5; o.font = Fc(fs); }
@@ -3282,6 +3283,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       pill(o, P(12 + 13 * TS()), P(12 + 13 * TS()), p.star ? p.num + ' ★' : String(p.num), p.star ? '#f2b632' : T.pill, p.star ? '#1c1a12' : '#fff');   // Highlight wie am Bildschirm
       if (fray > 0) { try { const mk = await loadImg('data:image/svg+xml;base64,' + btoa(frayMask(Math.round(bw), Math.round(bh), Math.round(fray), R, seedOf(p.id)))); o.globalCompositeOperation = 'destination-in'; o.drawImage(mk, 0, 0, bw, bh); o.globalCompositeOperation = 'source-over'; } catch (e) { console.warn('Maske', e); } }
       g.save(); if (!(fray > 0)) { rr(g, bx, by, bw, bh, R); g.clip(); } g.drawImage(off, bx, by, bw, bh); g.restore();
+      if (T.ink) { g.lineWidth = P(1); g.strokeStyle = T.accent; g.strokeRect(bx - P(.5), by - P(.5), bw + P(1), bh + P(1)); }   // feine Tuschelinie ums Foto
     }
     // Verlauf über dem Profilband liegt am Bildschirm über den Fotos – hier ebenso
     if (BH()) { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
