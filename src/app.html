@@ -222,7 +222,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
 #stage.ink .place.night { font-weight:600; }
 #stage.ink .tile { box-shadow:0 0 0 1px var(--pa), 0 10px 22px rgba(0,0,0,.18); border-radius:0; }
 #stage.ink.mat .tile { box-shadow:0 0 0 var(--mat) #fff, 0 0 0 var(--mat1) var(--pa), 0 10px 22px rgba(0,0,0,.18); }
-#stage.ink .tile img { filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)) grayscale(1) sepia(.28) contrast(1.04) brightness(1.02); }
+#stage.ink .tile img { filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)) grayscale(1) contrast(1.06); }
+#stage.ink.inkcolor .tile img { filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)); }
 #stage.ink .tile .z { font-family:Montserrat, Arial, sans-serif; }
 #stage.ink .pin { box-shadow:0 0 0 1.5px #fff, 0 3px 8px rgba(0,0,0,.25); }
 #stage.ink .tile .c { font-style:italic; font-weight:500; }
@@ -555,6 +556,13 @@ main { position:relative; overflow:hidden; background:#08111a; }
 <div class="grid2" style="margin-top:8px">
         <div style="grid-column:1 / -1"><label class="f" style="margin-top:0">Passepartout <span id="matval">8</span></label><input type="range" id="matsl" min="0" max="14" step="1" value="8" style="width:100%" title="Rand in Posterfarbe mit Haarlinie um jedes Foto; Einheit relativ zur Postergröße (skaliert mit dem Papier)"></div><div style="grid-column:1 / -1"><label class="f">Ecken abrunden <span id="radval">scharf</span></label><input type="range" id="radsl" min="0" max="24" step="2" value="0" style="width:100%" title="Eckenradius der Fotos und des Passepartouts – 0 lässt sie scharfkantig"></div>
       </div>
+      <div id="inkopts" hidden>
+        <label class="f">Fotos im Stil Tusche</label>
+        <div class="seg" id="inkphotoseg"><button data-v="bw" class="on">Schwarzweiß</button><button data-v="color">Farbig</button></div>
+        <label class="switch" style="margin-top:10px" title="Berge aus den Höhendaten und Wälder aus der Karte als gezeichnete Symbole – wie auf einer alten Reisekarte"><input type="checkbox" id="inkhills" checked><span class="kn"></span><span>Berge und Wälder zeichnen<small>Symbole aus Höhendaten und Waldflächen · lädt Höhenkacheln</small></span></label>
+        <label class="f">Dichte der Symbole <span id="inkdensval">100 %</span></label>
+        <input type="range" id="inkdens" min="40" max="180" step="10" value="100" style="width:100%">
+      </div>
       <label class="f">Farbabstimmung der Fotos <span id="gradeval">0 %</span></label>
       <input type="range" id="grade" min="0" max="100" step="5" value="0" style="width:100%" title="Fotos an die Farbstimmung des Posters angleichen: Sättigung dämpfen, Tönung in der Themenfarbe">
             <div class="hint">Der Abstand zwischen den Fotos steht oben in der Werkzeugleiste – dort sieht man ihn beim Verschieben gleich wirken.</div>
@@ -845,7 +853,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
     $('#mapzoomsl').addEventListener('input', e => map.setZoom(+e.target.value));
     // ausdrücklicher Klick schlägt die gespeicherte Ansicht immer
     $('#mapfit').addEventListener('click', e => { e.preventDefault(); keepView = false; fitRoute(); });
-    map.on('idle', () => { if (fillPlaceNames()) render(); renderInkOverlay(); });
+    map.on('idle', () => { if (fillPlaceNames()) render(); renderInkOverlay(); renderInkHills(); });
+    map.on('moveend', () => renderInkHills());
     let srcT = 0;   // sourcedata feuert beim Pannen/Zoomen laufend – gebündelt auswerten
     map.on('sourcedata', e => { if (!e.isSourceLoaded) return; clearTimeout(srcT); srcT = setTimeout(() => { if (fillPlaceNames()) render(); }, 400); });
     map.on('error', e => {
@@ -1371,6 +1380,15 @@ main { position:relative; overflow:hidden; background:#08111a; }
   $('#viga').addEventListener('input', e => { state.vigA = +e.target.value / 100; stage.style.setProperty('--pvigA', vigA()); vigLabel(); autosave(); });
   $('#viga').addEventListener('dblclick', () => { state.vigA = null; stage.style.setProperty('--pvigA', vigA()); vigLabel(); autosave(); });
   let reliefT = 0;
+  // Optionen des Stils Tusche: Fotos schwarzweiß/farbig, Berg- und Waldsymbole, Dichte
+  function inkOptsUI() { const box = $('#inkopts'); if (!box) return; box.hidden = !T.ink;
+    stage.classList.toggle('inkcolor', state.inkPhoto === 'color');
+    $('#inkphotoseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === (state.inkPhoto === 'color' ? 'color' : 'bw')));
+    $('#inkhills').checked = state.inkHills !== false; const d = Math.round((state.inkDensity ?? 1) * 100); $('#inkdens').value = d; $('#inkdensval').textContent = d + ' %'; }
+  $('#inkphotoseg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.inkPhoto = b.dataset.v; inkOptsUI(); render(); autosave(); });
+  $('#inkhills').addEventListener('change', e => { state.inkHills = e.target.checked; renderInkHills(true); autosave(); });
+  $('#inkdens').addEventListener('input', e => { state.inkDensity = +e.target.value / 100; $('#inkdensval').textContent = e.target.value + ' %'; });
+  $('#inkdens').addEventListener('change', () => { renderInkHills(true); autosave(); });
   $('#relief').addEventListener('input', e => { const v = +e.target.value / 100; state.relief = v; state.terrain = v > 0;
     $('#reliefval').textContent = v > 0 ? Math.round(v * 100) + ' %' : 'aus';
     clearTimeout(reliefT); reliefT = setTimeout(() => { terrainLayer(); autosave(); }, 120); });
@@ -1959,7 +1977,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     $('#stages').innerHTML = state.stages.map((s, i) => `<div class="row"><div class="n">${i + 1}</div><div><input value="${(s.name || '').replace(/"/g, '&quot;')}" data-i="${i}" aria-label="Etappenname"><div class="meta">${(s.distance / 1000).toFixed(0)} km · ${nf(s.gain)} Hm${s.hasEle ? '' : ' · keine Höhendaten'}</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
     $('#stages').querySelectorAll('input').forEach(inp => inp.addEventListener('change', e => { state.stages[+e.target.dataset.i].name = e.target.value; renderProfile(); }));
     $('#stages').querySelectorAll('button').forEach(b => b.addEventListener('click', e => { state.stages.splice(+e.target.dataset.del, 1); afterTourChange(); }));
-    renderTransferList(); clockInfo(); welcomeUI();
+    renderTransferList(); clockInfo(); welcomeUI(); inkOptsUI();
     tilesEl.innerHTML = ''; $('#photos').innerHTML = '';
     for (const p of state.photos) {
       const el = document.createElement('div'); el.className = 'tile' + (isSel(p.id) ? ' sel' : '') + (cropMode === p.id ? ' crop' : ''); el.dataset.id = p.id;
@@ -2222,7 +2240,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       if (c === 'country' || c === 'state') { if (q.x > 40 && q.y > 40 && q.x < CW - 40 && q.y < yMax) regions.push({ name, kind: c, x: q.x, y: q.y }); continue; }
       if (!(c in pri) || own.has(name.toLowerCase())) continue;
       if (q.x < 20 || q.y < 20 || q.x > CW - 20 || q.y > yMax) continue;
-      const d = near(q.x, q.y), maxD = (c === 'city' ? 80 : c === 'town' ? 42 : 24) * ts; if (d > maxD) continue;
+      const d = near(q.x, q.y), maxD = (c === 'city' ? 130 : c === 'town' ? 75 : 42) * ts; if (d > maxD) continue;
       cand.push({ name, kind: c, x: q.x, y: q.y, score: pri[c] * 1000 + (pr.rank ?? 40) * 10 + d / maxD }); }
     cand.sort((a, b) => a.score - b.score);
     const obst = inkObstacles(); const used = [];
@@ -2230,7 +2248,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     regions.sort((a, b) => (a.kind === 'country' ? 0 : 1) - (b.kind === 'country' ? 0 : 1));
     for (const r of regions) { if (out.regions.length >= 3) break; const fs = (r.kind === 'country' ? 24 : 19) * ts, w = r.name.length * fs * .95, box = [r.x - w / 2, r.y - fs * .7, r.x + w / 2, r.y + fs * .3];
       if (obst.some(o => rectHit(box, o)) || used.some(o => rectHit(box, o))) continue; used.push(box); out.regions.push({ ...r, fs }); }
-    for (const c of cand) { if (out.places.length >= 14) break; const fs = (c.kind === 'city' ? 15 : c.kind === 'town' ? 13 : 11.5) * ts, w = c.name.length * fs * .5, h = fs * 1.1;
+    for (const c of cand) { if (out.places.length >= 26) break; const fs = (c.kind === 'city' ? 15 : c.kind === 'town' ? 13 : 11.5) * ts, w = c.name.length * fs * .5, h = fs * 1.1;
       let box = [c.x + 6 * ts, c.y - h / 2, c.x + 6 * ts + w, c.y + h / 2], anchor = 'start';
       const hit = b => obst.some(o => rectHit(b, o)) || used.some(o => rectHit(b, o));
       if (hit(box)) { box = [c.x - 6 * ts - w, c.y - h / 2, c.x - 6 * ts, c.y + h / 2]; anchor = 'end'; if (hit(box)) continue; }
@@ -2265,6 +2283,106 @@ main { position:relative; overflow:hidden; background:#08111a; }
     return s;
   }
   function renderInkOverlay() { const g = $('#rtop-ink'); if (!g) return; g.innerHTML = T.ink ? inkOverlaySvg() : ''; }
+
+  // ---------- Stil "Tusche", Stufe 2: Berge und Wälder als gezeichnete Symbole.
+  // Berge kommen aus den Höhenkacheln (Terrarium): über ein Raster wird je Zelle die Höhenspanne der Umgebung
+  // bestimmt; wo sie groß ist, steht ein Bergsymbol, Größe nach Höhe über der Umgebung. Wälder kommen aus den
+  // Waldflächen der Kartenkacheln. Alles wird nach unten sortiert gezeichnet, vordere Symbole verdecken hintere.
+  const demCache = new Map();
+  async function demTile(z, x, y) {
+    const key = z + '/' + x + '/' + y; if (demCache.has(key)) return demCache.get(key);
+    const p = (async () => { try {
+      const r = await fetch(DEM_TILES.replace('{z}', z).replace('{x}', x).replace('{y}', y)); if (!r.ok) return null;
+      const bm = await createImageBitmap(await r.blob()); const c = document.createElement('canvas'); c.width = c.height = 256;
+      const cx = c.getContext('2d', { willReadFrequently: true }); cx.drawImage(bm, 0, 0); return cx.getImageData(0, 0, 256, 256).data; } catch (e) { return null; } })();
+    demCache.set(key, p); return p;
+  }
+  let hillsCache = { key: '', svg: '' }, hillsBusy = false, hillsPending = false;
+  function mulberry(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  function hillPath(cx, cy, s, v, rnd) {
+    // Asymmetrischer Gipfel mit weißer Füllung und Schraffur auf der rechten Flanke, drei Formvarianten
+    const w = s * (v === 0 ? 1.5 : v === 1 ? 1.25 : 1.7), h = s, j = k => (rnd() - .5) * s * .08;
+    const P = v === 0 ? [[-.55, .15], [-.22, -.5], [-.05, -.9], [.12, -.6], [.3, -.72], [.55, .15]]
+      : v === 1 ? [[-.5, .15], [-.15, -.62], [.05, -.95], [.22, -.55], [.5, .15]]
+      : [[-.55, .15], [-.35, -.42], [-.2, -.3], [-.02, -.88], [.18, -.5], [.32, -.62], [.55, .15]];
+    const pts = P.map(([x, y]) => [cx + x * w + j(), cy + y * h + j()]);
+    let d = 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L');
+    const top = pts[v === 0 ? 2 : v === 1 ? 2 : 3], foot = pts.at(-1); let hatch = '';
+    const n = Math.max(2, Math.round(s / 3.6));
+    for (let i = 1; i < n; i++) { const t = i / n, x0 = top[0] + (foot[0] - top[0]) * t * .92, y0 = top[1] + (foot[1] - top[1]) * t * .92, L = s * .42 * (1 - Math.abs(t - .5)) * (.8 + rnd() * .4);
+      hatch += `M${x0.toFixed(1)},${y0.toFixed(1)}l${(-L * .35).toFixed(1)},${(L * .9).toFixed(1)}`; }
+    return { body: d, hatch };
+  }
+  function treePath(cx, cy, s, rnd) {
+    let d = `M${cx.toFixed(1)},${cy.toFixed(1)}v${(-s * .28).toFixed(1)}`; let body = '';
+    for (let k = 0; k < 3; k++) { const y = cy - s * (.25 + .27 * k), w = s * (.42 - .1 * k) * (.9 + rnd() * .2); body += `M${(cx - w).toFixed(1)},${y.toFixed(1)}L${cx.toFixed(1)},${(y - s * .34).toFixed(1)}L${(cx + w).toFixed(1)},${y.toFixed(1)}Z`; }
+    return { body, trunk: d };
+  }
+  async function buildInkHills() {
+    const ts = TS(), dens = state.inkDensity ?? 1, yMax = CH - BH(); if (yMax < 100) return '';
+    // Höhenkacheln: eine Stufe feiner als die Karte, höchstens 12; nicht mehr als ~36 Kacheln
+    let dz = Math.min(12, Math.max(5, Math.round(map.getZoom()) + 1));
+    const corners = [[0, 0], [CW, 0], [0, yMax], [CW, yMax]].map(([x, y]) => map.unproject([x, y]));
+    let tiles, tx0, ty0, tx1, ty1;
+    for (;;) { const xs = corners.map(c => tileXY(c.lat, c.lng, dz)); tx0 = Math.min(...xs.map(t => t[0])); tx1 = Math.max(...xs.map(t => t[0])); ty0 = Math.min(...xs.map(t => t[1])); ty1 = Math.max(...xs.map(t => t[1]));
+      if ((tx1 - tx0 + 1) * (ty1 - ty0 + 1) <= 36 || dz <= 5) break; dz--; }
+    tiles = new Map(); const loads = [];
+    for (let x = tx0; x <= tx1; x++) for (let y = ty0; y <= ty1; y++) loads.push(demTile(dz, x, y).then(d => tiles.set(x + '/' + y, d)));
+    await Promise.all(loads); if (![...tiles.values()].some(Boolean)) return '';
+    const n = 2 ** dz;
+    const elev = (lat, lon) => { const fx = (lon + 180) / 360 * n, fy = (1 - Math.log(Math.tan(lat * d2r) + 1 / Math.cos(lat * d2r)) / Math.PI) / 2 * n;
+      const tx = Math.floor(fx), ty = Math.floor(fy); const d = tiles.get(tx + '/' + ty); if (!d) return null;
+      const px = Math.min(255, Math.floor((fx - tx) * 256)), py = Math.min(255, Math.floor((fy - ty) * 256)); const i = (py * 256 + px) * 4;
+      return d[i] * 256 + d[i + 1] + d[i + 2] / 256 - 32768; };
+    // Höhenraster über den Kartenbereich des Posters
+    const step = 5 * ts, nx = Math.ceil(CW / step) + 1, ny = Math.ceil(yMax / step) + 1; const H = new Float32Array(nx * ny).fill(NaN);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const ll = map.unproject([i * step, j * step]); const e = elev(ll.lat, ll.lng); if (e != null) H[j * nx + i] = e; }
+    // Wälder aus den Kartenkacheln (Polygone in Poster-Pixeln, mit Rahmen zum Vorfiltern)
+    const woods = [];
+    try { for (const f of map.querySourceFeatures('openmaptiles', { sourceLayer: 'landcover', filter: ['in', 'class', 'wood', 'forest'] })) {
+      const g = f.geometry; const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+      for (const poly of polys) { const rings = poly.map(r => r.map(c => { const q = map.project(c); return [q.x, q.y]; })); const o = rings[0]; if (!o || o.length < 4) continue;
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const [x, y] of o) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        if (x1 < 0 || y1 < 0 || x0 > CW || y0 > yMax) continue; woods.push({ rings, box: [x0, y0, x1, y1] }); } } } catch (e) {}
+    const inWood = (x, y) => { for (const w of woods) { const b = w.box; if (x < b[0] || x > b[2] || y < b[1] || y > b[3]) continue; let inside = false;
+      for (const r of w.rings) for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const [xi, yi] = r[i], [xj, yj] = r[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside; }
+      if (inside) return true; } return false; };
+    // Sperrflächen: Titelblock und Kennzahlen bleiben frei
+    const t = $('#title'), st = $('#stats'); const block = t && t.offsetWidth ? [t.offsetLeft - 16, t.offsetTop - 10, Math.max(t.offsetLeft + t.offsetWidth, st ? st.offsetLeft + st.offsetWidth : 0) + 16, (st && st.offsetHeight ? st.offsetTop + st.offsetHeight : t.offsetTop + t.offsetHeight) + 12] : null;
+    // Symbolzellen
+    const cell = 24 * ts, win = 3; const items = []; const rnd = mulberry(Math.round(map.getCenter().lng * 1e4) ^ Math.round(map.getCenter().lat * 1e4) ^ Math.round(map.getZoom() * 100));
+    for (let cy = cell * .5; cy < yMax - 4 * ts; cy += cell) for (let cx = cell * .5; cx < CW - 4 * ts; cx += cell) {
+      const x = cx + (rnd() - .5) * cell * .7, y = cy + (rnd() - .5) * cell * .7;
+      if (block && x > block[0] && x < block[2] && y > block[1] && y < block[3]) continue;
+      const gi = Math.round(x / step), gj = Math.round(y / step); let mn = Infinity, mx = -Infinity, c = NaN, cnt = 0;
+      for (let j = gj - win; j <= gj + win; j++) for (let i = gi - win; i <= gi + win; i++) { if (i < 0 || j < 0 || i >= nx || j >= ny) continue; const v = H[j * nx + i]; if (isNaN(v)) continue; cnt++; if (v < mn) mn = v; if (v > mx) mx = v; if (i === gi && j === gj) c = v; }
+      if (cnt < 6) continue; const range = mx - mn; if (isNaN(c)) c = (mn + mx) / 2;
+      const r = Math.max(0, Math.min(1, (range - 60) / 340));           // 60 m Spanne im Fenster = flach, ab ~400 m = Hochgebirge
+      const prom = Math.max(0, Math.min(1, (c - mn) / Math.max(60, range)));   // steht die Zelle selbst hoch in ihrer Umgebung?
+      if (r > .1 && rnd() < Math.min(1, (r * r * 1.5 + r * .35 + prom * .25) * dens)) { const sz = (11 + 24 * r * (.6 + .4 * prom)) * ts * (.85 + rnd() * .3); items.push({ k: 'h', x, y, s: sz, v: Math.floor(rnd() * 3) }); }
+      else if (r < .35 && woods.length && rnd() < .5 * dens && inWood(x, y)) items.push({ k: 't', x, y, s: (9 + rnd() * 4) * ts });
+    }
+    // Überlappende Berge ausdünnen: kleinere weichen größeren
+    items.sort((a, b) => b.s - a.s); const kept = [];
+    for (const it of items) { if (it.k === 'h' && kept.some(o => o.k === 'h' && (o.x - it.x) ** 2 + (o.y - it.y) ** 2 < ((o.s + it.s) * .5) ** 2)) continue; kept.push(it); }
+    kept.sort((a, b) => a.y - b.y);
+    const ink = T.accent, lw = (.9 * ts).toFixed(2); let out = '';
+    for (const it of kept) {
+      if (it.k === 'h') { const p = hillPath(it.x, it.y, it.s, it.v, rnd); out += `<path d="${p.body}" fill="#fff" stroke="${ink}" stroke-width="${(Math.max(.7, it.s / 14)).toFixed(2)}" stroke-linejoin="round" stroke-linecap="round"/><path d="${p.hatch}" fill="none" stroke="${ink}" stroke-width="${(Math.max(.45, it.s / 26)).toFixed(2)}" stroke-linecap="round" opacity=".85"/>`; }
+      else { const p = treePath(it.x, it.y, it.s, rnd); out += `<path d="${p.body}" fill="#fff" stroke="${ink}" stroke-width="${lw}" stroke-linejoin="round"/><path d="${p.trunk}" fill="none" stroke="${ink}" stroke-width="${lw}" stroke-linecap="round"/>`; }
+    }
+    return out;
+  }
+  async function renderInkHills(force) {
+    const g = $('#rtop-hills'); if (!g || !map) return;
+    if (!T.ink || state.inkHills === false || !state.stages.length) { g.innerHTML = ''; hillsCache = { key: '', svg: '' }; return; }
+    const c = map.getCenter(); const key = [c.lng.toFixed(5), c.lat.toFixed(5), map.getZoom().toFixed(3), CW, CH, BH(), state.inkDensity ?? 1, titleW()].join('|');
+    if (!force && hillsCache.key === key) { g.innerHTML = hillsCache.svg; return; }
+    if (hillsBusy) { hillsPending = true; return; } hillsBusy = true;
+    try { const svg = await buildInkHills(); hillsCache = { key, svg }; g.innerHTML = svg; } catch (e) { console.warn('Bergsymbole', e); }
+    finally { hillsBusy = false; if (hillsPending) { hillsPending = false; renderInkHills(); } }
+  }
+
   function renderPins() {
     pinsEl.innerHTML = ''; if (!map) { renderRouteTop(); return; }
     const ts = TS(), lim = 14 * ts, groups = [];
@@ -2291,7 +2409,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       it.d.dataset.ids = it.g.ps.map(p => p.id).join(',');
       if (it.fix) it.d.classList.add('moved'); }
     pinStems();
-    renderTransferSyms(); renderInkOverlay();
+    renderTransferSyms(); renderInkOverlay(); renderInkHills();
   }
   // Marken von Hand versetzen (der Stiel folgt); Doppelklick setzt sie an den Aufnahmeort zurück
   let pinDrag = null, lastPin = { el: null, t: 0 };
@@ -2559,7 +2677,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
   // Transferbögen (billig, ändern sich beim Ziehen laufend). So muss beim Ziehen nur die zweite neu.
   function routeTopTransfers() {
     const el = $('#rtop-tf'); if (!el || !map) return;
-    const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480, lim = vigH + 10;
+    const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480, lim = T.ink ? Infinity : vigH + 10;
     let tf = '';
     for (const t of state.transfers || []) { if (t.id === tfDragging) continue;   // die gezogene Linie liegt solange in #rtop-drag
       let td = '', op = false;
@@ -2572,9 +2690,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
     const el = $('#rtop'); if (!el) return;
     el.setAttribute('viewBox', `0 0 ${CW} ${CH}`);
     if (!map || !state.stages.length) { el.innerHTML = ''; return; }
-    if (!$('#rtop-tf')) el.innerHTML = '<g id="rtop-tf"></g><g id="rtop-route"></g><g id="rtop-ink"></g><g id="rtop-pins"></g><g id="rtop-drag"></g>';
+    if (!$('#rtop-tf')) el.innerHTML = '<g id="rtop-hills"></g><g id="rtop-tf"></g><g id="rtop-route"></g><g id="rtop-ink"></g><g id="rtop-pins"></g><g id="rtop-drag"></g>';
     const route = $('#rtop-route');
-    const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const lim = vigH + 10;
+    const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const lim = T.ink ? Infinity : vigH + 10;
     let d = '', open = false;
     for (const st of state.stages) { for (const p of st.points) { const q = map.project([p[1], p[0]]);
       if (q.y < lim && q.x > -50 && q.x < CW + 50) { d += (open ? 'L' : 'M') + q.x.toFixed(1) + ',' + q.y.toFixed(1) + ' '; open = true; } else open = false; } open = false; }
@@ -3042,9 +3160,12 @@ main { position:relative; overflow:hidden; background:#08111a; }
     }
     // Vignette
     const vA = vigA(); const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const vg = g.createLinearGradient(0, 0, 0, P(vigH)); vg.addColorStop(0, `rgba(${T.vig},${vA})`); vg.addColorStop(.45, `rgba(${T.vig},${vA * .8})`); vg.addColorStop(1, `rgba(${T.vig},0)`); g.fillStyle = vg; g.fillRect(0, 0, W, P(vigH));
+    // Stil Tusche: Berg- und Waldsymbole unter der Route (dasselbe SVG wie am Bildschirm)
+    if (T.ink && map && hillsCache.svg) { const hb = new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CW} ${CH}" width="${W}" height="${H}">${hillsCache.svg}</svg>`], { type: 'image/svg+xml' });
+      try { const hi = await loadImg(URL.createObjectURL(hb)); g.drawImage(hi, 0, 0, W, H); } catch (e) { console.warn('Bergsymbole', e); } }
     // Route über dem Verlauf: nach der Vignette erneut zeichnen, damit sie oben sichtbar bleibt
     if (map && state.stages.length) {
-      const lim = vigH + 10; const seg = [];
+      const lim = T.ink ? Infinity : vigH + 10; const seg = [];
       let cur = null;
       for (const st of state.stages) { for (const p of st.points) { const q = map.project([p[1], p[0]]);
         if (q.y < lim && q.x > -50 && q.x < CW + 50) { (cur = cur || (seg.push([]), seg.at(-1))).push([P(q.x), P(q.y)]); } else cur = null; } cur = null; }
@@ -3057,6 +3178,10 @@ main { position:relative; overflow:hidden; background:#08111a; }
           g.beginPath(); g.arc(x, y, P(3.4), 0, 7); g.fillStyle = '#fff'; g.fill(); }
         else { g.beginPath(); g.arc(x, y, P(7), 0, 7); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(3); g.strokeStyle = T.accent; g.stroke(); } }
     }
+    if (T.ink && map) for (const t of state.transfers || []) { const arc = transferArc(t, 64); if (arc.length < 2) continue;
+      g.beginPath(); arc.forEach((c, i) => { const q = map.project(c); i ? g.lineTo(P(q.x), P(q.y)) : g.moveTo(P(q.x), P(q.y)); });
+      g.lineCap = 'round'; g.setLineDash([]); g.strokeStyle = T.halo; g.lineWidth = P(6); g.globalAlpha = .6; g.stroke();
+      g.setLineDash([P(5.2), P(5.7)]); g.strokeStyle = T.cap; g.lineWidth = P(2.6); g.globalAlpha = .9; g.stroke(); g.setLineDash([]); g.globalAlpha = 1; }
     // Stil Tusche: Ortsnamen entlang der Route, Regionen, Kompassrose, Maßstab – dasselbe SVG wie am Bildschirm
     if (T.ink && map) { const ov = new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CW} ${CH}" width="${W}" height="${H}"><style>${await svgFontCss()}</style>${inkOverlaySvg()}</svg>`], { type: 'image/svg+xml' });
       try { const oi = await loadImg(URL.createObjectURL(ov)); g.drawImage(oi, 0, 0, W, H); } catch (e) { console.warn('Tusche-Overlay', e); } }
@@ -3147,9 +3272,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
       { const v = gradeVals(); if (v.sat < .999) { o.globalCompositeOperation = 'saturation'; o.globalAlpha = 1 - v.sat; o.fillStyle = '#808080'; o.fillRect(0, 0, bw, bh); }
         if (v.ta > 0) { o.globalCompositeOperation = 'soft-light'; o.globalAlpha = v.ta; o.fillStyle = v.tint; o.fillRect(0, 0, bw, bh); }
         if (v.con > 1.001) { o.globalCompositeOperation = 'overlay'; o.globalAlpha = (v.con - 1) * 2.5; o.drawImage(im, ox, oy, iw, ih); }
-        if (T.ink) {   // wie am Bildschirm: grayscale(1) sepia(.28) – Grau, dann leicht warm getönt
+        if (T.ink && state.inkPhoto !== 'color') {   // wie am Bildschirm: grayscale(1) contrast(1.06)
           o.globalCompositeOperation = 'saturation'; o.globalAlpha = 1; o.fillStyle = '#808080'; o.fillRect(0, 0, bw, bh);
-          o.globalCompositeOperation = 'color'; o.globalAlpha = .28; o.fillStyle = '#b08a55'; o.fillRect(0, 0, bw, bh); }
+          o.globalCompositeOperation = 'overlay'; o.globalAlpha = .15; o.drawImage(im, ox, oy, iw, ih); }
         o.globalAlpha = 1; o.globalCompositeOperation = 'source-over'; }
       if (T.ink && !mat) { g.lineWidth = P(1); g.strokeStyle = T.accent; g.strokeRect(bx - P(.5), by - P(.5), bw + P(1), bh + P(1)); }
       const gh = 70 * Math.max(1, TS()); const cg = o.createLinearGradient(0, bh - P(gh), 0, bh); cg.addColorStop(0, 'rgba(6,12,18,0)'); cg.addColorStop(1, 'rgba(6,12,18,.85)'); o.fillStyle = cg; o.fillRect(0, bh - P(gh), bw, P(gh));
