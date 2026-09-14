@@ -40,7 +40,6 @@ aside h1 { margin:0; font-size:21px; font-weight:900; letter-spacing:-.035em; li
 .drop { display:block; box-sizing:border-box; border:1.5px dashed #34495e; border-radius:11px; padding:13px 12px; text-align:center; color:var(--muted); font-size:12.5px; cursor:pointer; background:rgba(255,255,255,.015); transition:border-color .15s, background .15s; }
 .drop b { color:var(--text); font-weight:600; }
 .drop.over, .drop:hover { border-color:var(--accent); background:rgba(255,90,54,.07); color:var(--text); }
-#demonote a { color:var(--accent); font-weight:600; }
 .drop input { display:none; }
 .list { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
 .row { display:grid; grid-template-columns:26px 1fr 22px; gap:8px; align-items:center; background:var(--panel2); border-radius:10px; padding:7px 8px; font-size:12px; }
@@ -281,6 +280,23 @@ main { position:relative; overflow:hidden; background:#08111a; }
 #align button:hover { border-color:var(--accent); }
 #align button:disabled { opacity:.35; cursor:default; }
 #align .lbl { flex-basis:100%; font-size:10px; letter-spacing:.2em; color:var(--muted); margin-top:4px; }
+/* Start-Hinweis: liegt über dem leeren Poster, bis eine Route geladen ist */
+#welcome { position:absolute; inset:0; display:grid; place-items:center; padding:70px 24px 60px; pointer-events:none; z-index:3; }
+#welcome[hidden] { display:none; }
+.wbox { pointer-events:auto; box-sizing:border-box; max-width:640px; width:100%; background:var(--panel2); border:1px solid var(--line); border-radius:16px; padding:24px 24px 18px; box-shadow:0 20px 60px rgba(0,0,0,.5); color:var(--text); }
+.wtitle { font:900 22px Montserrat, Arial, sans-serif; letter-spacing:-.02em; margin-bottom:16px; }
+.wsteps { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.wstep { border:1.5px dashed #34495e; border-radius:12px; padding:16px 14px 14px; cursor:pointer; display:grid; gap:7px; align-content:start; transition:border-color .15s, background .15s; }
+.wstep:hover, .wstep.over { border-color:var(--accent); background:rgba(255,90,54,.07); }
+.wstep.done { opacity:.45; }
+.wstep b { font-size:14px; line-height:1.3; } .wstep small { color:var(--muted); font-size:11.5px; line-height:1.45; }
+.wn { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:13px; background:var(--accent); color:#fff; font:800 13px Montserrat, Arial, sans-serif; flex:none; }
+.wpriv { margin-top:16px; display:flex; gap:10px; align-items:flex-start; color:var(--muted); font-size:12px; line-height:1.5; }
+.wpriv svg { flex:none; margin-top:1px; color:#7fd18b; } .wpriv b { color:var(--text); }
+#photohint { position:absolute; left:50%; bottom:64px; transform:translateX(-50%); z-index:3; display:flex; align-items:center; gap:10px; background:var(--panel2); border:1.5px dashed #34495e; border-radius:12px; padding:10px 16px; color:var(--text); font:600 13px Montserrat, Arial, sans-serif; cursor:pointer; box-shadow:0 10px 30px rgba(0,0,0,.45); white-space:nowrap; transition:border-color .15s, background .15s; }
+#photohint[hidden] { display:none; } #photohint:hover, #photohint.over { border-color:var(--accent); background:rgba(255,90,54,.07); }
+#photohint small { color:var(--muted); font-weight:500; margin-left:4px; }
+#app.full #welcome, #app.full #photohint { display:none; }
 #hint { position:absolute; left:16px; bottom:12px; right:16px; color:#5f7288; font-size:11px; display:flex; align-items:center; justify-content:center; gap:10px; pointer-events:none; }
 #hint span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 #helpbtn { pointer-events:auto; width:26px; height:26px; border-radius:13px; border:1px solid var(--line); background:var(--panel2); color:var(--text); font:800 13px Montserrat, Arial, sans-serif; cursor:pointer; flex:none; }
@@ -381,6 +397,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
   main { order:0; }
   aside { order:1; border-right:0; border-top:1px solid var(--line); }
   #hint { display:none; }
+  #welcome { padding:52px 10px 14px; } .wbox { padding:16px 14px 12px; } .wtitle { font-size:17px; margin-bottom:10px; } .wsteps { grid-template-columns:1fr; gap:8px; } .wstep { padding:11px 12px; gap:4px; } .wstep small { display:none; } .wpriv { margin-top:10px; font-size:11px; }
+  #photohint { bottom:52px; font-size:12px; padding:8px 12px; max-width:calc(100% - 24px); white-space:normal; text-align:center; }
   #helpbtn { display:none; }
   #maptools { left:8px; right:8px; top:8px; gap:6px; padding:4px; flex-wrap:wrap; justify-content:flex-end; }
   #zoombar { right:8px; bottom:10px; }
@@ -422,8 +440,6 @@ main { position:relative; overflow:hidden; background:#08111a; }
     <div class="step on" data-t="tour">
       <h2><span class="no">1</span>Tour <span class="sub" id="mapinfo"></span></h2>
       <label class="drop" id="dropfit"><b>FIT / GPX / TCX</b> hierher ziehen oder tippen<br><span style="font-size:11px">mehrere Dateien = Etappen · Übernachtung nur, wenn ein Tag dazwischen liegt</span><input type="file" accept=".fit,.gpx,.tcx,.FIT,.GPX" multiple></label>
-      <div id="demorow" class="toolrow" hidden><button class="btn" id="demobtn" title="Lädt eine fertige Beispieltour mit Fotos – zum Ausprobieren, bevor du eigene Daten hast">Beispiel ansehen <small>fertiges Poster zum Ausprobieren</small></button></div>
-      <div id="demonote" class="hint" hidden style="border:1px solid var(--accent); border-radius:9px; padding:9px 11px; color:var(--text)"><b>Beispielprojekt.</b> Fotos verschieben, Stil und Schrift wechseln, exportieren – alles wie mit einer echten Tour. Sobald du oben eine eigene Aufzeichnung lädst, wird das Beispiel ersetzt. <a href="#" id="demodrop">Beispiel verwerfen</a></div>
       <label class="f" style="margin-top:10px">Sportart</label>
       <select id="sport" title="Bestimmt Titelvorschlag, Untertitel und Kennzahlen"><option value="">automatisch (aus der Datei)</option><option value="bike">Rad</option><option value="hike">Wandern</option><option value="canoe">Kanu</option></select>
       <div class="list" id="stages"></div>
@@ -547,6 +563,17 @@ main { position:relative; overflow:hidden; background:#08111a; }
     <div id="maptools"><button id="mapbtn" title="Karte verschieben / zoomen"><span class="w">Karte verschieben / zoomen</span><span class="s">Karte</span></button><div id="mapzoom" title="Zoomstufe der Karte im Poster">ZOOM <input type="range" id="mapzoomsl" min="4" max="14" step="0.05"> <span id="mzval"></span> <a href="#" id="mapfit" title="Karte auf die Route einpassen">einpassen</a></div><div id="pscalebox" title="Alle Fotos gemeinsam größer/kleiner (fixierte behalten ihre Position)"><span class="w">FOTOS</span><span class="s">FOTOS</span> <input type="range" id="pscale" min="50" max="160" step="5" value="100"> <span id="pscaleval">100 %</span></div><div id="gapbox" title="Fester Abstand zwischen benachbarten Fotos: darauf rasten sie ein (blauer Streifen mit Schloss); gilt auch für die automatische Anordnung"><span class="w">ABSTAND</span><span class="s">ABST.</span> <input type="range" id="gapsl" min="0" max="60" step="2" value="20"> <span id="gapval">20</span></div><button id="autobtn" class="on" title="Automatik-Layout: Fotos ordnen sich bei Änderungen an Karte, Format, Profil und Fotos selbst an (von Hand bewegte bleiben fixiert)"><span class="w">AUTO-LAYOUT</span><span class="s">AUTO</span> <b>AN</b></button></div>
     <div id="zoombar"><button id="zoomout" title="Kleiner (Strg/Cmd + Mausrad)">−</button><span class="val" id="zoomval" title="Auf 100 % stellen">100 %</span><button id="zoomin" title="Größer (Strg/Cmd + Mausrad)">+</button><button class="fitb" id="zoomfit" title="Ganzes Poster zeigen">einpassen</button><button class="fitb" id="zoomwide" title="Poster auf volle Breite – der Rest wird gescrollt">Breite</button><button class="fitb" id="zoomfull" title="Vollbild – nur das Poster (Esc beendet)">⛶</button></div>
     <div id="hint"><span>Ziehen = verschieben · Ecken/Kanten = Größe · Doppelklick = Ausschnitt · Entf = entfernen</span><button id="helpbtn" title="Hilfe">?</button></div>
+    <div id="welcome">
+      <div class="wbox">
+        <div class="wtitle">Dein Tourposter entsteht hier</div>
+        <div class="wsteps">
+          <div class="wstep" id="wstep1" title="FIT, GPX oder TCX auswählen"><span class="wn">1</span><b>Füge hier deine Route hinzu</b><small>FIT, GPX oder TCX – hierher ziehen oder klicken. Mehrere Dateien werden zu Etappen.</small></div>
+          <div class="wstep" id="wstep2" title="Fotos auswählen"><span class="wn">2</span><b>Füge Bilder deiner Tour hinzu</b><small>JPEG, PNG oder HEIC – Ort und Datum kommen aus dem Foto, die Bilder legen sich von selbst an die Route.</small></div>
+        </div>
+        <div class="wpriv"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="9" width="12" height="8" rx="2"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9"/></svg><span><b>Alle Daten bleiben auf deinem Rechner.</b> Route, Fotos und Poster werden nur in deinem Browser verarbeitet – nichts wird hochgeladen. Aus dem Netz kommen allein die Kartenkacheln.</span></div>
+      </div>
+    </div>
+    <div id="photohint" hidden title="Fotos auswählen"><span class="wn">2</span><span>Jetzt Bilder deiner Tour hinzufügen <small>hierher ziehen oder klicken</small></span></div>
     <div id="wall" hidden>
       <div class="wallbox">
         <div class="hhead"><b>An der Wand</b><div class="wallopts">
@@ -604,7 +631,6 @@ main { position:relative; overflow:hidden; background:#08111a; }
 <script>/*VENDOR_JS*/</script>
 <script id="roomsdata" type="application/json">[{"id": "wohnzimmer", "name": "Wohnzimmer", "src": "rooms/wohnzimmer.jpg", "note": "KI-generiertes Beispielbild", "cal": {"q": [[460.4, 319.9], [1227.6, 319.9], [1227.6, 1087.2], [460.4, 1087.2]], "w": 200, "h": 200, "base": 0, "cx": 113}}]</script>
 <script id="heifsrc" type="text/plain">/*HEIF_B64*/</script>
-<script id="demosrc" type="text/plain">/*DEMO_B64*/</script>
 <script>if (typeof FitParser === 'undefined' || typeof maplibregl === 'undefined') { window.__errs.unshift('Bibliotheks-Skript wurde nicht ausgeführt (' + (window.__vendorFail ? 'Ladefehler' : 'kein Ladefehler gemeldet') + ', ' + location.protocol + ')'); document.addEventListener('DOMContentLoaded', () => { const s = document.getElementById('status'); s.className = 'err'; s.textContent = 'Bibliotheken konnten nicht starten: ' + (window.__errs[0] || 'unbekannt') + ' – Browser: ' + navigator.userAgent; }); }</script>
 <script>
 (() => {
@@ -1320,12 +1346,20 @@ main { position:relative; overflow:hidden; background:#08111a; }
   // ------------------------------------------------------------ Tour-Dateien
   const dropfit = $('#dropfit');
   // Projektdateien (.json/.zip) hier mit abfangen – sonst meldet addTourFiles „keine Positionsdaten“
-  wireDrop(dropfit, files => { const rest = [];
+  function addTourOrProject(files) { const rest = [];
     for (const f of files) { if (/\.json$/i.test(f.name)) loadJsonFile(f); else if (/\.zip$/i.test(f.name)) loadZipFile(f); else rest.push(f); }
-    if (rest.length) addTourFiles(rest); });
+    if (rest.length) addTourFiles(rest); }
+  wireDrop(dropfit, addTourOrProject);
+  // Start-Hinweis über dem Poster: dieselben Ablagen noch einmal dort, wo der Blick zuerst hingeht
+  { const dz = (el, fn) => { el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); }); el.addEventListener('dragleave', () => el.classList.remove('over')); el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('over'); fn([...e.dataTransfer.files]); }); };
+    dz($('#wstep1'), addTourOrProject); dz($('#wstep2'), addPhotos); dz($('#photohint'), addPhotos);
+    $('#wstep1').addEventListener('click', () => dropfit.querySelector('input').click());
+    $('#wstep2').addEventListener('click', () => $('#dropimg input').click());
+    $('#photohint').addEventListener('click', () => $('#dropimg input').click()); }
+  function welcomeUI() { const w = $('#welcome'); if (!w) return; const hasT = !!state.stages.length, hasP = !!state.photos.length;
+    w.hidden = hasT; $('#wstep2').classList.toggle('done', hasP); $('#photohint').hidden = !hasT || hasP; }
   async function addTourFiles(files) {
     if (!files.length) return;
-    if (state.demo) { clearDemo(); say('Beispiel entfernt – eigene Tour wird geladen.'); }
     for (const f of [...files].sort((a, b) => a.name.localeCompare(b.name))) {
       try {
         if (typeof FitParser === 'undefined') { say('Bibliotheken nicht geladen – Datei bitte komplett herunterladen und neu öffnen (Browser: ' + navigator.userAgent.split(') ').pop() + ').', 'err'); return; }
@@ -1852,7 +1886,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     $('#stages').innerHTML = state.stages.map((s, i) => `<div class="row"><div class="n">${i + 1}</div><div><input value="${(s.name || '').replace(/"/g, '&quot;')}" data-i="${i}" aria-label="Etappenname"><div class="meta">${(s.distance / 1000).toFixed(0)} km · ${nf(s.gain)} Hm${s.hasEle ? '' : ' · keine Höhendaten'}</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
     $('#stages').querySelectorAll('input').forEach(inp => inp.addEventListener('change', e => { state.stages[+e.target.dataset.i].name = e.target.value; renderProfile(); }));
     $('#stages').querySelectorAll('button').forEach(b => b.addEventListener('click', e => { state.stages.splice(+e.target.dataset.del, 1); afterTourChange(); }));
-    renderTransferList(); clockInfo(); demoUI();
+    renderTransferList(); clockInfo(); welcomeUI();
     tilesEl.innerHTML = ''; $('#photos').innerHTML = '';
     for (const p of state.photos) {
       const el = document.createElement('div'); el.className = 'tile' + (isSel(p.id) ? ' sel' : '') + (cropMode === p.id ? ' crop' : ''); el.dataset.id = p.id;
@@ -2818,27 +2852,6 @@ main { position:relative; overflow:hidden; background:#08111a; }
     grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
     grip.addEventListener('dblclick', e => { e.stopPropagation(); state.titleW = null; stage.style.setProperty('--titleW', TITLEW + 'px'); render(); scheduleAuto('title'); autosave(); }); }
   stage.addEventListener('pointerdown', e => { if (e.target.id === 'overlay' || e.target.id === 'vig' || e.target.closest('#map')) { selected = new Set(); selPlace = null; cropMode = null; render(); } });
-  // ---------- Beispielprojekt: fertiges Poster zum Ausprobieren, wird durch eigene Daten ersetzt
-  const demoAvailable = () => { const el = $('#demosrc'); return !!el && (!!el.dataset.src || el.textContent.trim().length > 100); };
-  async function loadDemo() {
-    const el = $('#demosrc'); if (!el) return; say('Beispiel wird geladen …');
-    try { let blob;
-      if (el.dataset.src) { const r = await fetch(el.dataset.src); if (!r.ok) throw new Error('Beispiel nicht gefunden'); blob = await r.blob(); }
-      else { const bin = atob(el.textContent.trim()); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); blob = new Blob([u8], { type: 'application/zip' }); }
-      await loadZipFile(new File([blob], 'Beispiel.tourposter.zip', { type: 'application/zip' }));
-      state.demo = true; render(); autosave();
-      say('Beispiel geladen – Fotos verschieben, Stil wechseln, exportieren. Eine eigene Aufzeichnung ersetzt das Beispiel.', 'ok');
-    } catch (e) { say('Beispiel konnte nicht geladen werden: ' + e.message, 'err'); } }
-  // Beispiel vollständig entfernen (Tour, Fotos, Texte), ohne den Browser-Speicher sonst anzutasten
-  function clearDemo() {
-    if (!state.demo) return;
-    dropPhotos(() => true); state.stages = []; state.transfers = []; state.tfSeen = []; state.places = []; state.peaks = [];
-    state.title = ''; state.subline = ''; state.date = ''; state.titleEdited = state.sublineEdited = state.dateEdited = state.statsEdited = false;
-    state.demo = false; selected = new Set(); cropMode = null; }
-  function demoUI() { const row = $('#demorow'), note = $('#demonote'); if (!row) return;
-    row.hidden = !!state.stages.length || !demoAvailable(); note.hidden = !state.demo; }
-  $('#demobtn').addEventListener('click', loadDemo);
-  $('#demodrop').addEventListener('click', e => { e.preventDefault(); clearDemo(); afterTourChange(); render(); autosave(); say('Beispiel entfernt.', 'ok'); });
   $('#reset').addEventListener('click', async () => { if (!confirm('Alles zurücksetzen? Tour, Fotos und Texte werden aus dieser Seite und dem Browser-Speicher entfernt.')) return;
     try { localStorage.removeItem(KEY); } catch (e) {}
     try { await idb.keep([]); } catch (e) {}   // auch die Fotos in Originalgröße löschen – sonst bleiben sie im Browser liegen

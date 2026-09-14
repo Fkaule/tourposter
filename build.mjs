@@ -23,15 +23,13 @@ const faces = embed => FONTS.map(([key, fam, rng]) => {
 const fHead = base0.slice(0, base0.indexOf('/*FONTS*/')), fTail = base0.slice(base0.indexOf('/*FONTS_END*/') + '/*FONTS_END*/'.length);
 const base = fHead + faces(false) + fTail, baseSingle = fHead + faces(true) + fTail;
 // Einzeldatei: als data:-URL einbetten (das Bundle enthält "<!--" und "<script", was den HTML-Parser in einem Inline-Script aus dem Tritt bringt)
-// Beispielprojekt (demo/beispiel.tourposter.zip): gehostet als eigene Datei, in der Einzeldatei eingebettet
-const demo = fs.existsSync('demo/beispiel.tourposter.zip') ? fs.readFileSync('demo/beispiel.tourposter.zip') : Buffer.alloc(0);
-const single = baseSingle.replace('<script>/*VENDOR_JS*/</script>', `<script src="data:text/javascript.replace('/*DEMO_B64*/', demo.toString('base64'));base64,${js.toString('base64')}" onerror="window.__vendorFail=true"></script>`).replace('/*HEIF_B64*/', heif.toString('base64')).replace('/*DEMO_B64*/', demo.toString('base64'));
+const single = baseSingle.replace('<script>/*VENDOR_JS*/</script>', `<script src="data:text/javascript;base64,${js.toString('base64')}" onerror="window.__vendorFail=true"></script>`).replace('/*HEIF_B64*/', heif.toString('base64'));
 // Raumfotos für die Wandvorschau: Einzeldatei bettet sie als data:-URL ein, gehostet liegen sie unter rooms/
 const rooms = fs.existsSync('rooms') ? fs.readdirSync('rooms').sort() : [];
 let singleR = single;
 for (const f of rooms) { const d = fs.readFileSync(`rooms/${f}`); const mt = f.endsWith('.png') ? 'image/png' : f.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
   singleR = singleR.replaceAll(`"rooms/${f}"`, `"data:${mt};base64,${d.toString('base64')}"`); }
 fs.writeFileSync('Tourposter.html', singleR);
-const hosted = base.replace('<script>/*VENDOR_JS*/</script>', `<script src="vendor.js?v=${h(js)}" onerror="window.__vendorFail=true"></script>`).replace('<script id="heifsrc" type="text/plain">/*HEIF_B64*/</script>', `<script id="heifsrc" type="text/plain" data-src="heif.js?v=${h(heif)}"></script>`).replace('<script id="demosrc" type="text/plain">/*DEMO_B64*/</script>', demo.length ? `<script id="demosrc" type="text/plain" data-src="demo/beispiel.tourposter.zip?v=${h(demo)}"></script>` : '');
+const hosted = base.replace('<script>/*VENDOR_JS*/</script>', `<script src="vendor.js?v=${h(js)}" onerror="window.__vendorFail=true"></script>`).replace('<script id="heifsrc" type="text/plain">/*HEIF_B64*/</script>', `<script id="heifsrc" type="text/plain" data-src="heif.js?v=${h(heif)}"></script>`);
 fs.writeFileSync('index.html', hosted);
 console.log('index.html', (hosted.length / 1024 | 0), 'KB · vendor.js', (js.length / 1024 | 0), 'KB · heif.js', (heif.length / 1024 | 0), 'KB · Tourposter.html', (single.length / 1024 | 0), 'KB');
