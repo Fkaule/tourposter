@@ -558,6 +558,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
       <div id="inkopts" hidden>
         <label class="f">Fotos im Stil Tusche</label>
         <div class="seg" id="inkphotoseg"><button data-v="color" class="on">Farbig</button><button data-v="bw">Schwarzweiß</button></div>
+        <label class="f">Schnittkante der Fotos <span id="inkcutval">2</span></label>
+        <input type="range" id="inkcut" min="0" max="6" step="0.5" value="2" style="width:100%" title="Fotos wie von Hand geschnitten: leicht welliger Umriss mit Tuschelinie · 0 = gerade Kante">
+        <div class="hint">Wellung der Kante in Bildpunkten; das Foto selbst bleibt unverändert.</div>
         <label class="switch" style="margin-top:10px" title="Berge aus den Höhendaten und Wälder aus der Karte als gezeichnete Symbole – wie auf einer alten Reisekarte"><input type="checkbox" id="inkhills" checked><span class="kn"></span><span>Berge und Wälder zeichnen<small>Symbole aus Höhendaten und Waldflächen · lädt Höhenkacheln</small></span></label>
         <label class="f">Dichte der Symbole <span id="inkdensval">100 %</span></label>
         <input type="range" id="inkdens" min="40" max="180" step="10" value="100" style="width:100%">
@@ -1384,7 +1387,10 @@ main { position:relative; overflow:hidden; background:#08111a; }
   function inkOptsUI() { const box = $('#inkopts'); if (!box) return; box.hidden = !T.ink;
     stage.classList.toggle('inkbw', state.inkPhoto === 'bw');
     $('#inkphotoseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === (state.inkPhoto === 'bw' ? 'bw' : 'color')));
-    $('#inkhills').checked = state.inkHills !== false; const d = Math.round((state.inkDensity ?? 1) * 100); $('#inkdens').value = d; $('#inkdensval').textContent = d + ' %'; }
+    $('#inkhills').checked = state.inkHills !== false; const d = Math.round((state.inkDensity ?? 1) * 100); $('#inkdens').value = d; $('#inkdensval').textContent = d + ' %';
+    const c = state.inkCut ?? 2; $('#inkcut').value = c; $('#inkcutval').textContent = c > 0 ? String(c).replace('.', ',') : 'gerade'; }
+  $('#inkcut').addEventListener('input', e => { state.inkCut = +e.target.value; render(); });
+  $('#inkcut').addEventListener('change', () => autosave());
   $('#inkphotoseg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.inkPhoto = b.dataset.v; inkOptsUI(); render(); autosave(); });
   $('#inkhills').addEventListener('change', e => { state.inkHills = e.target.checked; renderInkHills(true); autosave(); });
   $('#inkdens').addEventListener('input', e => { state.inkDensity = +e.target.value / 100; $('#inkdensval').textContent = e.target.value + ' %'; });
@@ -1982,12 +1988,16 @@ main { position:relative; overflow:hidden; background:#08111a; }
     for (const p of state.photos) {
       const el = document.createElement('div'); el.className = 'tile' + (isSel(p.id) ? ' sel' : '') + (cropMode === p.id ? ' crop' : ''); el.dataset.id = p.id;
       Object.assign(el.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px' });
-      if (T.ink) { const m = matPx(), f = inkFrame(p.w, p.h, m, seedOf(p.id)); const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); sv.setAttribute('class', 'inkfr');
+      const cutAmp = inkCutAmp(), cutD = cutAmp > 0 && !(FR().fray > 0) ? inkCut(p.w, p.h, seedOf(p.id), cutAmp) : '';
+      if (T.ink) { const m = matPx(), f = inkFrame(p.w, p.h, m, seedOf(p.id), !!cutD); const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); sv.setAttribute('class', 'inkfr');
         sv.setAttribute('viewBox', `${-f.pad} ${-f.pad} ${p.w + 2 * f.pad} ${p.h + 2 * f.pad}`); sv.style.cssText = `position:absolute;left:${-f.pad}px;top:${-f.pad}px;width:${p.w + 2 * f.pad}px;height:${p.h + 2 * f.pad}px;pointer-events:none;overflow:visible;z-index:0`;
         const c = T.inkLine || T.accent; sv.innerHTML = `<path d="${f.shadow}" fill="none" stroke="${c}" stroke-width="1" stroke-linecap="round" opacity=".45"/><path d="${f.frame}" fill="none" stroke="${c}" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>${f.inner ? `<path d="${f.inner}" fill="none" stroke="${c}" stroke-width=".7" stroke-linecap="round" opacity=".8"/>` : ''}`;
         el.appendChild(sv); }
       const clip = document.createElement('div'); clip.className = 'clip'; el.appendChild(clip);
       if (FR().fray > 0) { const m = 'url("data:image/svg+xml;base64,' + btoa(frayMask(p.w, p.h, FR().fray, frRadius(), seedOf(p.id))) + '")'; clip.style.webkitMaskImage = m; clip.style.maskImage = m; clip.style.webkitMaskSize = '100% 100%'; clip.style.maskSize = '100% 100%'; clip.style.borderRadius = '0'; }
+      else if (cutD) { const m = 'url("data:image/svg+xml;base64,' + btoa(inkCutMask(p.w, p.h, cutD)) + '")'; clip.style.webkitMaskImage = m; clip.style.maskImage = m; clip.style.webkitMaskSize = '100% 100%'; clip.style.maskSize = '100% 100%'; clip.style.borderRadius = '0';
+        const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); sv.setAttribute('class', 'inkcut'); sv.setAttribute('viewBox', `0 0 ${p.w} ${p.h}`); sv.style.cssText = `position:absolute;left:0;top:0;width:${p.w}px;height:${p.h}px;pointer-events:none;overflow:visible;z-index:2`;
+        sv.innerHTML = `<path d="${cutD}" fill="none" stroke="${T.inkLine || T.accent}" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>`; el.appendChild(sv); }
       const img = document.createElement('img'); img.src = hiUrl.get(p.id) || p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
       if ((p.zoom ?? 1) > 1.001) { const z = document.createElement('div'); z.className = 'z'; z.textContent = Math.round(p.zoom * 100) + ' %'; clip.appendChild(z); }
       const hud = document.createElement('div'); hud.className = 'hud'; clip.appendChild(hud);
@@ -2289,7 +2299,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
   // Tusche: Fotorahmen wie mit der Feder gezogen – jede Kante eine leicht zitternde Linie, die an den Ecken
   // ein Stück übersteht; unten und rechts ein zweiter, versetzter Strich als gezeichneter Schatten.
   // Gleicher Pfad am Bildschirm (SVG im Foto) und im Export (Path2D), Zufall aus der Foto-ID, damit er stabil bleibt.
-  function inkFrame(w, h, mat, seed) {
+  function inkFrame(w, h, mat, seed, cut) {
     const rnd = mulberry(seed * 7919 + 13), o = mat + .5, over = 0;   // Ecken treffen sich, kein Überstand
     const x0 = -o, y0 = -o, x1 = w + o, y1 = h + o;
     const edge = (ax, ay, bx, by, amp) => { const L = Math.hypot(bx - ax, by - ay), n = Math.max(2, Math.round(L / 26)), nx = -(by - ay) / L, ny = (bx - ax) / L;
@@ -2299,8 +2309,20 @@ main { position:relative; overflow:hidden; background:#08111a; }
     const s = 2.2;   // Schattenstrich: rechts und unten, leicht versetzt, beginnt etwas unterhalb der Ecke
     const shadow = edge(x1 + s, y0 + 4, x1 + s, y1 + s, .7) + edge(x0 + 4, y1 + s, x1 + s + .5, y1 + s, .7);
     const inner = mat > 1 ? (edge(-.5, -.5, w + .5, -.5, .3) + edge(w + .5, -.5, w + .5, h + .5, .3).replace('M', 'L') + edge(w + .5, h + .5, -.5, h + .5, .3).replace('M', 'L') + edge(-.5, h + .5, -.5, -.5, .3).replace('M', 'L')) + 'Z' : '';
-    return { frame, shadow, inner, pad: o + s + over + 2 };
+    return { frame, shadow, inner: (cut ? '' : inner), pad: o + s + over + 2 };
   }
+  // Tusche: Schnittkante des Fotos – statt eines exakten Rechtecks ein leicht welliger, wie mit der Hand
+  // geschnittener Umriss (langsame Drift plus feines Zittern), innen im Foto. Das Foto wird damit maskiert und die
+  // Kante mit einer Tuschelinie nachgezogen; gleicher Pfad am Bildschirm (Maske + SVG) und im Export (Path2D).
+  const inkCutAmp = () => (T.ink ? Math.max(0, state.inkCut ?? 2) : 0);
+  function inkCut(w, h, seed, amp) {
+    const rnd = mulberry(seed * 104729 + 7), o = amp * 1.2 + .5, C = [[o, o], [w - o, o], [w - o, h - o], [o, h - o]]; let d = '';
+    for (let e = 0; e < 4; e++) { const [ax, ay] = C[e], [bx, by] = C[(e + 1) % 4], L = Math.hypot(bx - ax, by - ay), n = Math.max(3, Math.round(L / 14)), nx = -(by - ay) / L, ny = (bx - ax) / L, p1 = rnd() * 6.28, p2 = rnd() * 6.28;
+      for (let i = 0; i < n; i++) { const t = i / n, j = amp * (.7 * Math.sin(t * 3.1 + p1) + .3 * Math.sin(t * 9.7 + p2)) + (rnd() - .5) * amp * .5;
+        d += (d ? 'L' : 'M') + (ax + (bx - ax) * t + nx * j).toFixed(1) + ',' + (ay + (by - ay) * t + ny * j).toFixed(1); } }
+    return d + 'Z';
+  }
+  const inkCutMask = (w, h, d, vw = w, vh = h) => `<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(w)}" height="${Math.round(h)}" viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="none"><path d="${d}" fill="#fff"/></svg>`;
   function renderInkOverlay() { const g = $('#rtop-ink'); if (!g) return; g.innerHTML = T.ink ? inkOverlaySvg() : ''; }
 
   // ---------- Stil "Tusche", Stufe 2: Berge und Wälder als gezeichnete Symbole.
@@ -3302,10 +3324,13 @@ main { position:relative; overflow:hidden; background:#08111a; }
       o.fillText(cap, P(14), bh - P(14));
       pill(o, P(12 + 13 * TS()), P(12 + 13 * TS()), p.star ? p.num + ' ★' : String(p.num), p.star ? '#f2b632' : T.pill, p.star ? '#1c1a12' : '#fff');   // Highlight wie am Bildschirm
       if (fray > 0) { try { const mk = await loadImg('data:image/svg+xml;base64,' + btoa(frayMask(Math.round(bw), Math.round(bh), Math.round(fray), R, seedOf(p.id)))); o.globalCompositeOperation = 'destination-in'; o.drawImage(mk, 0, 0, bw, bh); o.globalCompositeOperation = 'source-over'; } catch (e) { console.warn('Maske', e); } }
-      g.save(); if (!(fray > 0)) { rr(g, bx, by, bw, bh, R); g.clip(); } g.drawImage(off, bx, by, bw, bh); g.restore();
-      if (T.ink) { const f = inkFrame(p.w, p.h, matPx(), seedOf(p.id)), c = T.inkLine || T.accent; g.save(); g.translate(bx, by); g.scale(S, S); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = c;
+      const cutAmp = inkCutAmp(), cutD = cutAmp > 0 && !(fray > 0) ? inkCut(p.w, p.h, seedOf(p.id), cutAmp) : '';
+      if (cutD) { try { const mk = await loadImg('data:image/svg+xml;base64,' + btoa(inkCutMask(bw, bh, cutD, p.w, p.h))); o.globalCompositeOperation = 'destination-in'; o.drawImage(mk, 0, 0, bw, bh); o.globalCompositeOperation = 'source-over'; } catch (e) { console.warn('Schnittkante', e); } }
+      g.save(); if (!(fray > 0) && !cutD) { rr(g, bx, by, bw, bh, R); g.clip(); } g.drawImage(off, bx, by, bw, bh); g.restore();
+      if (T.ink) { const f = inkFrame(p.w, p.h, matPx(), seedOf(p.id), !!cutD), c = T.inkLine || T.accent; g.save(); g.translate(bx, by); g.scale(S, S); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = c;
         g.globalAlpha = .45; g.lineWidth = 1; g.stroke(new Path2D(f.shadow)); g.globalAlpha = 1; g.lineWidth = 1.15; g.stroke(new Path2D(f.frame));
-        if (f.inner) { g.globalAlpha = .8; g.lineWidth = .7; g.stroke(new Path2D(f.inner)); } g.restore(); }
+        if (f.inner) { g.globalAlpha = .8; g.lineWidth = .7; g.stroke(new Path2D(f.inner)); }
+        if (cutD) { g.globalAlpha = 1; g.lineWidth = 1.1; g.stroke(new Path2D(cutD)); } g.restore(); }
     }
     // Verlauf über dem Profilband liegt am Bildschirm über den Fotos – hier ebenso
     if (BH()) { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
