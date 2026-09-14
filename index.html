@@ -220,8 +220,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
 #stage.ink .place.night { font-weight:600; }
 #stage.ink .tile { box-shadow:0 0 0 1px var(--pa), 0 10px 22px rgba(0,0,0,.18); border-radius:0; }
 #stage.ink.mat .tile { box-shadow:0 0 0 var(--mat) #fff, 0 0 0 var(--mat1) var(--pa), 0 10px 22px rgba(0,0,0,.18); }
-#stage.ink .tile img { filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)) grayscale(1) contrast(1.06); }
-#stage.ink.inkcolor .tile img { filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)); }
+#stage.ink.inkbw .tile img { filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)) grayscale(1) contrast(1.06); }
 #stage.ink .tile .z { font-family:Montserrat, Arial, sans-serif; }
 #stage.ink .pin { box-shadow:0 0 0 1.5px #fff, 0 3px 8px rgba(0,0,0,.25); }
 #stage.ink .tile .c { font-style:italic; font-weight:500; }
@@ -556,7 +555,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       </div>
       <div id="inkopts" hidden>
         <label class="f">Fotos im Stil Tusche</label>
-        <div class="seg" id="inkphotoseg"><button data-v="bw" class="on">Schwarzweiß</button><button data-v="color">Farbig</button></div>
+        <div class="seg" id="inkphotoseg"><button data-v="color" class="on">Farbig</button><button data-v="bw">Schwarzweiß</button></div>
         <label class="switch" style="margin-top:10px" title="Berge aus den Höhendaten und Wälder aus der Karte als gezeichnete Symbole – wie auf einer alten Reisekarte"><input type="checkbox" id="inkhills" checked><span class="kn"></span><span>Berge und Wälder zeichnen<small>Symbole aus Höhendaten und Waldflächen · lädt Höhenkacheln</small></span></label>
         <label class="f">Dichte der Symbole <span id="inkdensval">100 %</span></label>
         <input type="range" id="inkdens" min="40" max="180" step="10" value="100" style="width:100%">
@@ -730,9 +729,10 @@ main { position:relative; overflow:hidden; background:#08111a; }
   const INK = '#2b2118';
   const INK_STYLE = { version: 8, name: 'Tusche', sources: { openmaptiles: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } }, layers: [
     { id: 'bg', type: 'background', paint: { 'background-color': '#ffffff' } },
-    { id: 'water', type: 'fill', source: 'openmaptiles', 'source-layer': 'water', paint: { 'fill-color': '#f2f0eb' } },
+    { id: 'water', type: 'fill', source: 'openmaptiles', 'source-layer': 'water', paint: { 'fill-color': ['match', ['get', 'class'], 'river', '#e6e2d9', '#f2f0eb'] } },
     { id: 'water-line', type: 'line', source: 'openmaptiles', 'source-layer': 'water', paint: { 'line-color': INK, 'line-opacity': .75, 'line-width': ['interpolate', ['linear'], ['zoom'], 5, .5, 9, .9, 13, 1.4] } },
-    { id: 'waterway', type: 'line', source: 'openmaptiles', 'source-layer': 'waterway', filter: ['in', 'class', 'river', 'canal'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': INK, 'line-opacity': .6, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, .35, 10, .8, 13, 1.3] } },
+    { id: 'waterway', type: 'line', source: 'openmaptiles', 'source-layer': 'waterway', filter: ['in', 'class', 'river', 'canal'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': INK, 'line-opacity': .85, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, .9, 9, 1.4, 12, 2.4, 14, 3.2] } },
+    { id: 'waterway-small', type: 'line', source: 'openmaptiles', 'source-layer': 'waterway', minzoom: 10, filter: ['in', 'class', 'stream', 'drain', 'ditch'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': INK, 'line-opacity': .55, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, .5, 14, 1.2] } },
     { id: 'boundary-state', type: 'line', source: 'openmaptiles', 'source-layer': 'boundary', filter: ['all', ['==', 'admin_level', 4], ['!=', 'maritime', 1]], paint: { 'line-color': INK, 'line-opacity': .45, 'line-width': .7, 'line-dasharray': [1.5, 3] } },
     { id: 'boundary-country', type: 'line', source: 'openmaptiles', 'source-layer': 'boundary', filter: ['all', ['==', 'admin_level', 2], ['!=', 'maritime', 1]], paint: { 'line-color': INK, 'line-opacity': .8, 'line-width': 1.1, 'line-dasharray': [5, 3, 1.5, 3] } },
   ] };
@@ -1380,8 +1380,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
   let reliefT = 0;
   // Optionen des Stils Tusche: Fotos schwarzweiß/farbig, Berg- und Waldsymbole, Dichte
   function inkOptsUI() { const box = $('#inkopts'); if (!box) return; box.hidden = !T.ink;
-    stage.classList.toggle('inkcolor', state.inkPhoto === 'color');
-    $('#inkphotoseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === (state.inkPhoto === 'color' ? 'color' : 'bw')));
+    stage.classList.toggle('inkbw', state.inkPhoto === 'bw');
+    $('#inkphotoseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === (state.inkPhoto === 'bw' ? 'bw' : 'color')));
     $('#inkhills').checked = state.inkHills !== false; const d = Math.round((state.inkDensity ?? 1) * 100); $('#inkdens').value = d; $('#inkdensval').textContent = d + ' %'; }
   $('#inkphotoseg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.inkPhoto = b.dataset.v; inkOptsUI(); render(); autosave(); });
   $('#inkhills').addEventListener('change', e => { state.inkHills = e.target.checked; renderInkHills(true); autosave(); });
@@ -3270,7 +3270,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       { const v = gradeVals(); if (v.sat < .999) { o.globalCompositeOperation = 'saturation'; o.globalAlpha = 1 - v.sat; o.fillStyle = '#808080'; o.fillRect(0, 0, bw, bh); }
         if (v.ta > 0) { o.globalCompositeOperation = 'soft-light'; o.globalAlpha = v.ta; o.fillStyle = v.tint; o.fillRect(0, 0, bw, bh); }
         if (v.con > 1.001) { o.globalCompositeOperation = 'overlay'; o.globalAlpha = (v.con - 1) * 2.5; o.drawImage(im, ox, oy, iw, ih); }
-        if (T.ink && state.inkPhoto !== 'color') {   // wie am Bildschirm: grayscale(1) contrast(1.06)
+        if (T.ink && state.inkPhoto === 'bw') {   // wie am Bildschirm: grayscale(1) contrast(1.06)
           o.globalCompositeOperation = 'saturation'; o.globalAlpha = 1; o.fillStyle = '#808080'; o.fillRect(0, 0, bw, bh);
           o.globalCompositeOperation = 'overlay'; o.globalAlpha = .15; o.drawImage(im, ox, oy, iw, ih); }
         o.globalAlpha = 1; o.globalCompositeOperation = 'source-over'; }
