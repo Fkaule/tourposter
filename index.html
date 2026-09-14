@@ -219,8 +219,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
 #stage.ink .place { font-style:italic; font-weight:500; text-shadow:0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff; }
 #stage.ink .place.night { font-weight:600; }
 /* Tusche: Rahmen wie gezeichnet – feine Linie ums Foto, weißes Passepartout mit Tuschekontur, harter versetzter Schatten statt Weichzeichner */
-#stage.ink .tile { box-shadow:0 0 0 1px var(--pinkl), 3px 3px 0 0 rgba(43,33,24,.12); border-radius:0; }
-#stage.ink.mat .tile { box-shadow:0 0 0 1px var(--pinkl), 0 0 0 var(--mat) #fff, 0 0 0 var(--mat1) var(--pinkl), 3px 3px 0 var(--mat1) rgba(43,33,24,.12); }
+#stage.ink .tile { box-shadow:none; border-radius:0; }
+#stage.ink.mat .tile { box-shadow:0 0 0 var(--mat) #fff; }
+#stage.ink .tile .clip { z-index:1; } #stage.ink .tile .inkfr { z-index:0; }
 #stage.ink.inkbw .tile img { filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)) grayscale(1) contrast(1.06); }
 #stage.ink .tile .z { font-family:Montserrat, Arial, sans-serif; }
 #stage.ink .pin { box-shadow:0 0 0 1.5px #fff, 0 3px 8px rgba(0,0,0,.25); }
@@ -1981,6 +1982,10 @@ main { position:relative; overflow:hidden; background:#08111a; }
     for (const p of state.photos) {
       const el = document.createElement('div'); el.className = 'tile' + (isSel(p.id) ? ' sel' : '') + (cropMode === p.id ? ' crop' : ''); el.dataset.id = p.id;
       Object.assign(el.style, { left: p.x + 'px', top: p.y + 'px', width: p.w + 'px', height: p.h + 'px' });
+      if (T.ink) { const m = matPx(), f = inkFrame(p.w, p.h, m, seedOf(p.id)); const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); sv.setAttribute('class', 'inkfr');
+        sv.setAttribute('viewBox', `${-f.pad} ${-f.pad} ${p.w + 2 * f.pad} ${p.h + 2 * f.pad}`); sv.style.cssText = `position:absolute;left:${-f.pad}px;top:${-f.pad}px;width:${p.w + 2 * f.pad}px;height:${p.h + 2 * f.pad}px;pointer-events:none;overflow:visible;z-index:0`;
+        const c = T.inkLine || T.accent; sv.innerHTML = `<path d="${f.shadow}" fill="none" stroke="${c}" stroke-width="1" stroke-linecap="round" opacity=".45"/><path d="${f.frame}" fill="none" stroke="${c}" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>${f.inner ? `<path d="${f.inner}" fill="none" stroke="${c}" stroke-width=".7" stroke-linecap="round" opacity=".8"/>` : ''}`;
+        el.appendChild(sv); }
       const clip = document.createElement('div'); clip.className = 'clip'; el.appendChild(clip);
       if (FR().fray > 0) { const m = 'url("data:image/svg+xml;base64,' + btoa(frayMask(p.w, p.h, FR().fray, frRadius(), seedOf(p.id))) + '")'; clip.style.webkitMaskImage = m; clip.style.maskImage = m; clip.style.webkitMaskSize = '100% 100%'; clip.style.maskSize = '100% 100%'; clip.style.borderRadius = '0'; }
       const img = document.createElement('img'); img.src = hiUrl.get(p.id) || p.url || p.thumb; applyCrop(img, p); clip.appendChild(img);
@@ -2281,6 +2286,21 @@ main { position:relative; overflow:hidden; background:#08111a; }
       s += `<text x="${x0.toFixed(1)}" y="${(y + 13 * ts).toFixed(1)}" font-family="${ff}" font-style="italic" font-size="${(10 * ts).toFixed(1)}" text-anchor="middle" stroke="none">0</text><text x="${x1.toFixed(1)}" y="${(y + 13 * ts).toFixed(1)}" font-family="${ff}" font-style="italic" font-size="${(10 * ts).toFixed(1)}" text-anchor="middle" stroke="none">${km} km</text></g>`; }
     return s;
   }
+  // Tusche: Fotorahmen wie mit der Feder gezogen – jede Kante eine leicht zitternde Linie, die an den Ecken
+  // ein Stück übersteht; unten und rechts ein zweiter, versetzter Strich als gezeichneter Schatten.
+  // Gleicher Pfad am Bildschirm (SVG im Foto) und im Export (Path2D), Zufall aus der Foto-ID, damit er stabil bleibt.
+  function inkFrame(w, h, mat, seed) {
+    const rnd = mulberry(seed * 7919 + 13), o = mat + .5, over = 2 + rnd() * 1.5;
+    const x0 = -o, y0 = -o, x1 = w + o, y1 = h + o;
+    const edge = (ax, ay, bx, by, amp) => { const L = Math.hypot(bx - ax, by - ay), n = Math.max(2, Math.round(L / 26)), nx = -(by - ay) / L, ny = (bx - ax) / L;
+      let d = ''; for (let i = 0; i <= n; i++) { const t = i / n, j = (rnd() - .5) * amp * (i === 0 || i === n ? .5 : 1);
+        d += (i ? 'L' : 'M') + (ax + (bx - ax) * t + nx * j).toFixed(1) + ',' + (ay + (by - ay) * t + ny * j).toFixed(1); } return d; };
+    const frame = edge(x0 - over, y0, x1 + over, y0, 1.2) + edge(x1, y0 - over, x1, y1 + over, 1.2) + edge(x1 + over, y1, x0 - over, y1, 1.2) + edge(x0, y1 + over, x0, y0 - over, 1.2);
+    const s = 2.6;   // Schattenstrich: rechts und unten, leicht versetzt, beginnt etwas unterhalb der Ecke
+    const shadow = edge(x1 + s, y0 + 5, x1 + s, y1 + s, 1.4) + edge(x0 + 5, y1 + s, x1 + s + 1, y1 + s, 1.4);
+    const inner = mat > 1 ? edge(-.5, -.5, w + .5, -.5, .6) + edge(w + .5, -.5, w + .5, h + .5, .6) + edge(w + .5, h + .5, -.5, h + .5, .6) + edge(-.5, h + .5, -.5, -.5, .6) : '';
+    return { frame, shadow, inner, pad: o + s + over + 2 };
+  }
   function renderInkOverlay() { const g = $('#rtop-ink'); if (!g) return; g.innerHTML = T.ink ? inkOverlaySvg() : ''; }
 
   // ---------- Stil "Tusche", Stufe 2: Berge und Wälder als gezeichnete Symbole.
@@ -2356,7 +2376,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       const gi = Math.round(x / step), gj = Math.round(y / step); let mn = Infinity, mx = -Infinity, c = NaN, cnt = 0;
       for (let j = gj - win; j <= gj + win; j++) for (let i = gi - win; i <= gi + win; i++) { if (i < 0 || j < 0 || i >= nx || j >= ny) continue; const v = H[j * nx + i]; if (isNaN(v)) continue; cnt++; if (v < mn) mn = v; if (v > mx) mx = v; if (i === gi && j === gj) c = v; }
       if (cnt < 6) continue; const range = mx - mn; if (isNaN(c)) c = (mn + mx) / 2;
-      const r = Math.max(0, Math.min(1, (range - 60) / 340));           // 60 m Spanne im Fenster = flach, ab ~400 m = Hochgebirge
+      const r = Math.max(0, Math.min(1, (range - 60 / dens) / (340 / dens)));   // Dichte senkt auch die Schwelle: bei 180 % zeigen schon ~35 m Spanne einen Hügel, bei 40 % erst 150 m
       const prom = Math.max(0, Math.min(1, (c - mn) / Math.max(60, range)));   // steht die Zelle selbst hoch in ihrer Umgebung?
       if (r > .1 && rnd() < Math.min(1, (r * r * 1.5 + r * .35 + prom * .25) * dens)) { const sz = (11 + 24 * r * (.6 + .4 * prom)) * ts * (.85 + rnd() * .3); items.push({ k: 'h', x, y, s: sz, v: Math.floor(rnd() * 3) }); }
       else if (r < .35 && woods.length && rnd() < .5 * dens && inWood(x, y)) items.push({ k: 't', x, y, s: (9 + rnd() * 4) * ts });
@@ -3261,9 +3281,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
       const bx = P(p.x), by = P(p.y), bw = P(p.w), bh = P(p.h);
       const fr = FR(), R = P(frRadius()), mat = P(fr.mat), fray = P(fr.fray);
       // Schatten (+ Passepartout mit Haarlinie und Eckmarken)
-      if (T.ink) { const o = mat + P(1), d = P(3); g.fillStyle = 'rgba(43,33,24,.12)'; g.fillRect(bx - o + d, by - o + d, bw + 2 * o, bh + 2 * o); }   // harter Versatzschatten wie am Bildschirm
-      else { g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(30); g.shadowOffsetY = P(14); rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, mat ? R * .4 : R); g.fillStyle = '#000'; g.fill(); g.restore(); }
-      if (mat) { rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, T.ink ? 0 : R * .4); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(1); g.strokeStyle = T.ink ? T.inkLine : T.line; g.stroke();
+      // Tusche: gezeichneter Rahmen folgt nach dem Foto (gleicher Pfad wie am Bildschirm)
+      if (!T.ink)       { g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(30); g.shadowOffsetY = P(14); rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, mat ? R * .4 : R); g.fillStyle = '#000'; g.fill(); g.restore(); }
+      if (mat) { rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, T.ink ? 0 : R * .4); g.fillStyle = T.bg; g.fill(); if (!T.ink) { g.lineWidth = P(1); g.strokeStyle = T.line; g.stroke(); }
         if (fr.marks) { const k = P(12), o = mat + P(7); g.strokeStyle = T.accent; g.lineWidth = P(1.5); g.beginPath(); g.moveTo(bx - o, by - o + k); g.lineTo(bx - o, by - o); g.lineTo(bx - o + k, by - o); g.moveTo(bx + bw + o - k, by + bh + o); g.lineTo(bx + bw + o, by + bh + o); g.lineTo(bx + bw + o, by + bh + o - k); g.stroke(); } }
       // Foto samt Farbabstimmung, Bildunterschrift und Nummer in eine Zwischenfläche zeichnen – dann ggf. ausgefranst maskieren
       const off = document.createElement('canvas'); off.width = Math.round(bw); off.height = Math.round(bh); const o = off.getContext('2d');
@@ -3283,7 +3303,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
       pill(o, P(12 + 13 * TS()), P(12 + 13 * TS()), p.star ? p.num + ' ★' : String(p.num), p.star ? '#f2b632' : T.pill, p.star ? '#1c1a12' : '#fff');   // Highlight wie am Bildschirm
       if (fray > 0) { try { const mk = await loadImg('data:image/svg+xml;base64,' + btoa(frayMask(Math.round(bw), Math.round(bh), Math.round(fray), R, seedOf(p.id)))); o.globalCompositeOperation = 'destination-in'; o.drawImage(mk, 0, 0, bw, bh); o.globalCompositeOperation = 'source-over'; } catch (e) { console.warn('Maske', e); } }
       g.save(); if (!(fray > 0)) { rr(g, bx, by, bw, bh, R); g.clip(); } g.drawImage(off, bx, by, bw, bh); g.restore();
-      if (T.ink) { g.lineWidth = P(1); g.strokeStyle = T.inkLine; g.strokeRect(bx - P(.5), by - P(.5), bw + P(1), bh + P(1)); }   // feine Tuschelinie ums Foto
+      if (T.ink) { const f = inkFrame(p.w, p.h, matPx(), seedOf(p.id)), c = T.inkLine || T.accent; g.save(); g.translate(bx, by); g.scale(S, S); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = c;
+        g.globalAlpha = .45; g.lineWidth = 1; g.stroke(new Path2D(f.shadow)); g.globalAlpha = 1; g.lineWidth = 1.15; g.stroke(new Path2D(f.frame));
+        if (f.inner) { g.globalAlpha = .8; g.lineWidth = .7; g.stroke(new Path2D(f.inner)); } g.restore(); }
     }
     // Verlauf über dem Profilband liegt am Bildschirm über den Fotos – hier ebenso
     if (BH()) { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
