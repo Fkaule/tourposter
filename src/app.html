@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Tourposter: Aus deiner Radtour (FIT, GPX, TCX) und deinen Fotos wird ein Poster mit Karte, Route und Höhenprofil – direkt im Browser, deine Daten bleiben auf deinem Gerät. Als PNG/PDF exportieren oder drucken lassen.">
+<meta name="description" content="Tourposter: Aus deiner Radtour (FIT, GPX, TCX) und deinen Fotos wird ein Poster mit Karte, Route und Höhenprofil – direkt im Browser, deine Daten bleiben auf deinem Gerät. Als PNG oder PDF exportieren.">
 <meta property="og:title" content="Tourposter – dein Radtour-Poster aus Route und Fotos">
 <meta property="og:description" content="Karte, Route, Höhenprofil und deine Fotos als Poster. Läuft im Browser, ohne Upload.">
 <meta property="og:type" content="website">
@@ -40,6 +40,7 @@ aside h1 { margin:0; font-size:21px; font-weight:900; letter-spacing:-.035em; li
 .drop { display:block; box-sizing:border-box; border:1.5px dashed #34495e; border-radius:11px; padding:13px 12px; text-align:center; color:var(--muted); font-size:12.5px; cursor:pointer; background:rgba(255,255,255,.015); transition:border-color .15s, background .15s; }
 .drop b { color:var(--text); font-weight:600; }
 .drop.over, .drop:hover { border-color:var(--accent); background:rgba(255,90,54,.07); color:var(--text); }
+#demonote a { color:var(--accent); font-weight:600; }
 .drop input { display:none; }
 .list { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
 .row { display:grid; grid-template-columns:26px 1fr 22px; gap:8px; align-items:center; background:var(--panel2); border-radius:10px; padding:7px 8px; font-size:12px; }
@@ -299,8 +300,6 @@ main { position:relative; overflow:hidden; background:#08111a; }
 #fbdlg textarea, #fbdlg input[type=email], #fbdlg select { box-sizing:border-box; max-width:100%; }
 #fbdlg input[type=email], #fbdlg select { width:100%; padding:8px 10px; background:var(--panel2); border:1px solid var(--line); border-radius:8px; color:var(--text); font:13px Montserrat, Arial, sans-serif; }
 #fbdlg input[type=email]::placeholder { color:var(--muted); }
-#orderdlg { position:fixed; inset:0; background:rgba(4,10,16,.7); z-index:50; display:grid; place-items:center; padding:16px; backdrop-filter:blur(3px); }
-#orderdlg[hidden] { display:none; }
 .obody { padding:14px 18px 18px; font-size:13px; line-height:1.5; } .obody .muted { color:var(--muted); font-size:12px; } .obody a { color:var(--accent); }
 #pricetbl { width:100%; border-collapse:collapse; margin-top:6px; } #pricetbl td { padding:6px 4px; border-bottom:1px solid var(--line); } #pricetbl td:last-child { text-align:right; font-weight:700; }
 #help { position:fixed; inset:0; background:rgba(4,10,16,.7); z-index:50; display:grid; place-items:center; padding:16px; backdrop-filter:blur(3px); }
@@ -423,6 +422,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
     <div class="step on" data-t="tour">
       <h2><span class="no">1</span>Tour <span class="sub" id="mapinfo"></span></h2>
       <label class="drop" id="dropfit"><b>FIT / GPX / TCX</b> hierher ziehen oder tippen<br><span style="font-size:11px">mehrere Dateien = Etappen · Übernachtung nur, wenn ein Tag dazwischen liegt</span><input type="file" accept=".fit,.gpx,.tcx,.FIT,.GPX" multiple></label>
+      <div id="demorow" class="toolrow" hidden><button class="btn" id="demobtn" title="Lädt eine fertige Beispieltour mit Fotos – zum Ausprobieren, bevor du eigene Daten hast">Beispiel ansehen <small>fertiges Poster zum Ausprobieren</small></button></div>
+      <div id="demonote" class="hint" hidden style="border:1px solid var(--accent); border-radius:9px; padding:9px 11px; color:var(--text)"><b>Beispielprojekt.</b> Fotos verschieben, Stil und Schrift wechseln, exportieren – alles wie mit einer echten Tour. Sobald du oben eine eigene Aufzeichnung lädst, wird das Beispiel ersetzt. <a href="#" id="demodrop">Beispiel verwerfen</a></div>
       <label class="f" style="margin-top:10px">Sportart</label>
       <select id="sport" title="Bestimmt Titelvorschlag, Untertitel und Kennzahlen"><option value="">automatisch (aus der Datei)</option><option value="bike">Rad</option><option value="hike">Wandern</option><option value="canoe">Kanu</option></select>
       <div class="list" id="stages"></div>
@@ -577,17 +578,6 @@ main { position:relative; overflow:hidden; background:#08111a; }
         </div>
       </div>
     </div>
-    <div id="orderdlg" hidden>
-      <div class="hbox" style="max-width:560px">
-        <div class="hhead"><b>Poster drucken lassen</b><button id="orderclose">×</button></div>
-        <div class="obody">
-          <p>Dein Poster wird von unserem Druckpartner auf Posterpapier gedruckt und zu dir geschickt. Die Druckdatei entsteht wie gewohnt hier im Browser – erst beim Absenden der Bestellung wird sie zusammen mit deinen Bestelldaten übermittelt (<a href="datenschutz.html" target="_blank">Datenschutz</a>).</p>
-          <table id="pricetbl"></table>
-          <p id="ordernote" class="muted"></p>
-          <div class="btnrow" style="margin-top:14px"><button class="btn primary" id="orderpdf">Druckdatei erzeugen <small>PDF</small></button><a class="btn" id="ordermail" href="#">Bestellung per E-Mail</a></div>
-        </div>
-      </div>
-    </div>
     <div id="help" hidden>
       <div class="hbox">
         <div class="hhead"><b>So geht's</b><button id="helpclose">×</button></div>
@@ -614,6 +604,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
 <script>/*VENDOR_JS*/</script>
 <script id="roomsdata" type="application/json">[{"id": "wohnzimmer", "name": "Wohnzimmer", "src": "rooms/wohnzimmer.jpg", "note": "KI-generiertes Beispielbild", "cal": {"q": [[460.4, 319.9], [1227.6, 319.9], [1227.6, 1087.2], [460.4, 1087.2]], "w": 200, "h": 200, "base": 0, "cx": 113}}]</script>
 <script id="heifsrc" type="text/plain">/*HEIF_B64*/</script>
+<script id="demosrc" type="text/plain">/*DEMO_B64*/</script>
 <script>if (typeof FitParser === 'undefined' || typeof maplibregl === 'undefined') { window.__errs.unshift('Bibliotheks-Skript wurde nicht ausgeführt (' + (window.__vendorFail ? 'Ladefehler' : 'kein Ladefehler gemeldet') + ', ' + location.protocol + ')'); document.addEventListener('DOMContentLoaded', () => { const s = document.getElementById('status'); s.className = 'err'; s.textContent = 'Bibliotheken konnten nicht starten: ' + (window.__errs[0] || 'unbekannt') + ' – Browser: ' + navigator.userAgent; }); }</script>
 <script>
 (() => {
@@ -1051,15 +1042,6 @@ main { position:relative; overflow:hidden; background:#08111a; }
   });
   $('#format').addEventListener('change', e => { keepView = false; setFormat(e.target.value); });
   // ---------- Druckservice: zentrale Konfiguration (Preise, Partner, Bestellweg). Solange kein Server steht, läuft die Bestellung per E-Mail mit angehängter Druckdatei.
-  const ORDER = { partner: '[Druckpartner]', email: 'bestellung@tourposter.online', endpoint: null,   // endpoint: später URL des Bestell-Servers (Upload + Bestelldaten)
-    prices: { A3: 19.90, A2: 29.90, A1: 44.90, '30x45': 24.90, '40x60': 34.90, '50x70': 39.90, '60x90': 54.90, '70x100': 69.90 },
-    note: 'Preise inkl. MwSt., zzgl. Versand [x,xx €]. Personalisierte Poster sind vom Widerruf ausgeschlossen (§ 312g Abs. 2 Nr. 1 BGB). Lieferzeit ca. [5] Werktage.' };
-  function openOrder() { const tbl = $('#pricetbl'); const cur = state.paper; tbl.innerHTML = Object.entries(ORDER.prices).map(([k, v]) => { const p = PAPER[k]; const lab = p ? (p[2] === 'DIN' ? k + ' · ' + p[0] + ' × ' + p[1] + ' mm' : p[0] / 10 + ' × ' + p[1] / 10 + ' cm') : k; return `<tr${k === cur ? ' style="color:var(--accent)"' : ''}><td>${lab}${k === cur ? ' (gewählt)' : ''}</td><td>${v.toFixed(2).replace('.', ',')} €</td></tr>`; }).join('');
-    $('#ordernote').textContent = ORDER.note + (ORDER.prices[cur] ? '' : ` Für das gewählte Format (${cur}) gibt es keinen Druck – bitte oben eine Druckgröße wählen.`);
-    const subj = encodeURIComponent(`Tourposter-Bestellung: ${fname()} (${cur})`); const body = encodeURIComponent(`Hallo,\n\nich möchte folgendes Poster drucken lassen:\n\nTour: ${state.title || fname()}\nGröße: ${cur}\nStil: ${state.theme}\n\nDie Druckdatei (PDF) hänge ich an.\n\nLieferadresse:\n[Name]\n[Straße]\n[PLZ Ort]\n\nViele Grüße`);
-    $('#ordermail').href = `mailto:${ORDER.email}?subject=${subj}&body=${body}`; $('#orderdlg').hidden = false; }
-  if ($('#order')) $('#order').addEventListener('click', openOrder);   // Button derzeit ausgeblendet – Druckservice folgt $('#orderclose').addEventListener('click', () => { $('#orderdlg').hidden = true; }); $('#orderdlg').addEventListener('click', e => { if (e.target.id === 'orderdlg') $('#orderdlg').hidden = true; });
-  $('#orderpdf').addEventListener('click', () => { $('#orderdlg').hidden = true; $('#expdf').click(); });
   // ---------- Wandvorschau: Poster maßstabsgetreu in ein Raumfoto gerechnet
   let wallImg = null, wallSizeSel = null, wallSeq = 0, wallBusy = 0;
   // ---------- Raumfoto-Wandvorschau: das gerenderte Poster perspektivisch ins Foto rechnen
@@ -1343,6 +1325,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     if (rest.length) addTourFiles(rest); });
   async function addTourFiles(files) {
     if (!files.length) return;
+    if (state.demo) { clearDemo(); say('Beispiel entfernt – eigene Tour wird geladen.'); }
     for (const f of [...files].sort((a, b) => a.name.localeCompare(b.name))) {
       try {
         if (typeof FitParser === 'undefined') { say('Bibliotheken nicht geladen – Datei bitte komplett herunterladen und neu öffnen (Browser: ' + navigator.userAgent.split(') ').pop() + ').', 'err'); return; }
@@ -1869,7 +1852,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     $('#stages').innerHTML = state.stages.map((s, i) => `<div class="row"><div class="n">${i + 1}</div><div><input value="${(s.name || '').replace(/"/g, '&quot;')}" data-i="${i}" aria-label="Etappenname"><div class="meta">${(s.distance / 1000).toFixed(0)} km · ${nf(s.gain)} Hm${s.hasEle ? '' : ' · keine Höhendaten'}</div></div><button data-del="${i}" title="Entfernen">×</button></div>`).join('');
     $('#stages').querySelectorAll('input').forEach(inp => inp.addEventListener('change', e => { state.stages[+e.target.dataset.i].name = e.target.value; renderProfile(); }));
     $('#stages').querySelectorAll('button').forEach(b => b.addEventListener('click', e => { state.stages.splice(+e.target.dataset.del, 1); afterTourChange(); }));
-    renderTransferList(); clockInfo();
+    renderTransferList(); clockInfo(); demoUI();
     tilesEl.innerHTML = ''; $('#photos').innerHTML = '';
     for (const p of state.photos) {
       const el = document.createElement('div'); el.className = 'tile' + (isSel(p.id) ? ' sel' : '') + (cropMode === p.id ? ' crop' : ''); el.dataset.id = p.id;
@@ -2835,6 +2818,27 @@ main { position:relative; overflow:hidden; background:#08111a; }
     grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
     grip.addEventListener('dblclick', e => { e.stopPropagation(); state.titleW = null; stage.style.setProperty('--titleW', TITLEW + 'px'); render(); scheduleAuto('title'); autosave(); }); }
   stage.addEventListener('pointerdown', e => { if (e.target.id === 'overlay' || e.target.id === 'vig' || e.target.closest('#map')) { selected = new Set(); selPlace = null; cropMode = null; render(); } });
+  // ---------- Beispielprojekt: fertiges Poster zum Ausprobieren, wird durch eigene Daten ersetzt
+  const demoAvailable = () => { const el = $('#demosrc'); return !!el && (!!el.dataset.src || el.textContent.trim().length > 100); };
+  async function loadDemo() {
+    const el = $('#demosrc'); if (!el) return; say('Beispiel wird geladen …');
+    try { let blob;
+      if (el.dataset.src) { const r = await fetch(el.dataset.src); if (!r.ok) throw new Error('Beispiel nicht gefunden'); blob = await r.blob(); }
+      else { const bin = atob(el.textContent.trim()); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); blob = new Blob([u8], { type: 'application/zip' }); }
+      await loadZipFile(new File([blob], 'Beispiel.tourposter.zip', { type: 'application/zip' }));
+      state.demo = true; render(); autosave();
+      say('Beispiel geladen – Fotos verschieben, Stil wechseln, exportieren. Eine eigene Aufzeichnung ersetzt das Beispiel.', 'ok');
+    } catch (e) { say('Beispiel konnte nicht geladen werden: ' + e.message, 'err'); } }
+  // Beispiel vollständig entfernen (Tour, Fotos, Texte), ohne den Browser-Speicher sonst anzutasten
+  function clearDemo() {
+    if (!state.demo) return;
+    dropPhotos(() => true); state.stages = []; state.transfers = []; state.tfSeen = []; state.places = []; state.peaks = [];
+    state.title = ''; state.subline = ''; state.date = ''; state.titleEdited = state.sublineEdited = state.dateEdited = state.statsEdited = false;
+    state.demo = false; selected = new Set(); cropMode = null; }
+  function demoUI() { const row = $('#demorow'), note = $('#demonote'); if (!row) return;
+    row.hidden = !!state.stages.length || !demoAvailable(); note.hidden = !state.demo; }
+  $('#demobtn').addEventListener('click', loadDemo);
+  $('#demodrop').addEventListener('click', e => { e.preventDefault(); clearDemo(); afterTourChange(); render(); autosave(); say('Beispiel entfernt.', 'ok'); });
   $('#reset').addEventListener('click', async () => { if (!confirm('Alles zurücksetzen? Tour, Fotos und Texte werden aus dieser Seite und dem Browser-Speicher entfernt.')) return;
     try { localStorage.removeItem(KEY); } catch (e) {}
     try { await idb.keep([]); } catch (e) {}   // auch die Fotos in Originalgröße löschen – sonst bleiben sie im Browser liegen
