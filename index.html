@@ -2290,15 +2290,15 @@ main { position:relative; overflow:hidden; background:#08111a; }
   // ein Stück übersteht; unten und rechts ein zweiter, versetzter Strich als gezeichneter Schatten.
   // Gleicher Pfad am Bildschirm (SVG im Foto) und im Export (Path2D), Zufall aus der Foto-ID, damit er stabil bleibt.
   function inkFrame(w, h, mat, seed) {
-    const rnd = mulberry(seed * 7919 + 13), o = mat + .5, over = .8 + rnd() * .8;   // Ecken stehen nur knapp über
+    const rnd = mulberry(seed * 7919 + 13), o = mat + .5, over = 0;   // Ecken treffen sich, kein Überstand
     const x0 = -o, y0 = -o, x1 = w + o, y1 = h + o;
     const edge = (ax, ay, bx, by, amp) => { const L = Math.hypot(bx - ax, by - ay), n = Math.max(2, Math.round(L / 26)), nx = -(by - ay) / L, ny = (bx - ax) / L;
       let d = ''; for (let i = 0; i <= n; i++) { const t = i / n, j = (rnd() - .5) * amp * (i === 0 || i === n ? .5 : 1);
         d += (i ? 'L' : 'M') + (ax + (bx - ax) * t + nx * j).toFixed(1) + ',' + (ay + (by - ay) * t + ny * j).toFixed(1); } return d; };
-    const frame = edge(x0 - over, y0, x1 + over, y0, .55) + edge(x1, y0 - over, x1, y1 + over, .55) + edge(x1 + over, y1, x0 - over, y1, .55) + edge(x0, y1 + over, x0, y0 - over, .55);
+    const frame = (edge(x0, y0, x1, y0, .55) + edge(x1, y0, x1, y1, .55).replace('M', 'L') + edge(x1, y1, x0, y1, .55).replace('M', 'L') + edge(x0, y1, x0, y0, .55).replace('M', 'L')) + 'Z';
     const s = 2.2;   // Schattenstrich: rechts und unten, leicht versetzt, beginnt etwas unterhalb der Ecke
     const shadow = edge(x1 + s, y0 + 4, x1 + s, y1 + s, .7) + edge(x0 + 4, y1 + s, x1 + s + .5, y1 + s, .7);
-    const inner = mat > 1 ? edge(-.5, -.5, w + .5, -.5, .3) + edge(w + .5, -.5, w + .5, h + .5, .3) + edge(w + .5, h + .5, -.5, h + .5, .3) + edge(-.5, h + .5, -.5, -.5, .3) : '';
+    const inner = mat > 1 ? (edge(-.5, -.5, w + .5, -.5, .3) + edge(w + .5, -.5, w + .5, h + .5, .3).replace('M', 'L') + edge(w + .5, h + .5, -.5, h + .5, .3).replace('M', 'L') + edge(-.5, h + .5, -.5, -.5, .3).replace('M', 'L')) + 'Z' : '';
     return { frame, shadow, inner, pad: o + s + over + 2 };
   }
   function renderInkOverlay() { const g = $('#rtop-ink'); if (!g) return; g.innerHTML = T.ink ? inkOverlaySvg() : ''; }
