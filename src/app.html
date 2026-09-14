@@ -19,6 +19,10 @@
 @font-face{font-family:'Space Grotesk';font-style:normal;font-weight:300 700;font-display:swap;src:url(fonts/space-grotesk.woff2) format('woff2')}
 @font-face{font-family:'Playfair Display';font-style:normal;font-weight:400 900;font-display:swap;src:url(fonts/playfair-display.woff2) format('woff2')}
 @font-face{font-family:'Lora';font-style:normal;font-weight:400 700;font-display:swap;src:url(fonts/lora.woff2) format('woff2')}
+@font-face{font-family:'EB Garamond';font-style:normal;font-weight:400 800;font-display:swap;src:url(fonts/eb-garamond.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'EB Garamond';font-style:italic;font-weight:400 800;font-display:swap;src:url(fonts/eb-garamond-italic.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'EB Garamond';font-style:normal;font-weight:400 800;font-display:swap;src:url(fonts/eb-garamond-ext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'EB Garamond';font-style:italic;font-weight:400 800;font-display:swap;src:url(fonts/eb-garamond-ext-italic.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 /*FONTS_END*/</style>
 <style>
 /*MAPLIBRE_CSS*/
@@ -206,6 +210,22 @@ main { position:relative; overflow:hidden; background:#08111a; }
 #stats div:last-child { border:0; }
 #stats b { font-weight:800; font-size:calc(38px * var(--tt, 1)); line-height:1; color:var(--ptext); }
 #stats span { font-size:calc(11px * var(--ts, 1)); letter-spacing:.22em; color:var(--pmuted); }
+/* Stil "Tusche": Typografie einer gezeichneten Reisekarte – gesperrte Kapitalen, Kursive, dünne Tuschelinien, Fotos in Sepia */
+#stage.ink #title .date { font-weight:500; font-style:italic; letter-spacing:.12em; font-size:calc(14px * var(--ts, 1)); }
+#stage.ink #title .date::before { height:1px; }
+#stage.ink #title .h { font-weight:500; text-transform:uppercase; letter-spacing:.16em; font-size:calc(56px * var(--tt, 1)); line-height:1.08; margin-top:22px; }
+#stage.ink #title .sub { font-style:italic; font-size:calc(18px * var(--ts, 1)); }
+#stage.ink #stats b { font-weight:500; }
+#stage.ink #stats span { letter-spacing:.24em; font-size:calc(10.5px * var(--ts, 1)); text-transform:uppercase; }
+#stage.ink #stats div { border-right-color:var(--pmuted); }
+#stage.ink .place { font-style:italic; font-weight:500; text-shadow:0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff; }
+#stage.ink .place.night { font-weight:600; }
+#stage.ink .tile { box-shadow:0 0 0 1px var(--pa), 0 10px 22px rgba(0,0,0,.18); border-radius:0; }
+#stage.ink.mat .tile { box-shadow:0 0 0 var(--mat) #fff, 0 0 0 var(--mat1) var(--pa), 0 10px 22px rgba(0,0,0,.18); }
+#stage.ink .tile img { filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)) grayscale(1) sepia(.28) contrast(1.04) brightness(1.02); }
+#stage.ink .tile .z { font-family:Montserrat, Arial, sans-serif; }
+#stage.ink .pin { box-shadow:0 0 0 1.5px #fff, 0 3px 8px rgba(0,0,0,.25); }
+#stage.ink .tile .c { font-style:italic; font-weight:500; }
 [contenteditable] { outline:none; border-radius:4px; cursor:text; }
 [contenteditable]:hover { box-shadow:0 0 0 1.5px rgba(255,90,54,.6); }
 [contenteditable]:focus { box-shadow:0 0 0 2px var(--accent); }
@@ -518,13 +538,13 @@ main { position:relative; overflow:hidden; background:#08111a; }
       <div id="themepick"></div>
       <select id="theme" hidden>
         <option value="nacht"></option><option value="fjord"></option><option value="hell"></option><option value="retro"></option>
-        <option value="wald"></option><option value="kohle"></option><option value="blaupause"></option><option value="mono"></option><option value="sand"></option>
+        <option value="wald"></option><option value="kohle"></option><option value="blaupause"></option><option value="mono"></option><option value="sand"></option><option value="tusche"></option>
       </select>
       <label class="f">Schrift</label>
       <div id="fontpick"></div>
       <select id="font" hidden>
         <option value="montserrat"></option><option value="inter"></option><option value="oswald"></option>
-        <option value="space"></option><option value="playfair"></option><option value="lora"></option>
+        <option value="space"></option><option value="playfair"></option><option value="lora"></option><option value="garamond"></option>
       </select>
             <div class="grp">Karte</div>
 <label class="f">Geländerelief <span id="reliefval">60 %</span></label>
@@ -699,6 +719,17 @@ main { position:relative; overflow:hidden; background:#08111a; }
   const say = (m, cls) => { statusEl.textContent = m; statusEl.className = cls || ''; };
 
   // ------------------------------------------------------------ Stile
+  // Kartenstil für "Tusche": weißes Blatt, Küsten und Seen als feine Linie, Flüsse, gestrichelte Grenzen.
+  // Keine Straßen, keine Kachel-Beschriftung – Ortsnamen entlang der Route und Ländernamen setzen wir selbst (inkLabels).
+  const INK = '#2b2118';
+  const INK_STYLE = { version: 8, name: 'Tusche', sources: { openmaptiles: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } }, layers: [
+    { id: 'bg', type: 'background', paint: { 'background-color': '#ffffff' } },
+    { id: 'water', type: 'fill', source: 'openmaptiles', 'source-layer': 'water', paint: { 'fill-color': '#f2f0eb' } },
+    { id: 'water-line', type: 'line', source: 'openmaptiles', 'source-layer': 'water', paint: { 'line-color': INK, 'line-opacity': .75, 'line-width': ['interpolate', ['linear'], ['zoom'], 5, .5, 9, .9, 13, 1.4] } },
+    { id: 'waterway', type: 'line', source: 'openmaptiles', 'source-layer': 'waterway', filter: ['in', 'class', 'river', 'canal'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': INK, 'line-opacity': .6, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, .35, 10, .8, 13, 1.3] } },
+    { id: 'boundary-state', type: 'line', source: 'openmaptiles', 'source-layer': 'boundary', filter: ['all', ['==', 'admin_level', 4], ['!=', 'maritime', 1]], paint: { 'line-color': INK, 'line-opacity': .45, 'line-width': .7, 'line-dasharray': [1.5, 3] } },
+    { id: 'boundary-country', type: 'line', source: 'openmaptiles', 'source-layer': 'boundary', filter: ['all', ['==', 'admin_level', 2], ['!=', 'maritime', 1]], paint: { 'line-color': INK, 'line-opacity': .8, 'line-width': 1.1, 'line-dasharray': [5, 3, 1.5, 3] } },
+  ] };
   const THEMES = {
     nacht: { map: 'https://tiles.openfreemap.org/styles/dark', accent: '#ff5a36', bg: '#0d1a26', vig: '13,26,38', text: '#ffffff', cap: '#e6edf3', sub: '#b7c5d3', muted: '#8fa3b8', band: 'rgba(6,12,18,.86)', line: '#283440', halo: '#0d1a26', pill: 'rgba(13,26,38,.85)', grid: '#283440', axis: '#788c9e', pinBg: '#ffffff', pinFg: '#0d1a26', vigA: .9, tint: '#1e3a55', tintA: .35, sat: .8 },
     fjord: { map: 'https://tiles.openfreemap.org/styles/fiord', accent: '#ffb347', bg: '#1c2a3a', vig: '28,42,58', text: '#ffffff', cap: '#eef3f8', sub: '#c3cfdb', muted: '#8ea0b4', band: 'rgba(12,22,34,.88)', line: '#33475c', halo: '#1c2a3a', pill: 'rgba(28,42,58,.85)', grid: '#33475c', axis: '#8ea0b4', pinBg: '#ffffff', pinFg: '#1c2a3a', vigA: .92, tint: '#274b6e', tintA: .38, sat: .75 },
@@ -708,6 +739,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     kohle: { map: 'https://tiles.openfreemap.org/styles/dark', accent: '#f0a830', bg: '#14100d', vig: '20,16,13', text: '#f7f2ea', cap: '#efe7db', sub: '#c3b6a4', muted: '#948674', band: 'rgba(10,8,6,.88)', line: '#3a3128', halo: '#14100d', pill: 'rgba(20,16,13,.85)', grid: '#3a3128', axis: '#948674', pinBg: '#f7f2ea', pinFg: '#14100d', vigA: .92, tint: '#7a5a2e', tintA: .35, sat: .72 },
     blaupause: { map: 'https://tiles.openfreemap.org/styles/dark', accent: '#4fc3f7', bg: '#0b1b2b', vig: '11,27,43', text: '#eaf6ff', cap: '#dbecf8', sub: '#a8c4d8', muted: '#7e9bb2', band: 'rgba(5,15,25,.88)', line: '#1f3a52', halo: '#0b1b2b', pill: 'rgba(11,27,43,.85)', grid: '#1f3a52', axis: '#7e9bb2', pinBg: '#eaf6ff', pinFg: '#0b1b2b', vigA: .9, tint: '#1b4a6e', tintA: .4, sat: .68 },
     mono:  { map: 'https://tiles.openfreemap.org/styles/positron', accent: '#141414', bg: '#ffffff', vig: '255,255,255', text: '#141414', cap: '#141414', sub: '#3d3d3d', muted: '#6f6f6f', band: 'rgba(255,255,255,.96)', line: '#dcdcdc', halo: '#ffffff', pill: 'rgba(20,20,20,.85)', grid: '#e4e4e4', axis: '#6f6f6f', pinBg: '#141414', pinFg: '#ffffff', vigA: .96, tint: '#000000', tintA: .06, sat: .08 },
+    tusche: { map: INK_STYLE, ink: true, font: 'garamond', accent: INK, bg: '#ffffff', vig: '255,255,255', text: INK, cap: INK, sub: '#4a3f33', muted: '#6f6558', band: 'rgba(255,255,255,.96)', line: '#cfc8bc', halo: '#ffffff', pill: 'rgba(43,33,24,.85)', grid: '#e4dfd5', axis: '#7a7064', pinBg: INK, pinFg: '#ffffff', vigA: .55, tint: '#3a2e22', tintA: .12, sat: .08 },
     sand:  { map: 'https://tiles.openfreemap.org/styles/bright', accent: '#8a9a5b', bg: '#efe7d8', vig: '239,231,216', text: '#33301f', cap: '#33301f', sub: '#5c563d', muted: '#857e62', band: 'rgba(239,231,216,.95)', line: '#d6cbb3', halo: '#efe7d8', pill: 'rgba(51,48,31,.85)', grid: '#d6cbb3', axis: '#857e62', pinBg: '#33301f', pinFg: '#ffffff', vigA: .95, tint: '#b9a877', tintA: .35, sat: .74 },
   };
   // ------------------------------------------------------------ Schriften (Google Fonts, bei Bedarf nachgeladen)
@@ -718,6 +750,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     space:      { css: '"Space Grotesk"' },
     playfair:   { css: '"Playfair Display"' },
     lora:       { css: 'Lora' },
+    garamond:   { css: '"EB Garamond"' },
   };
   // ---- Auswahl mit Vorschau: Stile als Miniposter, Schriften als Schriftprobe
   const THEME_META = {
@@ -730,8 +763,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
     sand:      { name: 'Sand',      desc: 'bunte Karte, Salbei' },
     wald:      { name: 'Wald',      desc: 'helle Karte, Tannengrün' },
     mono:      { name: 'Mono',      desc: 'helle Karte, Schwarzweiß – Farbabstimmung zieht die Fotos nach Grau' },
+    tusche:    { name: 'Tusche',    desc: 'weißes Blatt, Tuschelinien wie eine gezeichnete Reisekarte – Fotos in Sepia' },
   };
-  const THEME_GROUPS = [['dunkel', ['nacht', 'fjord', 'kohle', 'blaupause']], ['hell', ['hell', 'retro', 'sand', 'wald', 'mono']]];
+  const THEME_GROUPS = [['dunkel', ['nacht', 'fjord', 'kohle', 'blaupause']], ['hell', ['hell', 'retro', 'sand', 'wald', 'mono']], ['gezeichnet', ['tusche']]];
   const FONT_META = {
     montserrat: { name: 'Montserrat', desc: 'geometrisch, Standard' },
     inter:      { name: 'Inter',      desc: 'neutral, sehr gut lesbar' },
@@ -739,8 +773,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
     space:      { name: 'Space Grotesk', desc: 'technisch, eigenwillig' },
     playfair:   { name: 'Playfair',   desc: 'Serif, elegant' },
     lora:       { name: 'Lora',       desc: 'Serif, warm' },
+    garamond:   { name: 'Garamond',   desc: 'Serif, klassisch – passt zum Stil Tusche' },
   };
-  const FONT_GROUPS = [['ohne Serifen', ['montserrat', 'inter', 'oswald', 'space']], ['mit Serifen', ['playfair', 'lora']]];
+  const FONT_GROUPS = [['ohne Serifen', ['montserrat', 'inter', 'oswald', 'space']], ['mit Serifen', ['playfair', 'lora', 'garamond']]];
   // Miniposter: Grundfarbe, Karte angedeutet, Route im Akzent, Titelzeilen, Profilband
   const themeSvg = t => `<svg viewBox="0 0 40 52" aria-hidden="true">
     <rect width="40" height="52" fill="${t.bg}"/>
@@ -761,7 +796,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
           b.innerHTML = prev(k) + `<span>${meta[k].name}</span>`;
           b.addEventListener('click', () => { pick(k); autosave(); });
           host.appendChild(b); } } };
-    mk($('#themepick'), THEME_GROUPS, THEME_META, k => themeSvg(THEMES[k]), applyTheme);
+    mk($('#themepick'), THEME_GROUPS, THEME_META, k => themeSvg(THEMES[k]), pickTheme);
     mk($('#fontpick'), FONT_GROUPS, FONT_META, k => `<span class="fp" style="font-family:${FONTS[k].css.replace(/"/g, '&quot;')}, Arial, sans-serif">Tour</span>`, applyFont);
     syncPickers();
   }
@@ -786,12 +821,16 @@ main { position:relative; overflow:hidden; background:#08111a; }
   function applyTheme(name) {
     const prev = T; T = THEMES[name] || THEMES.nacht; state.theme = name; $('#theme').value = name; syncPickers();
     if ($('#vigaval')) setTimeout(vigLabel, 0);
+    stage.classList.toggle('ink', !!T.ink);
     const st = stage.style; st.setProperty('--pa', T.accent); st.setProperty('--pvigA', vigA()); applyGrade(); st.setProperty('--pbg', T.bg); st.setProperty('--pvig', T.vig); st.setProperty('--ptext', T.text); st.setProperty('--pcap', T.cap); st.setProperty('--psub', T.sub); st.setProperty('--pmuted', T.muted); st.setProperty('--pband', T.band); st.setProperty('--pline', T.line); st.setProperty('--phalo', T.halo); st.setProperty('--ppill', T.pill);
     if (map && prev.map !== T.map) { fallback = false; map.setStyle(T.map); map.once('styledata', () => setTimeout(() => { addRouteLayers(); terrainLayer(); peakLayer(); }, 300)); }
     else if (map && map.getSource && map.getSource('route')) addRouteLayers();
     render();
   }
-  $('#theme').addEventListener('change', e => { applyTheme(e.target.value); if (map && map.isStyleLoaded()) { terrainLayer(); peakLayer(); } });
+  // Stil vom Nutzer gewählt: ein Stil mit eigener Schrift (Tusche -> Garamond) bringt sie mit; zurück geht es auf die Standardschrift
+  function pickTheme(k) { const from = T, to = THEMES[k] || THEMES.nacht; applyTheme(k);
+    if (to.font && FONTS[to.font]) applyFont(to.font); else if (from.font && state.font === from.font) applyFont('montserrat'); }
+  $('#theme').addEventListener('change', e => { pickTheme(e.target.value); if (map && map.isStyleLoaded()) { terrainLayer(); peakLayer(); } });
 
   // ------------------------------------------------------------ Karte
   let map = null, fallback = false;
@@ -806,7 +845,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     $('#mapzoomsl').addEventListener('input', e => map.setZoom(+e.target.value));
     // ausdrücklicher Klick schlägt die gespeicherte Ansicht immer
     $('#mapfit').addEventListener('click', e => { e.preventDefault(); keepView = false; fitRoute(); });
-    map.on('idle', () => { if (fillPlaceNames()) render(); });
+    map.on('idle', () => { if (fillPlaceNames()) render(); renderInkOverlay(); });
     let srcT = 0;   // sourcedata feuert beim Pannen/Zoomen laufend – gebündelt auswerten
     map.on('sourcedata', e => { if (!e.isSourceLoaded) return; clearTimeout(srcT); srcT = setTimeout(() => { if (fillPlaceNames()) render(); }, 400); });
     map.on('error', e => {
@@ -2155,6 +2194,77 @@ main { position:relative; overflow:hidden; background:#08111a; }
       for (const o of free) { o.x += (o.ax - o.x) * .05; o.y += (o.ay - o.y) * .05; }
       if (!hit) break; }
   }
+  // ---------- Stil "Tusche": Beschriftung wie auf einer gezeichneten Reisekarte.
+  // Ortsnamen kommen nicht aus den Kacheln der Karte, sondern werden hier gesetzt: nur Orte nahe der Route,
+  // dazu Regionsnamen (Land/Bundesland) gesperrt, eine Kompassrose und ein Maßstab. Gleicher SVG-Text für
+  // Bildschirm (#rtop-ink) und Export (als Bild gerastert) – so sehen beide identisch aus.
+  function inkObstacles() {
+    const rects = [];
+    const t = $('#title'), st = $('#stats');
+    if (t && t.offsetWidth) rects.push([t.offsetLeft - 10, t.offsetTop - 6, Math.max(t.offsetLeft + t.offsetWidth, st ? st.offsetLeft + st.offsetWidth : 0) + 10, (st && st.offsetHeight ? st.offsetTop + st.offsetHeight : t.offsetTop + t.offsetHeight) + 8]);
+    for (const p of state.photos) { const m = matPx(); rects.push([p.x - m, p.y - m, p.x + p.w + m, p.y + p.h + m]); }
+    placesEl.querySelectorAll('.place').forEach(el => { if (el.offsetWidth) rects.push([el.offsetLeft - 8, el.offsetTop - el.offsetHeight / 2 - 4, el.offsetLeft + el.offsetWidth + 8, el.offsetTop + el.offsetHeight / 2 + 4]); });
+    pinsEl.querySelectorAll('.pin').forEach(el => { const w = el.offsetWidth || 26, h = el.offsetHeight || 26, cx = parseFloat(el.style.left), cy = parseFloat(el.style.top); rects.push([cx - w / 2 - 3, cy - h / 2 - 3, cx + w / 2 + 3, cy + h / 2 + 3]); });
+    return rects;
+  }
+  const rectHit = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
+  function inkLabelData() {
+    const out = { places: [], regions: [] };
+    if (!map || !T.ink || !map.isStyleLoaded() || !state.stages.length) return out;
+    let feats = []; try { feats = map.querySourceFeatures('openmaptiles', { sourceLayer: 'place' }); } catch (e) { return out; }
+    const ts = TS(), yMax = CH - BH() - 30 * ts;
+    const rp = []; for (const st of state.stages) for (let i = 0; i < st.points.length; i += 2) { const q = map.project([st.points[i][1], st.points[i][0]]); rp.push([q.x, q.y]); }
+    const near = (x, y) => { let bd = Infinity; for (const [rx, ry] of rp) { const d = (rx - x) ** 2 + (ry - y) ** 2; if (d < bd) bd = d; } return Math.sqrt(bd); };
+    const own = new Set(state.places.map(p => (p.text || '').trim().toLowerCase()).concat(state.photos.map(p => (p.place || '').trim().toLowerCase())));
+    const pri = { city: 0, town: 1, village: 2 }; const seen = new Set(); const cand = [], regions = [];
+    for (const f of feats) { const pr = f.properties || {}; const name = pr['name:de'] || pr.name; const g = f.geometry; if (!name || !g || g.type !== 'Point') continue;
+      const q = map.project(g.coordinates); const c = pr.class; const key = c + '|' + name.toLowerCase(); if (seen.has(key)) continue; seen.add(key);
+      if (c === 'country' || c === 'state') { if (q.x > 40 && q.y > 40 && q.x < CW - 40 && q.y < yMax) regions.push({ name, kind: c, x: q.x, y: q.y }); continue; }
+      if (!(c in pri) || own.has(name.toLowerCase())) continue;
+      if (q.x < 20 || q.y < 20 || q.x > CW - 20 || q.y > yMax) continue;
+      const d = near(q.x, q.y), maxD = (c === 'city' ? 80 : c === 'town' ? 42 : 24) * ts; if (d > maxD) continue;
+      cand.push({ name, kind: c, x: q.x, y: q.y, score: pri[c] * 1000 + (pr.rank ?? 40) * 10 + d / maxD }); }
+    cand.sort((a, b) => a.score - b.score);
+    const obst = inkObstacles(); const used = [];
+    // Regionen zuerst: groß, gesperrt, blass – höchstens drei, nicht über Titel oder Fotos
+    regions.sort((a, b) => (a.kind === 'country' ? 0 : 1) - (b.kind === 'country' ? 0 : 1));
+    for (const r of regions) { if (out.regions.length >= 3) break; const fs = (r.kind === 'country' ? 24 : 19) * ts, w = r.name.length * fs * .95, box = [r.x - w / 2, r.y - fs * .7, r.x + w / 2, r.y + fs * .3];
+      if (obst.some(o => rectHit(box, o)) || used.some(o => rectHit(box, o))) continue; used.push(box); out.regions.push({ ...r, fs }); }
+    for (const c of cand) { if (out.places.length >= 14) break; const fs = (c.kind === 'city' ? 15 : c.kind === 'town' ? 13 : 11.5) * ts, w = c.name.length * fs * .5, h = fs * 1.1;
+      let box = [c.x + 6 * ts, c.y - h / 2, c.x + 6 * ts + w, c.y + h / 2], anchor = 'start';
+      const hit = b => obst.some(o => rectHit(b, o)) || used.some(o => rectHit(b, o));
+      if (hit(box)) { box = [c.x - 6 * ts - w, c.y - h / 2, c.x - 6 * ts, c.y + h / 2]; anchor = 'end'; if (hit(box)) continue; }
+      used.push(box); out.places.push({ ...c, fs, anchor }); }
+    return out;
+  }
+  function inkScale() {
+    if (!map) return null; const ts = TS(), y = CH - BH() - 30 * ts, xe = CW - 56;
+    const a = map.unproject([xe - 100, y]), b = map.unproject([xe, y]); const mpp = hav([a.lat, a.lng], [b.lat, b.lng]) / 100; if (!(mpp > 0)) return null;
+    const maxPx = 190 * ts; const km = [1, 2, 5, 10, 20, 25, 50, 100, 200].reverse().find(k => k * 1000 / mpp <= maxPx) || 1; const L = km * 1000 / mpp;
+    return { x0: xe - L, x1: xe, y, km, L };
+  }
+  function inkOverlaySvg() {
+    if (!T.ink || !map) return '';
+    const ts = TS(), ff = fontSvg(), ink = T.accent; let s = '';
+    const { places, regions } = inkLabelData();
+    for (const r of regions) s += `<text x="${r.x.toFixed(1)}" y="${r.y.toFixed(1)}" font-family="${ff}" font-size="${r.fs.toFixed(1)}" font-weight="500" letter-spacing="${(r.fs * .38).toFixed(1)}" text-anchor="middle" fill="${ink}" opacity=".5">${esc(r.name.toUpperCase())}</text>`;
+    for (const p of places) { s += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(2.6 * ts).toFixed(1)}" fill="${ink}"/>`
+      + `<text x="${(p.anchor === 'start' ? p.x + 6 * ts : p.x - 6 * ts).toFixed(1)}" y="${(p.y + p.fs * .35).toFixed(1)}" font-family="${ff}" font-style="italic" font-weight="${p.kind === 'city' ? 600 : 500}" font-size="${p.fs.toFixed(1)}" text-anchor="${p.anchor}" fill="${ink}" stroke="${T.halo}" stroke-width="${(3 * ts).toFixed(1)}" paint-order="stroke" stroke-linejoin="round">${esc(p.name)}</text>`; }
+    // Kompassrose oben rechts
+    { const r = 30 * ts, cx = CW - 56 - r, cy = 48 + r + 6 * ts; const pt = (ang, len) => `${(cx + Math.sin(ang) * len).toFixed(1)},${(cy - Math.cos(ang) * len).toFixed(1)}`;
+      let g = `<g fill="${ink}" stroke="${ink}"><circle cx="${cx}" cy="${cy}" r="${(r * .92).toFixed(1)}" fill="none" stroke-width="${(.8 * ts).toFixed(1)}" opacity=".7"/><circle cx="${cx}" cy="${cy}" r="${(r * .62).toFixed(1)}" fill="none" stroke-width="${(.5 * ts).toFixed(1)}" opacity=".5"/>`;
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, main = k % 2 === 0, len = main ? r * .88 : r * .5, wd = main ? r * .16 : r * .1;
+        g += `<path d="M${pt(a, len)} L${pt(a + Math.PI / 2, wd)} L${pt(a + Math.PI, 0)} Z" stroke="none"/><path d="M${pt(a, len)} L${pt(a - Math.PI / 2, wd)} L${pt(a + Math.PI, 0)} Z" fill="${T.halo}" stroke-width="${(.6 * ts).toFixed(1)}"/>`; }
+      g += `<text x="${cx}" y="${(cy - r * .98).toFixed(1)}" font-family="${ff}" font-style="italic" font-size="${(13 * ts).toFixed(1)}" text-anchor="middle" stroke="none">N</text></g>`; s += g; }
+    // Maßstab unten rechts über dem Profil
+    const sc = inkScale(); if (sc) { const { x0, x1, y, km, L } = sc; const tick = 5 * ts;
+      s += `<g stroke="${ink}" stroke-width="${(1 * ts).toFixed(1)}" fill="${ink}"><line x1="${x0.toFixed(1)}" y1="${y}" x2="${x1.toFixed(1)}" y2="${y}"/>`;
+      for (const f of [0, .5, 1]) s += `<line x1="${(x0 + L * f).toFixed(1)}" y1="${(y - tick).toFixed(1)}" x2="${(x0 + L * f).toFixed(1)}" y2="${y}"/>`;
+      s += `<rect x="${x0.toFixed(1)}" y="${(y - tick * .5).toFixed(1)}" width="${(L / 2).toFixed(1)}" height="${(tick * .5).toFixed(1)}" stroke="none"/>`;
+      s += `<text x="${x0.toFixed(1)}" y="${(y + 13 * ts).toFixed(1)}" font-family="${ff}" font-style="italic" font-size="${(10 * ts).toFixed(1)}" text-anchor="middle" stroke="none">0</text><text x="${x1.toFixed(1)}" y="${(y + 13 * ts).toFixed(1)}" font-family="${ff}" font-style="italic" font-size="${(10 * ts).toFixed(1)}" text-anchor="middle" stroke="none">${km} km</text></g>`; }
+    return s;
+  }
+  function renderInkOverlay() { const g = $('#rtop-ink'); if (!g) return; g.innerHTML = T.ink ? inkOverlaySvg() : ''; }
   function renderPins() {
     pinsEl.innerHTML = ''; if (!map) { renderRouteTop(); return; }
     const ts = TS(), lim = 14 * ts, groups = [];
@@ -2181,7 +2291,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       it.d.dataset.ids = it.g.ps.map(p => p.id).join(',');
       if (it.fix) it.d.classList.add('moved'); }
     pinStems();
-    renderTransferSyms();
+    renderTransferSyms(); renderInkOverlay();
   }
   // Marken von Hand versetzen (der Stiel folgt); Doppelklick setzt sie an den Aufnahmeort zurück
   let pinDrag = null, lastPin = { el: null, t: 0 };
@@ -2462,7 +2572,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     const el = $('#rtop'); if (!el) return;
     el.setAttribute('viewBox', `0 0 ${CW} ${CH}`);
     if (!map || !state.stages.length) { el.innerHTML = ''; return; }
-    if (!$('#rtop-tf')) el.innerHTML = '<g id="rtop-tf"></g><g id="rtop-route"></g><g id="rtop-pins"></g><g id="rtop-drag"></g>';
+    if (!$('#rtop-tf')) el.innerHTML = '<g id="rtop-tf"></g><g id="rtop-route"></g><g id="rtop-ink"></g><g id="rtop-pins"></g><g id="rtop-drag"></g>';
     const route = $('#rtop-route');
     const vigH = parseFloat(stage.style.getPropertyValue('--vigH')) || 480; const lim = vigH + 10;
     let d = '', open = false;
@@ -2511,7 +2621,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     const pts = xs.map((x, i) => `${X(x).toFixed(1)},${Y(ys[i]).toFixed(1)}`).join(' ');
     let b = '';
     bounds.slice(0, -1).forEach((bd, i) => { if (!isNightBreak(i)) return;   // gleicher Tag: keine Quartiersmarke
-      const x = X(bd.end); const nm = state.places.find(p => p.key === 'night' + i)?.text || ''; b += `<line x1="${x}" y1="${yt - 6}" x2="${x}" y2="${yb}" stroke="${T.axis}" stroke-width=".6"/><circle cx="${x}" cy="${yt - 3}" r="4.2" fill="${T.accent}" stroke="${T.halo}"/><circle cx="${x}" cy="${yt - 3}" r="1.4" fill="${T.pinBg}"/><text x="${x}" y="${yt - 10}" fill="${T.cap}" font-size="${fz(12)}" font-weight="600" text-anchor="middle" font-family="${fontSvg()}">${esc(nm)}</text>`; });
+      const x = X(bd.end); const nm = state.places.find(p => p.key === 'night' + i)?.text || ''; b += `<line x1="${x}" y1="${yt - 6}" x2="${x}" y2="${yb}" stroke="${T.axis}" stroke-width=".6"/><circle cx="${x}" cy="${yt - 3}" r="4.2" fill="${T.accent}" stroke="${T.halo}"/><circle cx="${x}" cy="${yt - 3}" r="1.4" fill="${T.pinBg}"/><text x="${x}" y="${yt - 10}" fill="${T.cap}" font-size="${fz(12)}" font-weight="600" text-anchor="middle" font-family="${fontSvg()}"${ital()}>${esc(nm)}</text>`; });
     // Entfernungsmarken: Schrittweite so, dass höchstens ~8 Marken entstehen
     const tkm = total / 1000, stepK = [5, 10, 20, 25, 50, 100, 200, 500].find(st => tkm / st <= 8) || 500;
     for (let k = stepK; k < tkm - stepK * .35; k += stepK) { const x = X(k * 1000); g += `<line x1="${x}" y1="${yb}" x2="${x}" y2="${yb + 4}" stroke="${T.axis}" stroke-width=".6"/><line x1="${x}" y1="${yt}" x2="${x}" y2="${yb}" stroke="${T.grid}" stroke-width=".4" stroke-dasharray="2 3"/><text x="${x}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(10)}" text-anchor="middle" font-family="${fontSvg()}">${k} km</text>`; }
@@ -2553,14 +2663,18 @@ main { position:relative; overflow:hidden; background:#08111a; }
             while (clash(tx, ty) && n++ < 24 && ty > yt + 2) ty -= lh; } }
         ty = Math.max(yt - 2, ty);
         const [bl, br] = box(tx); lab.push({ l: bl, r: br, y: ty });
-        pk += `<path d="M${x - 3.6},${y + 1} L${x},${y - 5} L${x + 3.6},${y + 1} Z" fill="${T.cap}" stroke="${T.halo}" stroke-width=".8"/><text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="${T.cap}" font-size="${fz(10)}" font-weight="600" text-anchor="${anchor}" font-family="${fontSvg()}" stroke="${T.halo}" stroke-width="2.5" paint-order="stroke" stroke-linejoin="round">${esc(txt)}</text>`; } }
+        pk += `<path d="M${x - 3.6},${y + 1} L${x},${y - 5} L${x + 3.6},${y + 1} Z" fill="${T.cap}" stroke="${T.halo}" stroke-width=".8"/><text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="${T.cap}" font-size="${fz(10)}" font-weight="600" text-anchor="${anchor}" font-family="${fontSvg()}"${ital()} stroke="${T.halo}" stroke-width="2.5" paint-order="stroke" stroke-linejoin="round">${esc(txt)}</text>`; } }
     profGeom = { x0, x1, yt, yb, ymax, total, H, fz: +fz(1), eleAt: d => { let i = 0; while (i < xs.length - 1 && xs[i + 1] < d) i++; return ys[i] ?? 0; } };
-    svg.innerHTML = g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" fill="${T.accent}" fill-opacity=".37"/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="1.6" stroke-linejoin="round"/>` + b + pk + fo +
+    // Tusche: Fläche unter der Kurve als feine Schraffur statt Farbfläche
+    const hatch = T.ink ? `<defs><pattern id="inkhatch" patternUnits="userSpaceOnUse" width="${fz(5)}" height="${fz(5)}" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="${fz(5)}" stroke="${T.accent}" stroke-width="${fz(.7)}" opacity=".55"/></pattern></defs>` : '';
+    const fillAttr = T.ink ? `fill="url(#inkhatch)"` : `fill="${T.accent}" fill-opacity=".37"`;
+    svg.innerHTML = hatch + g + `<polygon points="${X(0)},${yb} ${pts} ${X(total)},${yb}" ${fillAttr}/><polyline points="${pts}" fill="none" stroke="${T.accent}" stroke-width="${T.ink ? 1.3 : 1.6}" stroke-linejoin="round"/>` + b + pk + fo +
       `<text x="${x0}" y="20" fill="${T.muted}" font-size="${fz(11)}" font-weight="700" letter-spacing="2.4" font-family="${fontSvg()}">HÖHENPROFIL</text><text x="${x1}" y="20" fill="${T.muted}" font-size="${fz(11)}" text-anchor="end" font-family="${fontSvg()}">Höchster Punkt ${nf(maxE)} m</text>` +
-      `<text x="${x0}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" font-family="${fontSvg()}">${esc(state.places.find(p => p.key === 'start')?.text || 'Start')}</text>${(() => { const s = state.places.find(p => p.key === 'start')?.text, e = state.places.find(p => p.key === 'end')?.text;
-        return sameName(s, e) ? '' : `<text x="${x1}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" text-anchor="end" font-family="${fontSvg()}">${esc(e || 'Ziel')}</text>`; })()}`;
+      `<text x="${x0}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" font-family="${fontSvg()}"${ital()}>${esc(state.places.find(p => p.key === 'start')?.text || 'Start')}</text>${(() => { const s = state.places.find(p => p.key === 'start')?.text, e = state.places.find(p => p.key === 'end')?.text;
+        return sameName(s, e) ? '' : `<text x="${x1}" y="${yb + 14}" fill="${T.axis}" font-size="${fz(11)}" text-anchor="end" font-family="${fontSvg()}"${ital()}>${esc(e || 'Ziel')}</text>`; })()}`;
   }
   const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const ital = () => T.ink ? ' font-style="italic"' : '';   // Tusche: Ortsnamen kursiv
 
   // ------------------------------------------------------------ Drag / Resize / Einrasten / Bildausschnitt (aus dem Layouter)
   function applyCrop(img, t) { const z = t.zoom ?? 1, ax = t.ax ?? 50, ay = t.ay ?? 50; Object.assign(img.style, { width: z * 100 + '%', height: z * 100 + '%', left: -(z - 1) * ax + '%', top: -(z - 1) * ay + '%', objectPosition: `${ax}% ${ay}%` }); }
@@ -2943,34 +3057,46 @@ main { position:relative; overflow:hidden; background:#08111a; }
           g.beginPath(); g.arc(x, y, P(3.4), 0, 7); g.fillStyle = '#fff'; g.fill(); }
         else { g.beginPath(); g.arc(x, y, P(7), 0, 7); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(3); g.strokeStyle = T.accent; g.stroke(); } }
     }
+    // Stil Tusche: Ortsnamen entlang der Route, Regionen, Kompassrose, Maßstab – dasselbe SVG wie am Bildschirm
+    if (T.ink && map) { const ov = new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CW} ${CH}" width="${W}" height="${H}"><style>${await svgFontCss()}</style>${inkOverlaySvg()}</svg>`], { type: 'image/svg+xml' });
+      try { const oi = await loadImg(URL.createObjectURL(ov)); g.drawImage(oi, 0, 0, W, H); } catch (e) { console.warn('Tusche-Overlay', e); } }
     // Titelblock
     const x0 = P(56); g.fillStyle = T.accent; g.fillRect(x0, P(53), P(28), P(2));
     // Halo in Posterfarbe hinter allen Titeltexten (weicher Schatten + dünne Kontur) – lesbar auch über Kartenbeschriftung
     const textH = (t, x, y) => g.fillText(t, x, y); const spacedH = (t, x, y, gap) => spaced(g, t, x, y, gap);
-    g.font = F(700, 12); g.textBaseline = 'top'; spacedH(state.date || '', x0 + P(40), P(48), P(3.6 * TS()));
-    g.fillStyle = T.text; g.font = F(900, 80, false); g.textBaseline = 'alphabetic';
+    const ink = !!T.ink;   // Stil "Tusche": gesperrte Kapitalen, Kursive – Maße wie im Bildschirm-CSS (#stage.ink)
+    if (ink) { g.font = `italic 500 ${Math.round(14 * S * TS())}px ${fontStack()}`; g.textBaseline = 'top'; spacedH(state.date || '', x0 + P(40), P(47), P(.12 * 14 * TS())); }
+    else { g.font = F(700, 12); g.textBaseline = 'top'; spacedH(state.date || '', x0 + P(40), P(48), P(3.6 * TS())); }
+    const tPx = ink ? 56 : 80, tLh = ink ? 1.08 : .92, tGap = ink ? .16 * tPx * TT() : 0;
+    g.fillStyle = T.text; g.font = F(ink ? 500 : 900, tPx, false); g.textBaseline = 'alphabetic';
+    // Breite einer Zeile inkl. Sperrung (Tusche) – so brechen die Zeilen wie am Bildschirm
+    const mw = t => ink ? [...t.toUpperCase()].reduce((a, ch) => a + g.measureText(ch).width + P(tGap), 0) : g.measureText(t).width;
     // Zeilen wie am Bildschirm umbrechen: an eigenen Umbrüchen und an der eingestellten Textbreite
     const wrapT = (txt, maxW) => { const out = [];
       const hard = w => { let cur = '';            // ein einzelnes Wort, das breiter ist als der Textkasten
-        for (const ch of w) { if (cur && g.measureText(cur + ch).width > maxW) { out.push(cur); cur = ch; } else cur += ch; }
+        for (const ch of w) { if (cur && mw(cur + ch) > maxW) { out.push(cur); cur = ch; } else cur += ch; }
         return cur; };
       for (const raw of String(txt || '').split('\n')) { let line = '';
         for (const w of raw.split(' ')) { const test = line ? line + ' ' + w : w;
-          if (line && g.measureText(test).width > maxW) { out.push(line); line = g.measureText(w).width > maxW ? hard(w) : w; }
-          else line = g.measureText(test).width > maxW ? hard(test) : test; }
+          if (line && mw(test) > maxW) { out.push(line); line = mw(w) > maxW ? hard(w) : w; }
+          else line = mw(test) > maxW ? hard(test) : test; }
         out.push(line); }
       return out; };
-    const tsz = 80 * TT(), tl = wrapT(state.title, P(titleW())); tl.forEach((l, i) => textH(l, x0 - P(4), P(90 + tsz * .92 * .78 + i * tsz * .925)));
-    const subY = 93 + tl.length * tsz * .92 + 14 + 17 * TS();   // wie im Bildschirm-Layout: Untertitel folgt dem Titel (Zeilenzahl, Größe)
-    g.fillStyle = T.sub; g.font = F(400, 16);
-    const subLines = wrapT(state.subline, P(titleW()));
-    subLines.forEach((l, i) => textH(l, x0, P(subY + i * 22 * TS())));
+    const tsz = tPx * TT(), tl = wrapT(state.title, P(titleW()));
+    const hTop = 90 + (ink ? -4 : 0);   // Oberkante des Titelblocks wie am Bildschirm (margin-top 22 statt 26)
+    tl.forEach((l, i) => ink ? spacedH(l.toUpperCase(), x0, P(hTop + i * tsz * tLh + tsz * tLh * .5 + tsz * .33), P(tGap)) : textH(l, x0 - P(4), P(hTop + tsz * .92 * .78 + i * tsz * .925)));
+    const sPx = ink ? 18 : 16, sLh = ink ? 25 : 22, sOff = ink ? 19 : 17;
+    const subY = 93 + (ink ? -4 : 0) + tl.length * tsz * tLh + 14 + sOff * TS();   // wie im Bildschirm-Layout: Untertitel folgt dem Titel (Zeilenzahl, Größe)
+    g.fillStyle = T.sub; g.font = ink ? `italic 400 ${Math.round(sPx * S * TS())}px ${fontStack()}` : F(400, sPx);
+    const mwPlain = t => g.measureText(t).width;
+    const subLines = (() => { const out = []; for (const raw of String(state.subline || '').split('\n')) { let line = ''; for (const w of raw.split(' ')) { const test = line ? line + ' ' + w : w; if (line && mwPlain(test) > P(titleW())) { out.push(line); line = w; } else line = test; } out.push(line); } return out; })();
+    subLines.forEach((l, i) => textH(l, x0, P(subY + i * sLh * TS())));
     let x = x0; const nSub = subLines.filter(Boolean).length;
-    const statsTop = subY - 17 * TS() + nSub * 22 * TS() + 24;   // wie am Bildschirm: 24 px unter dem Untertitel
+    const statsTop = subY - sOff * TS() + nSub * sLh * TS() + 24;   // wie am Bildschirm: 24 px unter dem Untertitel
     const stats = state.stats || [];
     stats.forEach(([n, l], si) => {
-      g.fillStyle = T.text; g.font = F(800, 38, false); textH(n, x, P(statsTop + 34 * TT())); const wn = g.measureText(n).width;
-      g.fillStyle = T.muted; g.font = F(500, 11); g.textBaseline = 'top'; const lx = spacedH(l, x, P(statsTop + 44 * TT()), P(2.4 * TS())); g.textBaseline = 'alphabetic';
+      g.fillStyle = T.text; g.font = F(ink ? 500 : 800, 38, false); textH(n, x, P(statsTop + 34 * TT())); const wn = g.measureText(n).width;
+      g.fillStyle = T.muted; g.font = F(500, ink ? 10.5 : 11); g.textBaseline = 'top'; const lx = spacedH(ink ? l.toUpperCase() : l, x, P(statsTop + 44 * TT()), P((ink ? 2.5 : 2.4) * TS())); g.textBaseline = 'alphabetic';
       x += Math.max(wn, lx - x) + P(28);
       if (si < stats.length - 1) { g.fillStyle = T.line; g.fillRect(x, P(statsTop + 4), P(1), P(44 * TT())); }   // am Bildschirm hat die letzte Kennzahl keinen Strich
       x += P(28);
@@ -2995,7 +3121,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
         g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(8); g.shadowOffsetY = P(4); pill(g, px, py, d.textContent, T.pinBg, T.pinFg); g.restore(); } }
     // Ortsnamen
     if (map) for (const p of shownPlaces()) { if (!p.text) continue; const pt = map.project([p.lon, p.lat]); const x = P(pt.x + p.dx), y = P(pt.y + p.dy);
-      g.font = F(p.kind === 'night' ? 700 : 600, 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = T.halo;
+      g.font = (T.ink ? 'italic ' : '') + F(p.kind === 'night' ? (T.ink ? 600 : 700) : (T.ink ? 500 : 600), 17); g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = P(3); g.strokeStyle = T.halo;
       // eingestellte Breite: Zeilen wie am Bildschirm umbrechen, Zeilenabstand wie im CSS (1.25)
       let lines = [p.text];
       if (p.w) { lines = []; let line = '';
@@ -3011,8 +3137,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
       const bx = P(p.x), by = P(p.y), bw = P(p.w), bh = P(p.h);
       const fr = FR(), R = P(frRadius()), mat = P(fr.mat), fray = P(fr.fray);
       // Schatten (+ Passepartout mit Haarlinie und Eckmarken)
-      g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(30); g.shadowOffsetY = P(14); rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, mat ? R * .4 : R); g.fillStyle = '#000'; g.fill(); g.restore();
-      if (mat) { rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, R * .4); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(1); g.strokeStyle = T.line; g.stroke();
+      g.save(); g.shadowColor = T.ink ? 'rgba(0,0,0,.18)' : 'rgba(0,0,0,.5)'; g.shadowBlur = P(T.ink ? 22 : 30); g.shadowOffsetY = P(T.ink ? 10 : 14); rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, mat ? R * .4 : R); g.fillStyle = '#000'; g.fill(); g.restore();
+      if (mat) { rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, R * .4); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(1); g.strokeStyle = T.ink ? T.accent : T.line; g.stroke();
         if (fr.marks) { const k = P(12), o = mat + P(7); g.strokeStyle = T.accent; g.lineWidth = P(1.5); g.beginPath(); g.moveTo(bx - o, by - o + k); g.lineTo(bx - o, by - o); g.lineTo(bx - o + k, by - o); g.moveTo(bx + bw + o - k, by + bh + o); g.lineTo(bx + bw + o, by + bh + o); g.lineTo(bx + bw + o, by + bh + o - k); g.stroke(); } }
       // Foto samt Farbabstimmung, Bildunterschrift und Nummer in eine Zwischenfläche zeichnen – dann ggf. ausgefranst maskieren
       const off = document.createElement('canvas'); off.width = Math.round(bw); off.height = Math.round(bh); const o = off.getContext('2d');
@@ -3021,9 +3147,14 @@ main { position:relative; overflow:hidden; background:#08111a; }
       { const v = gradeVals(); if (v.sat < .999) { o.globalCompositeOperation = 'saturation'; o.globalAlpha = 1 - v.sat; o.fillStyle = '#808080'; o.fillRect(0, 0, bw, bh); }
         if (v.ta > 0) { o.globalCompositeOperation = 'soft-light'; o.globalAlpha = v.ta; o.fillStyle = v.tint; o.fillRect(0, 0, bw, bh); }
         if (v.con > 1.001) { o.globalCompositeOperation = 'overlay'; o.globalAlpha = (v.con - 1) * 2.5; o.drawImage(im, ox, oy, iw, ih); }
+        if (T.ink) {   // wie am Bildschirm: grayscale(1) sepia(.28) – Grau, dann leicht warm getönt
+          o.globalCompositeOperation = 'saturation'; o.globalAlpha = 1; o.fillStyle = '#808080'; o.fillRect(0, 0, bw, bh);
+          o.globalCompositeOperation = 'color'; o.globalAlpha = .28; o.fillStyle = '#b08a55'; o.fillRect(0, 0, bw, bh); }
         o.globalAlpha = 1; o.globalCompositeOperation = 'source-over'; }
+      if (T.ink && !mat) { g.lineWidth = P(1); g.strokeStyle = T.accent; g.strokeRect(bx - P(.5), by - P(.5), bw + P(1), bh + P(1)); }
       const gh = 70 * Math.max(1, TS()); const cg = o.createLinearGradient(0, bh - P(gh), 0, bh); cg.addColorStop(0, 'rgba(6,12,18,0)'); cg.addColorStop(1, 'rgba(6,12,18,.85)'); o.fillStyle = cg; o.fillRect(0, bh - P(gh), bw, P(gh));
-      o.fillStyle = '#e6edf3'; let fs = 12; o.font = F(500, fs); const cap = p.caption ?? autoCaption(p); while (fs > 8.5 && o.measureText(cap).width > bw - P(28)) { fs -= .5; o.font = F(500, fs); }
+      const Fc = px => (T.ink ? 'italic ' : '') + F(500, px);
+      o.fillStyle = '#e6edf3'; let fs = 12; o.font = Fc(fs); const cap = p.caption ?? autoCaption(p); while (fs > 8.5 && o.measureText(cap).width > bw - P(28)) { fs -= .5; o.font = Fc(fs); }
       o.fillText(cap, P(14), bh - P(14));
       pill(o, P(12 + 13 * TS()), P(12 + 13 * TS()), p.star ? p.num + ' ★' : String(p.num), p.star ? '#f2b632' : T.pill, p.star ? '#1c1a12' : '#fff');   // Highlight wie am Bildschirm
       if (fray > 0) { try { const mk = await loadImg('data:image/svg+xml;base64,' + btoa(frayMask(Math.round(bw), Math.round(bh), Math.round(fray), R, seedOf(p.id)))); o.globalCompositeOperation = 'destination-in'; o.drawImage(mk, 0, 0, bw, bh); o.globalCompositeOperation = 'source-over'; } catch (e) { console.warn('Maske', e); } }
@@ -3033,7 +3164,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     if (BH()) { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
     // Höhenprofil-Band (SVG rastern)
     if (BH()) {
-    const band = new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CW} ${BH()}" width="${W}" height="${P(BH())}"><style>text{font-family:${fontSvg()}}</style>${$('#profile').innerHTML}</svg>`], { type: 'image/svg+xml' });
+    const band = new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CW} ${BH()}" width="${W}" height="${P(BH())}"><style>${await svgFontCss()}text{font-family:${fontSvg()}}</style>${$('#profile').innerHTML}</svg>`], { type: 'image/svg+xml' });
     g.fillStyle = T.band; g.fillRect(0, H - P(BH()), W, P(BH())); g.fillStyle = T.line; g.fillRect(0, H - P(BH()), W, P(.6));
     try { const bi = await loadImg(URL.createObjectURL(band)); g.drawImage(bi, 0, H - P(BH()), W, P(BH())); } catch (e) { console.warn('Profil', e); }
     }
@@ -3042,6 +3173,20 @@ main { position:relative; overflow:hidden; background:#08111a; }
   function spaced(g, txt, x, y, gap) { for (const ch of txt) { g.fillText(ch, x, y); x += g.measureText(ch).width + gap; } return x; }
   function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
   function pill(g, cx, cy, txt, bg, fg) { const t = TS(); g.font = F(700, 13); const w = Math.max(P(26 * t), g.measureText(txt).width + P(16 * t)); rr(g, cx - w / 2, cy - P(13 * t), w, P(26 * t), P(13 * t)); g.fillStyle = bg; g.fill(); g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, cx, cy); g.textAlign = 'left'; g.textBaseline = 'alphabetic'; }
+  // Schriftregeln der aktuellen Posterschrift als CSS mit eingebetteten Daten: ein per Blob gerastertes SVG
+  // kennt die Webfonts der Seite nicht – ohne das fiele der Text im Export auf eine Systemschrift zurück.
+  const fontCssCache = {};
+  async function svgFontCss() {
+    const fam = (FONTS[state.font]?.css || 'Montserrat').replace(/"/g, ''); if (fontCssCache[fam]) return fontCssCache[fam];
+    const rules = [];
+    for (const ss of document.styleSheets) { let rs; try { rs = ss.cssRules; } catch (e) { continue; }
+      for (const r of rs) { if (r.type !== CSSRule.FONT_FACE_RULE || r.style.fontFamily.replace(/"/g, '') !== fam) continue;
+        const m = /url\(["']?([^"')]+)["']?\)/.exec(r.style.getPropertyValue('src')); if (!m) continue; let url = m[1];
+        if (!url.startsWith('data:')) { try { const bl = await (await fetch(url)).blob(); url = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(bl); }); } catch (e) { continue; } }
+        const ur = r.style.getPropertyValue('unicode-range');
+        rules.push(`@font-face{font-family:'${fam}';font-style:${r.style.fontStyle || 'normal'};font-weight:${r.style.fontWeight || '400'};src:url(${url}) format('woff2');${ur ? 'unicode-range:' + ur + ';' : ''}}`); } }
+    return fontCssCache[fam] = rules.join('');
+  }
   function loadImg(src, big) { return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
   function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
   const fname = () => (state.title || 'Tourposter').replace(/\s+/g, '_').replace(/[^\wäöüÄÖÜß_-]/g, '');

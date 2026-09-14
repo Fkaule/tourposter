@@ -15,10 +15,14 @@ const h = b => crypto.createHash('md5').update(b).digest('hex').slice(0, 8);
 const base0 = app.replace('/*MAPLIBRE_CSS*/', css);
 // Schriften liegen als eigene Dateien im Repo (kein Google-CDN): gehostet unter fonts/, in der Einzeldatei eingebettet
 // Schlüssel, Familienname, tatsächliche Gewichtsachse der variablen Schrift
-const FONTS = [['montserrat', 'Montserrat', '100 900'], ['inter', 'Inter', '100 900'], ['oswald', 'Oswald', '200 700'], ['space-grotesk', 'Space Grotesk', '300 700'], ['playfair-display', 'Playfair Display', '400 900'], ['lora', 'Lora', '400 700']];
-const faces = embed => FONTS.map(([key, fam, rng]) => {
+const LATIN = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
+const LATIN_EXT = 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF';
+// [Datei, Familie, Gewichtsbereich, Stil, unicode-range]
+const FONTS = [['montserrat', 'Montserrat', '100 900'], ['inter', 'Inter', '100 900'], ['oswald', 'Oswald', '200 700'], ['space-grotesk', 'Space Grotesk', '300 700'], ['playfair-display', 'Playfair Display', '400 900'], ['lora', 'Lora', '400 700'],
+  ['eb-garamond', 'EB Garamond', '400 800', 'normal', LATIN], ['eb-garamond-italic', 'EB Garamond', '400 800', 'italic', LATIN], ['eb-garamond-ext', 'EB Garamond', '400 800', 'normal', LATIN_EXT], ['eb-garamond-ext-italic', 'EB Garamond', '400 800', 'italic', LATIN_EXT]];
+const faces = embed => FONTS.map(([key, fam, rng, sty = 'normal', ur]) => {
   const url = embed ? `data:font/woff2;base64,${fs.readFileSync(`fonts/${key}.woff2`).toString('base64')}` : `fonts/${key}.woff2`;
-  return `@font-face{font-family:'${fam}';font-style:normal;font-weight:${rng};font-display:swap;src:url(${url}) format('woff2')}`;
+  return `@font-face{font-family:'${fam}';font-style:${sty};font-weight:${rng};font-display:swap;src:url(${url}) format('woff2')${ur ? ';unicode-range:' + ur : ''}}`;
 }).join('\n');
 const fHead = base0.slice(0, base0.indexOf('/*FONTS*/')), fTail = base0.slice(base0.indexOf('/*FONTS_END*/') + '/*FONTS_END*/'.length);
 const base = fHead + faces(false) + fTail, baseSingle = fHead + faces(true) + fTail;
