@@ -219,8 +219,8 @@ main { position:relative; overflow:hidden; background:#08111a; }
 #stage.ink .place { font-style:italic; font-weight:500; text-shadow:0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff; }
 #stage.ink .place.night { font-weight:600; }
 /* Tusche: Rahmen wie gezeichnet – feine Linie ums Foto, weißes Passepartout mit Tuschekontur, harter versetzter Schatten statt Weichzeichner */
-#stage.ink .tile { box-shadow:0 0 0 1px var(--pa), 3px 3px 0 0 rgba(43,33,24,.16); border-radius:0; }
-#stage.ink.mat .tile { box-shadow:0 0 0 1px var(--pa), 0 0 0 var(--mat) #fff, 0 0 0 var(--mat1) var(--pa), 3px 3px 0 var(--mat1) rgba(43,33,24,.16); }
+#stage.ink .tile { box-shadow:0 0 0 1px var(--pinkl), 3px 3px 0 0 rgba(43,33,24,.12); border-radius:0; }
+#stage.ink.mat .tile { box-shadow:0 0 0 1px var(--pinkl), 0 0 0 var(--mat) #fff, 0 0 0 var(--mat1) var(--pinkl), 3px 3px 0 var(--mat1) rgba(43,33,24,.12); }
 #stage.ink.inkbw .tile img { filter:saturate(var(--gsat,1)) contrast(var(--gcon,1)) grayscale(1) contrast(1.06); }
 #stage.ink .tile .z { font-family:Montserrat, Arial, sans-serif; }
 #stage.ink .pin { box-shadow:0 0 0 1.5px #fff, 0 3px 8px rgba(0,0,0,.25); }
@@ -727,15 +727,15 @@ main { position:relative; overflow:hidden; background:#08111a; }
   // ------------------------------------------------------------ Stile
   // Kartenstil für "Tusche": weißes Blatt, Küsten und Seen als feine Linie, Flüsse, gestrichelte Grenzen.
   // Keine Straßen, keine Kachel-Beschriftung – Ortsnamen entlang der Route und Ländernamen setzen wir selbst (inkLabels).
-  const INK = '#2b2118';
+  const INK = '#2b2118', INK_SOFT = '#6a5d50';   // kräftig für Route und Text, weich für Kartenlinien, Symbole und Rahmen
   const INK_STYLE = { version: 8, name: 'Tusche', sources: { openmaptiles: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } }, layers: [
     { id: 'bg', type: 'background', paint: { 'background-color': '#ffffff' } },
     { id: 'water', type: 'fill', source: 'openmaptiles', 'source-layer': 'water', paint: { 'fill-color': ['match', ['get', 'class'], 'river', '#e6e2d9', '#f2f0eb'] } },
-    { id: 'water-line', type: 'line', source: 'openmaptiles', 'source-layer': 'water', paint: { 'line-color': INK, 'line-opacity': .75, 'line-width': ['interpolate', ['linear'], ['zoom'], 5, .5, 9, .9, 13, 1.4] } },
-    { id: 'waterway', type: 'line', source: 'openmaptiles', 'source-layer': 'waterway', filter: ['in', 'class', 'river', 'canal'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': INK, 'line-opacity': .85, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, .9, 9, 1.4, 12, 2.4, 14, 3.2] } },
-    { id: 'waterway-small', type: 'line', source: 'openmaptiles', 'source-layer': 'waterway', minzoom: 10, filter: ['in', 'class', 'stream', 'drain', 'ditch'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': INK, 'line-opacity': .55, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, .5, 14, 1.2] } },
-    { id: 'boundary-state', type: 'line', source: 'openmaptiles', 'source-layer': 'boundary', filter: ['all', ['==', 'admin_level', 4], ['!=', 'maritime', 1]], paint: { 'line-color': INK, 'line-opacity': .45, 'line-width': .7, 'line-dasharray': [1.5, 3] } },
-    { id: 'boundary-country', type: 'line', source: 'openmaptiles', 'source-layer': 'boundary', filter: ['all', ['==', 'admin_level', 2], ['!=', 'maritime', 1]], paint: { 'line-color': INK, 'line-opacity': .8, 'line-width': 1.1, 'line-dasharray': [5, 3, 1.5, 3] } },
+    { id: 'water-line', type: 'line', source: 'openmaptiles', 'source-layer': 'water', paint: { 'line-color': INK_SOFT, 'line-opacity': .8, 'line-width': ['interpolate', ['linear'], ['zoom'], 5, .5, 9, .9, 13, 1.4] } },
+    { id: 'waterway', type: 'line', source: 'openmaptiles', 'source-layer': 'waterway', filter: ['in', 'class', 'river', 'canal'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': INK_SOFT, 'line-opacity': .8, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, .9, 9, 1.4, 12, 2.4, 14, 3.2] } },
+    { id: 'waterway-small', type: 'line', source: 'openmaptiles', 'source-layer': 'waterway', minzoom: 10, filter: ['in', 'class', 'stream', 'drain', 'ditch'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': INK_SOFT, 'line-opacity': .5, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, .5, 14, 1.2] } },
+    { id: 'boundary-state', type: 'line', source: 'openmaptiles', 'source-layer': 'boundary', filter: ['all', ['==', 'admin_level', 4], ['!=', 'maritime', 1]], paint: { 'line-color': INK_SOFT, 'line-opacity': .5, 'line-width': .7, 'line-dasharray': [1.5, 3] } },
+    { id: 'boundary-country', type: 'line', source: 'openmaptiles', 'source-layer': 'boundary', filter: ['all', ['==', 'admin_level', 2], ['!=', 'maritime', 1]], paint: { 'line-color': INK_SOFT, 'line-opacity': .85, 'line-width': 1.1, 'line-dasharray': [5, 3, 1.5, 3] } },
   ] };
   const THEMES = {
     nacht: { map: 'https://tiles.openfreemap.org/styles/dark', accent: '#ff5a36', bg: '#0d1a26', vig: '13,26,38', text: '#ffffff', cap: '#e6edf3', sub: '#b7c5d3', muted: '#8fa3b8', band: 'rgba(6,12,18,.86)', line: '#283440', halo: '#0d1a26', pill: 'rgba(13,26,38,.85)', grid: '#283440', axis: '#788c9e', pinBg: '#ffffff', pinFg: '#0d1a26', vigA: .9, tint: '#1e3a55', tintA: .35, sat: .8 },
@@ -746,7 +746,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     kohle: { map: 'https://tiles.openfreemap.org/styles/dark', accent: '#f0a830', bg: '#14100d', vig: '20,16,13', text: '#f7f2ea', cap: '#efe7db', sub: '#c3b6a4', muted: '#948674', band: 'rgba(10,8,6,.88)', line: '#3a3128', halo: '#14100d', pill: 'rgba(20,16,13,.85)', grid: '#3a3128', axis: '#948674', pinBg: '#f7f2ea', pinFg: '#14100d', vigA: .92, tint: '#7a5a2e', tintA: .35, sat: .72 },
     blaupause: { map: 'https://tiles.openfreemap.org/styles/dark', accent: '#4fc3f7', bg: '#0b1b2b', vig: '11,27,43', text: '#eaf6ff', cap: '#dbecf8', sub: '#a8c4d8', muted: '#7e9bb2', band: 'rgba(5,15,25,.88)', line: '#1f3a52', halo: '#0b1b2b', pill: 'rgba(11,27,43,.85)', grid: '#1f3a52', axis: '#7e9bb2', pinBg: '#eaf6ff', pinFg: '#0b1b2b', vigA: .9, tint: '#1b4a6e', tintA: .4, sat: .68 },
     mono:  { map: 'https://tiles.openfreemap.org/styles/positron', accent: '#141414', bg: '#ffffff', vig: '255,255,255', text: '#141414', cap: '#141414', sub: '#3d3d3d', muted: '#6f6f6f', band: 'rgba(255,255,255,.96)', line: '#dcdcdc', halo: '#ffffff', pill: 'rgba(20,20,20,.85)', grid: '#e4e4e4', axis: '#6f6f6f', pinBg: '#141414', pinFg: '#ffffff', vigA: .96, tint: '#000000', tintA: .06, sat: .08 },
-    tusche: { map: INK_STYLE, ink: true, font: 'garamond', accent: INK, bg: '#ffffff', vig: '255,255,255', text: INK, cap: INK, sub: '#4a3f33', muted: '#6f6558', band: 'rgba(255,255,255,.96)', line: '#cfc8bc', halo: '#ffffff', pill: 'rgba(43,33,24,.85)', grid: '#e4dfd5', axis: '#7a7064', pinBg: INK, pinFg: '#ffffff', vigA: .55, tint: '#3a2e22', tintA: .12, sat: .08 },
+    tusche: { map: INK_STYLE, ink: true, font: 'garamond', accent: INK, inkLine: INK_SOFT, bg: '#ffffff', vig: '255,255,255', text: INK, cap: INK, sub: '#4a3f33', muted: '#6f6558', band: 'rgba(255,255,255,.96)', line: '#cfc8bc', halo: '#ffffff', pill: 'rgba(43,33,24,.85)', grid: '#e4dfd5', axis: '#7a7064', pinBg: INK, pinFg: '#ffffff', vigA: .55, tint: '#3a2e22', tintA: .12, sat: .08 },
     sand:  { map: 'https://tiles.openfreemap.org/styles/bright', accent: '#8a9a5b', bg: '#efe7d8', vig: '239,231,216', text: '#33301f', cap: '#33301f', sub: '#5c563d', muted: '#857e62', band: 'rgba(239,231,216,.95)', line: '#d6cbb3', halo: '#efe7d8', pill: 'rgba(51,48,31,.85)', grid: '#d6cbb3', axis: '#857e62', pinBg: '#33301f', pinFg: '#ffffff', vigA: .95, tint: '#b9a877', tintA: .35, sat: .74 },
   };
   // ------------------------------------------------------------ Schriften (Google Fonts, bei Bedarf nachgeladen)
@@ -828,7 +828,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
   function applyTheme(name) {
     const prev = T; T = THEMES[name] || THEMES.nacht; state.theme = name; $('#theme').value = name; syncPickers();
     if ($('#vigaval')) setTimeout(vigLabel, 0);
-    stage.classList.toggle('ink', !!T.ink);
+    stage.classList.toggle('ink', !!T.ink); stage.style.setProperty('--pinkl', T.inkLine || T.accent);
     const st = stage.style; st.setProperty('--pa', T.accent); st.setProperty('--pvigA', vigA()); applyGrade(); st.setProperty('--pbg', T.bg); st.setProperty('--pvig', T.vig); st.setProperty('--ptext', T.text); st.setProperty('--pcap', T.cap); st.setProperty('--psub', T.sub); st.setProperty('--pmuted', T.muted); st.setProperty('--pband', T.band); st.setProperty('--pline', T.line); st.setProperty('--phalo', T.halo); st.setProperty('--ppill', T.pill);
     if (map && prev.map !== T.map) { fallback = false; map.setStyle(T.map); map.once('styledata', () => setTimeout(() => { addRouteLayers(); terrainLayer(); peakLayer(); }, 300)); }
     else if (map && map.getSource && map.getSource('route')) addRouteLayers();
@@ -2262,11 +2262,11 @@ main { position:relative; overflow:hidden; background:#08111a; }
   }
   function inkOverlaySvg() {
     if (!T.ink || !map) return '';
-    const ts = TS(), ff = fontSvg(), ink = T.accent; let s = '';
+    const ts = TS(), ff = fontSvg(), ink = T.inkLine || T.accent, txt = T.accent; let s = '';
     const { places, regions } = inkLabelData();
-    for (const r of regions) s += `<text x="${r.x.toFixed(1)}" y="${r.y.toFixed(1)}" font-family="${ff}" font-size="${r.fs.toFixed(1)}" font-weight="500" letter-spacing="${(r.fs * .38).toFixed(1)}" text-anchor="middle" fill="${ink}" opacity=".5">${esc(r.name.toUpperCase())}</text>`;
+    for (const r of regions) s += `<text x="${r.x.toFixed(1)}" y="${r.y.toFixed(1)}" font-family="${ff}" font-size="${r.fs.toFixed(1)}" font-weight="500" letter-spacing="${(r.fs * .38).toFixed(1)}" text-anchor="middle" fill="${ink}" opacity=".6">${esc(r.name.toUpperCase())}</text>`;
     for (const p of places) { s += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${(2.6 * ts).toFixed(1)}" fill="${ink}"/>`
-      + `<text x="${(p.anchor === 'start' ? p.x + 6 * ts : p.x - 6 * ts).toFixed(1)}" y="${(p.y + p.fs * .35).toFixed(1)}" font-family="${ff}" font-style="italic" font-weight="${p.kind === 'city' ? 600 : 500}" font-size="${p.fs.toFixed(1)}" text-anchor="${p.anchor}" fill="${ink}" stroke="${T.halo}" stroke-width="${(3 * ts).toFixed(1)}" paint-order="stroke" stroke-linejoin="round">${esc(p.name)}</text>`; }
+      + `<text x="${(p.anchor === 'start' ? p.x + 6 * ts : p.x - 6 * ts).toFixed(1)}" y="${(p.y + p.fs * .35).toFixed(1)}" font-family="${ff}" font-style="italic" font-weight="${p.kind === 'city' ? 600 : 500}" font-size="${p.fs.toFixed(1)}" text-anchor="${p.anchor}" fill="${txt}" stroke="${T.halo}" stroke-width="${(3 * ts).toFixed(1)}" paint-order="stroke" stroke-linejoin="round">${esc(p.name)}</text>`; }
     // Kompassrose oben rechts
     { const r = 30 * ts, cx = CW - 56 - r, cy = 48 + r + 6 * ts; const pt = (ang, len) => `${(cx + Math.sin(ang) * len).toFixed(1)},${(cy - Math.cos(ang) * len).toFixed(1)}`;
       let g = `<g fill="${ink}" stroke="${ink}"><circle cx="${cx}" cy="${cy}" r="${(r * .92).toFixed(1)}" fill="none" stroke-width="${(.8 * ts).toFixed(1)}" opacity=".7"/><circle cx="${cx}" cy="${cy}" r="${(r * .62).toFixed(1)}" fill="none" stroke-width="${(.5 * ts).toFixed(1)}" opacity=".5"/>`;
@@ -2365,7 +2365,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     items.sort((a, b) => b.s - a.s); const kept = [];
     for (const it of items) { if (it.k === 'h' && kept.some(o => o.k === 'h' && (o.x - it.x) ** 2 + (o.y - it.y) ** 2 < ((o.s + it.s) * .5) ** 2)) continue; kept.push(it); }
     kept.sort((a, b) => a.y - b.y);
-    const ink = T.accent, lw = (.9 * ts).toFixed(2); let out = '';
+    const ink = T.inkLine || T.accent, lw = (.9 * ts).toFixed(2); let out = '';
     for (const it of kept) {
       if (it.k === 'h') { const p = hillPath(it.x, it.y, it.s, it.v, rnd); out += `<path d="${p.body}" fill="#fff" stroke="${ink}" stroke-width="${(Math.max(.7, it.s / 14)).toFixed(2)}" stroke-linejoin="round" stroke-linecap="round"/><path d="${p.hatch}" fill="none" stroke="${ink}" stroke-width="${(Math.max(.45, it.s / 26)).toFixed(2)}" stroke-linecap="round" opacity=".85"/>`; }
       else { const p = treePath(it.x, it.y, it.s, rnd); out += `<path d="${p.body}" fill="#fff" stroke="${ink}" stroke-width="${lw}" stroke-linejoin="round"/><path d="${p.trunk}" fill="none" stroke="${ink}" stroke-width="${lw}" stroke-linecap="round"/>`; }
@@ -3261,9 +3261,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
       const bx = P(p.x), by = P(p.y), bw = P(p.w), bh = P(p.h);
       const fr = FR(), R = P(frRadius()), mat = P(fr.mat), fray = P(fr.fray);
       // Schatten (+ Passepartout mit Haarlinie und Eckmarken)
-      if (T.ink) { const o = mat + P(1), d = P(3); g.fillStyle = 'rgba(43,33,24,.16)'; g.fillRect(bx - o + d, by - o + d, bw + 2 * o, bh + 2 * o); }   // harter Versatzschatten wie am Bildschirm
+      if (T.ink) { const o = mat + P(1), d = P(3); g.fillStyle = 'rgba(43,33,24,.12)'; g.fillRect(bx - o + d, by - o + d, bw + 2 * o, bh + 2 * o); }   // harter Versatzschatten wie am Bildschirm
       else { g.save(); g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = P(30); g.shadowOffsetY = P(14); rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, mat ? R * .4 : R); g.fillStyle = '#000'; g.fill(); g.restore(); }
-      if (mat) { rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, T.ink ? 0 : R * .4); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(1); g.strokeStyle = T.ink ? T.accent : T.line; g.stroke();
+      if (mat) { rr(g, bx - mat, by - mat, bw + 2 * mat, bh + 2 * mat, T.ink ? 0 : R * .4); g.fillStyle = T.bg; g.fill(); g.lineWidth = P(1); g.strokeStyle = T.ink ? T.inkLine : T.line; g.stroke();
         if (fr.marks) { const k = P(12), o = mat + P(7); g.strokeStyle = T.accent; g.lineWidth = P(1.5); g.beginPath(); g.moveTo(bx - o, by - o + k); g.lineTo(bx - o, by - o); g.lineTo(bx - o + k, by - o); g.moveTo(bx + bw + o - k, by + bh + o); g.lineTo(bx + bw + o, by + bh + o); g.lineTo(bx + bw + o, by + bh + o - k); g.stroke(); } }
       // Foto samt Farbabstimmung, Bildunterschrift und Nummer in eine Zwischenfläche zeichnen – dann ggf. ausgefranst maskieren
       const off = document.createElement('canvas'); off.width = Math.round(bw); off.height = Math.round(bh); const o = off.getContext('2d');
@@ -3283,7 +3283,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       pill(o, P(12 + 13 * TS()), P(12 + 13 * TS()), p.star ? p.num + ' ★' : String(p.num), p.star ? '#f2b632' : T.pill, p.star ? '#1c1a12' : '#fff');   // Highlight wie am Bildschirm
       if (fray > 0) { try { const mk = await loadImg('data:image/svg+xml;base64,' + btoa(frayMask(Math.round(bw), Math.round(bh), Math.round(fray), R, seedOf(p.id)))); o.globalCompositeOperation = 'destination-in'; o.drawImage(mk, 0, 0, bw, bh); o.globalCompositeOperation = 'source-over'; } catch (e) { console.warn('Maske', e); } }
       g.save(); if (!(fray > 0)) { rr(g, bx, by, bw, bh, R); g.clip(); } g.drawImage(off, bx, by, bw, bh); g.restore();
-      if (T.ink) { g.lineWidth = P(1); g.strokeStyle = T.accent; g.strokeRect(bx - P(.5), by - P(.5), bw + P(1), bh + P(1)); }   // feine Tuschelinie ums Foto
+      if (T.ink) { g.lineWidth = P(1); g.strokeStyle = T.inkLine; g.strokeRect(bx - P(.5), by - P(.5), bw + P(1), bh + P(1)); }   // feine Tuschelinie ums Foto
     }
     // Verlauf über dem Profilband liegt am Bildschirm über den Fotos – hier ebenso
     if (BH()) { const bf = g.createLinearGradient(0, H - P(BH() + 46), 0, H - P(BH())); bf.addColorStop(0, `rgba(${T.vig},0)`); bf.addColorStop(1, `rgba(${T.vig},${vA * .75})`); g.fillStyle = bf; g.fillRect(0, H - P(BH() + 46), W, P(46)); }
