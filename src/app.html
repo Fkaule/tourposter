@@ -799,6 +799,31 @@ main { position:relative; overflow:hidden; background:#08111a; }
     <rect x="0" y="41" width="40" height="11" fill="${t.band}"/>
     <path d="M2 50l6-3 5 2 6-4 5 1 6-3 6 2v5H2z" fill="${t.accent}" fill-opacity=".45"/>
   </svg>`;
+  // Miniposter für „Tusche“: weißes Blatt, gezeichneter Rand, Fluss, Route als Tuschelinie, Bergsymbole,
+  // Bäume, ein Foto mit gezeichnetem Rahmen, Kompassrose, Profilband mit Schraffur
+  const inkThemeSvg = t => { const k = t.accent, s = t.inkLine || t.accent; return `<svg viewBox="0 0 40 52" aria-hidden="true">
+    <defs><pattern id="ipvh" width="1.6" height="1.6" patternUnits="userSpaceOnUse"><path d="M-.4 2L2 -.4M-.4 .4L.4 -.4M1.2 2L2 1.2" stroke="${s}" stroke-width=".28"/></pattern></defs>
+    <rect width="40" height="52" fill="${t.bg}"/>
+    <path d="M1.4 1.6L38.5 1.3 38.8 50.5 1.6 50.7Z" fill="none" stroke="${s}" stroke-width=".5"/>
+    <path d="M1.4 24c5-1.5 7 2.5 11 1.5s6-4 10-2 6 4.5 9 3.5 5-3 7.4-2.5" fill="none" stroke="#9db0c3" stroke-width=".6"/>
+    <path d="M4.5 39.5c3-5 5-8 8-9.5s5 1 8-2 3-6.5 7-8 5-1.5 7-5" fill="none" stroke="${k}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M34.5 15l2.5-3.5" fill="none" stroke="${k}" stroke-width=".7" stroke-dasharray="1.2 .9" stroke-linecap="round"/>
+    <g fill="${t.bg}" stroke="${k}" stroke-width=".5" stroke-linejoin="round">
+      <path d="M6 28l2.6-5 1.4 1.7 1.6-2.7 3.1 6z"/><path d="M27.5 24.5l2.2-4 1.1 1.3 1.3-2.1 2.6 4.8z"/><path d="M22 34l1.8-3.3.9 1.1 1-1.7 2.1 3.9z"/>
+      <path d="M10.6 24.2l1.8 2.2M31.4 20.8l1.5 1.9M25.1 31.6l1.2 1.6" stroke-width=".38"/>
+    </g>
+    <g fill="${t.bg}" stroke="${k}" stroke-width=".42" stroke-linejoin="round">
+      <path d="M15 34.5l.8-1.8.8 1.8zM16.8 33.8l.8-1.8.8 1.8zM15.9 35.6l.8-1.8.8 1.8zM31 30.5l.8-1.8.8 1.8zM32.7 31.2l.8-1.8.8 1.8zM27.5 38l.8-1.8.8 1.8zM8.5 35l.8-1.8.8 1.8z"/>
+      <path d="M15.8 34.5v.9M17.6 33.8v.9M16.7 35.6v.9M31.8 30.5v.9M33.5 31.2v.9M28.3 38v.9M9.3 35v.9" stroke-width=".3"/>
+    </g>
+    <g transform="translate(33.6 36.6)"><circle r="1.1" fill="none" stroke="${k}" stroke-width=".4"/><circle r="2" fill="none" stroke="${k}" stroke-width=".25"/><path d="M0-3.2l.55 2.4L0 0l-.55-.8zM0 3.2l.55-2.4L0 0l-.55.8z" fill="${k}"/><path d="M-3.2 0l2.4.55L0 0l-.8-.55zM3.2 0l-2.4.55L0 0l.8-.55z" fill="none" stroke="${k}" stroke-width=".25"/></g>
+    <path d="M25 4.2l10.6-.2.2 8.4-10.7.2z" fill="${t.bg}" stroke="${s}" stroke-width=".5"/>
+    <path d="M26.3 5.5l8.1-.1.1 5.9-8.2.1z" fill="#cfd6db"/><path d="M26.3 11.4l2.4-3 1.7 1.5 2-2.6 2 4.1z" fill="#8d99a3"/><path d="M26.3 5.5l8.1-.1.1 5.9-8.2.1z" fill="none" stroke="${s}" stroke-width=".35"/>
+    <rect x="4.5" y="5" width="10.5" height="2.3" rx=".3" fill="${k}"/><rect x="6.2" y="8.8" width="7" height="1.2" rx=".4" fill="${s}" opacity=".85"/>
+    <path d="M1.5 41.6h37.3" stroke="${s}" stroke-width=".35"/>
+    <path d="M3.5 49l5-2.6 5 1.5 6-3.8 5 .8 5.5-2.4 4 1.3 3-1.5V49z" fill="url(#ipvh)"/>
+    <path d="M3.5 49l5-2.6 5 1.5 6-3.8 5 .8 5.5-2.4 4 1.3 3-1.5" fill="none" stroke="${k}" stroke-width=".75" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`; };
   let pickersReady = false;
   function buildPickers() {
     if (pickersReady) return; pickersReady = true;
@@ -809,7 +834,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
           b.innerHTML = prev(k) + `<span>${meta[k].name}</span>`;
           b.addEventListener('click', () => { pick(k); autosave(); });
           host.appendChild(b); } } };
-    mk($('#themepick'), THEME_GROUPS, THEME_META, k => themeSvg(THEMES[k]), pickTheme);
+    mk($('#themepick'), THEME_GROUPS, THEME_META, k => (THEMES[k].ink ? inkThemeSvg : themeSvg)(THEMES[k]), pickTheme);
     mk($('#fontpick'), FONT_GROUPS, FONT_META, k => `<span class="fp" style="font-family:${FONTS[k].css.replace(/"/g, '&quot;')}, Arial, sans-serif">Tour</span>`, applyFont);
     syncPickers();
   }
