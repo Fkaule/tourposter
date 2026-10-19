@@ -54,6 +54,7 @@ aside h1 { margin:0; font-size:21px; font-weight:900; letter-spacing:-.035em; li
 .row input { width:100%; box-sizing:border-box; background:transparent; border:0; border-bottom:1px solid #2c4258; color:var(--text); font:12px Montserrat, Arial, sans-serif; padding:2px 0; }
 .row .meta { font-size:10px; color:var(--muted); }
 .row .meta a { color:var(--accent); font-weight:600; }
+.row .meta .dpi { font-weight:600; } .row .meta .dpi.warn { color:#d9a441; } .row .meta .dpi.bad { color:#e5604e; }
 .row .psearch { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
 .row .psearch input { flex:1; min-width:120px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 8px; font:inherit; font-size:12px; }
 .row .psearch button.fine { background:var(--panel2); color:var(--text); border:1px solid var(--line); }
@@ -1745,31 +1746,55 @@ main { position:relative; overflow:hidden; background:#08111a; }
     const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .93)); if (!blob) throw new Error('JPEG-Umwandlung fehlgeschlagen');
     say(''); return new File([blob], f.name, { type: 'image/jpeg', lastModified: f.lastModified }); }
   async function addPhotos(files) {
-    const added = [];
+    const added = [], replaced = [], dup = [];
     for (let f of files) {
       if (/\.json$/i.test(f.name)) { await loadJsonFile(f); continue; }
       if (!f.type.startsWith('image/') && !/\.(heic|heif)$/i.test(f.name)) continue;
       const known = state.photos.find(p => p.name === f.name && !originals.has(p.id));
-      if (known) { try { f = await decodable(f); } catch (e) { say(`${f.name}: ${e.message}`, 'err'); continue; } originals.set(known.id, f); idb.put(known.id, f).catch(() => {}); known.url = URL.createObjectURL(f); known.thumb = await thumb(known.url); continue; }   // Original zu geladenem Layout nachreichen
+      if (known) { try { f = await decodable(f); } catch (e) { say(`${f.name}: ${e.message}`, 'err'); continue; } originals.set(known.id, f); idb.put(known.id, f).catch(() => {}); known.url = URL.createObjectURL(f); known.thumb = await thumb(known.url); delete known.pw; continue; }   // Original zu geladenem Layout nachreichen
       const id = Math.random().toString(36).slice(2, 9); let lat = null, lon = null, date = null;
       try { const g = await exifr.gps(f); if (g && g.latitude != null) { lat = g.latitude; lon = g.longitude; } } catch (e) {}
       try { const ex = await exifr.parse(f, { pick: ['DateTimeOriginal', 'CreateDate'] }); const d = ex?.DateTimeOriginal || ex?.CreateDate; if (d) date = new Date(d).toISOString(); } catch (e) {}
       try { f = await decodable(f); } catch (e) { say(`${f.name}: ${e.message}`, 'err'); continue; }
-      const url = URL.createObjectURL(f); originals.set(id, f); idb.put(id, f).catch(() => {});
-      const dims = await new Promise(r => { const im = new Image(); im.onload = () => r([im.naturalWidth, im.naturalHeight]); im.onerror = () => r([3, 4]); im.src = url; });
+      const url = URL.createObjectURL(f);
+      const dims = await imgDims(url) || [3, 4];
+      // Dasselbe Foto (gleiche Aufnahmesekunde) ist schon da – z. B. erst die 1024-px-Vorschau aus der Fotos-App, jetzt das Original:
+      // höher aufgelöste Datei ersetzt das Original, Layout/Ausschnitt/Text bleiben; gleich oder kleiner → Duplikat, wird übersprungen
+      const same = date && state.photos.find(p => p.date && !added.includes(p.id) && Math.abs(new Date(p.date) - new Date(date)) < 1000);
+      if (same) { if (dims[0] * dims[1] > (same.pw || 0) * (same.ph || 0)) { originals.set(same.id, f); idb.put(same.id, f).catch(() => {}); same.url = url; same.thumb = await thumb(url); same.pw = dims[0]; same.ph = dims[1]; same.name = f.name; hiUrl.delete(same.id); replaced.push(same); }
+        else dup.push(same); continue; }
+      originals.set(id, f); idb.put(id, f).catch(() => {});
       const slots = state.format === 'landscape' ? SLOTS_L : SLOTS_P;
       const used = state.photos.map(p => p.x + ',' + p.y); const slot = slots.find(s => !used.includes(s[0] + ',' + s[1])) || [400, 600, 232, 310];
       // Kachel im echten Seitenverhältnis des Fotos (kein Anschnitt), Fläche wie ein 232×310-Slot; extreme Formate (Panorama, 9:16) auf 1:2 … 2:1 begrenzt
       const ar = Math.min(2, Math.max(.5, dims[0] / dims[1])); const A = 232 * 310; const size = [Math.round(Math.sqrt(A * ar)), Math.round(Math.sqrt(A / ar))];
-      state.photos.push({ id, name: f.name, x: slot[0], y: slot[1], w: size[0], h: size[1], ax: 50, ay: 50, lat, lon, date, url, thumb: await thumb(url) }); added.push(id);
+      state.photos.push({ id, name: f.name, x: slot[0], y: slot[1], w: size[0], h: size[1], ax: 50, ay: 50, lat, lon, date, url, thumb: await thumb(url), pw: dims[0], ph: dims[1] }); added.push(id);
     }
     const nt = placeByTime();
     if (nt) say(`${nt} Foto(s) ohne GPS über die Aufnahmezeit auf der Route verortet.`, 'ok');
+    if (replaced.length) say(`${replaced.length} Foto(s) durch die höher aufgelöste Datei ersetzt (${replaced.map(p => 'Nr. ' + p.num + ': ' + p.pw + ' × ' + p.ph + ' px').join(', ')}).`, 'ok');
+    else if (dup.length) say(`${dup.length} Foto(s) übersprungen – gleiche Aufnahme schon vorhanden (${dup.map(p => 'Nr. ' + p.num).join(', ')}).`);
     render();
     // Neue Fotos automatisch um die Route legen (bestehende bleiben, wo sie sind); ohne Ortsangabe erst nach „Ort setzen“ sinnvoll, dann trotzdem frei platziert
     if (added.length && autoOn() && map && state.stages.length) { await new Promise(r => setTimeout(r, 50)); autoLayout(null, { quiet: true, allowZoom: true }); }
   }
   function thumb(url) { return new Promise(r => { const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); const s = 360 / Math.max(im.width, im.height); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); r(c.toDataURL('image/jpeg', .72)); }; im.onerror = () => r(''); im.src = url; }); }
+  // Pixelmaße des Originals (pw/ph) – für die Auflösungsprüfung. Werden beim Hinzufügen gesetzt; bei geladenen
+  // Projekten nachträglich gemessen (einmal pro Foto, danach ein render()).
+  const imgDims = url => new Promise(r => { const im = new Image(); im.onload = () => r([im.naturalWidth, im.naturalHeight]); im.onerror = () => r(null); im.src = url; });
+  let dimsBusy = false;
+  async function fillDims() { if (dimsBusy) return; dimsBusy = true; let n = 0;
+    try { for (const p of state.photos) { if (p.pw || !p.url || !originals.has(p.id)) continue; const d = await imgDims(p.url); if (d) { p.pw = d[0]; p.ph = d[1]; n++; } } }
+    finally { dimsBusy = false; } if (n) render(); }
+  // Effektive Druckauflösung eines Fotos in dpi auf dem gewählten Papier (null, wenn unbekannt oder Bildschirmformat).
+  // Kachel deckt das Foto ab (cover) und ist um zoom vergrößert: Quellpixel pro Zoll = 1123 · 25,4 / (Maßstab · kurze Seite in mm).
+  function photoDpi(p) { if (!p.pw || !p.ph || isPx(state.paper)) return null; const pp = PAPER[state.paper] || PAPER.A3;
+    const s = Math.max(p.w / p.pw, p.h / p.ph) * (p.zoom ?? 1); return Math.round(1123 * 25.4 / (s * pp[0])); }
+  const DPI_WARN = 300, DPI_BAD = 200;   // unter 300 dpi wird das Foto im Druck hochskaliert (gelb), unter 200 dpi sichtbar unscharf (rot, Warnung vor dem Export)
+  const paperName = () => { const o = $('#paper').selectedOptions[0]; return o ? o.textContent.replace(/^[A-Z]\d · /, '') : state.paper; };
+  // Apple Fotos liefert beim Ziehen in den Browser oft nur die 1024-px-Vorschau (Dateiname …_1_105_c.jpeg) statt des Originals
+  const isApplePreview = name => /_1_10\d_[a-z]\.(jpe?g|heic)$/i.test(name || '');
+  const lowResPhotos = () => state.photos.map(p => [p, photoDpi(p)]).filter(([p, d]) => d != null && d < DPI_BAD);
   // Nummerierung: nach Aufnahmezeit. Fotos ohne Datum (z. B. Screenshots oder bearbeitete Bilder ohne EXIF)
   // werden über ihren Ort an der Route eingeordnet, nicht stumpf nach vorn gestellt.
   function renumber() {
@@ -1995,6 +2020,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
     catch (e) { if (!quotaWarned) { quotaWarned = true;   // sonst verspricht die App eine Sicherung, die nie stattfindet
       say('Die Sitzung passt nicht mehr in den Browser-Speicher – bitte über „Projekt sichern (.zip)“ sichern.', 'warn'); } } }, 1500); }
   function render() {
+    fillDims();
     renumber(); autosave();
     // Fokus im Bildunterschrift-Feld über den Neuaufbau retten
     const act = document.activeElement, focusRow = act && act.tagName === 'INPUT' && act.closest('.row.photo'); const focusId = focusRow ? focusRow.dataset.id : null, focusSel = focusRow ? act.selectionStart : 0;
@@ -2064,6 +2090,9 @@ main { position:relative; overflow:hidden; background:#08111a; }
       row.innerHTML = `<div class="n">${p.num}</div><img src="${p.thumb}"><div><input aria-label="Bildunterschrift"><div class="meta"></div></div><button title="Entfernen">×</button>`;
       row.querySelector('input').value = p.caption ?? autoCaption(p);
       row.querySelector('.meta').textContent = `${p.name} · ${p.lat != null ? p.lat.toFixed(3) + ', ' + p.lon.toFixed(3) + (p.timePos ? ' (aus der Aufnahmezeit)' : '') : 'kein GPS'}${originals.has(p.id) ? '' : ' · Original fehlt (für Export neu hinzufügen)'}`;
+      { const d = photoDpi(p); if (d != null) { const b = document.createElement('span'); b.className = 'dpi' + (d < DPI_BAD ? ' bad' : d < DPI_WARN ? ' warn' : ''); b.textContent = `${d} dpi`;
+          b.title = `${p.pw} × ${p.ph} px auf ${paperName()} → ${d} dpi` + (d < DPI_WARN ? ' – im Druck sichtbar unscharf' + (isApplePreview(p.name) ? '. Das ist nur die 1024-px-Vorschau aus der Fotos-App: dort „Ablage → Exportieren → Unverändertes Original exportieren“ und die Datei hier erneut hinzufügen (ersetzt sich automatisch über die Aufnahmezeit)' : '. Original in voller Auflösung hinzufügen (ersetzt sich automatisch über die Aufnahmezeit)') : ' – gut für den Druck');
+          row.querySelector('.meta').append(' · ', b); } }
       if (map) { const a = document.createElement('a'); a.href = '#'; a.textContent = setPosFor === p.id ? 'auf die Karte klicken …' : (p.lat != null ? ' Ort ändern' : ' Ort setzen'); a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); startSetPos(p); }); row.querySelector('.meta').append(' · ', a);
         const b2 = document.createElement('a'); b2.href = '#'; b2.textContent = searchFor === p.id ? 'Suche schließen' : 'Ort suchen'; b2.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); endSetPos(); searchFor = searchFor === p.id ? null : p.id; searchHits = null; render(); }); row.querySelector('.meta').append(' · ', b2);
         if (searchFor === p.id) { const box = document.createElement('div'); box.className = 'psearch'; box.innerHTML = `<input placeholder="Ort, Gipfel, Sehenswürdigkeit … nahe der Route"><button class="fine" title="Lädt die Detail-Kacheln (Zoom 14, alle POIs) rund um die bisherigen Treffer und den Kartenausschnitt">Genauer</button><div class="hits"></div>`;
@@ -3337,7 +3366,7 @@ main { position:relative; overflow:hidden; background:#08111a; }
       // Foto samt Farbabstimmung, Bildunterschrift und Nummer in eine Zwischenfläche zeichnen – dann ggf. ausgefranst maskieren
       const off = document.createElement('canvas'); off.width = Math.round(bw); off.height = Math.round(bh); const o = off.getContext('2d');
       const s = Math.max(bw / im.width, bh / im.height) * Math.max(1, p.zoom ?? 1); const iw = im.width * s, ih = im.height * s; const ox = -(iw - bw) * (p.ax ?? 50) / 100, oy = -(ih - bh) * (p.ay ?? 50) / 100;
-      o.drawImage(im, ox, oy, iw, ih);
+      o.imageSmoothingQuality = 'high'; o.drawImage(im, ox, oy, iw, ih);
       { const v = gradeVals(); if (v.sat < .999) { o.globalCompositeOperation = 'saturation'; o.globalAlpha = 1 - v.sat; o.fillStyle = '#808080'; o.fillRect(0, 0, bw, bh); }
         if (v.ta > 0) { o.globalCompositeOperation = 'soft-light'; o.globalAlpha = v.ta; o.fillStyle = v.tint; o.fillRect(0, 0, bw, bh); }
         if (v.con > 1.001) { o.globalCompositeOperation = 'overlay'; o.globalAlpha = (v.con - 1) * 2.5; o.drawImage(im, ox, oy, iw, ih); }
@@ -3421,8 +3450,10 @@ main { position:relative; overflow:hidden; background:#08111a; }
   // ------------------------------------------------------------ Projekt sichern (.zip) / Sitzung im Browser
   // Vor dem Export: fehlen Originale, erst warnen; zweiter Klick innerhalb von 15 s exportiert trotzdem (Vorschau 360 px)
   let exportForce = 0;
-  function exportOk() { const miss = missingOriginals(); if (!miss.length || Date.now() < exportForce) return true; exportForce = Date.now() + 15000;
-    say(`${miss.length} Foto(s) liegen nur als 360-px-Vorschau vor (${miss.map(p => p.name).join(', ')}) – im Druck unscharf. Originale über „Fotos“ erneut hinzufügen (Zuordnung per Dateiname) oder innerhalb von 15 s nochmal klicken, um trotzdem zu exportieren.`, 'err'); return false; }
+  function exportOk() { const miss = missingOriginals(), low = lowResPhotos(); if ((!miss.length && !low.length) || Date.now() < exportForce) return true; exportForce = Date.now() + 15000;
+    if (miss.length) say(`${miss.length} Foto(s) liegen nur als 360-px-Vorschau vor (${miss.map(p => p.name).join(', ')}) – im Druck unscharf. Originale über „Fotos“ erneut hinzufügen (Zuordnung per Dateiname) oder innerhalb von 15 s nochmal klicken, um trotzdem zu exportieren.`, 'err');
+    else say(`${low.length} Foto(s) haben für ${paperName()} zu wenig Auflösung (${low.map(([p, d]) => 'Nr. ' + p.num + ': ' + d + ' dpi, ' + p.pw + ' × ' + p.ph + ' px').join('; ')}).` + (low.some(([p]) => isApplePreview(p.name)) ? ' Das sind 1024-px-Vorschauen aus der Fotos-App – dort „Ablage → Exportieren → Unverändertes Original exportieren“ und die Dateien hier über „Fotos“ erneut hinzufügen; sie ersetzen sich automatisch über die Aufnahmezeit.' : ' Originale in voller Auflösung über „Fotos“ erneut hinzufügen – sie ersetzen sich automatisch über die Aufnahmezeit.') + ' Innerhalb von 15 s nochmal klicken, um trotzdem zu exportieren.', 'err');
+    return false; }
   const KEY = 'tourposter-proto';
   // Originale (Dateien in voller Auflösung) in IndexedDB – bleiben so über Neuladen/Browserstart erhalten
   const idb = { db: null,
