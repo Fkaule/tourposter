@@ -3416,7 +3416,16 @@ main { position:relative; overflow:hidden; background:#08111a; }
   function loadImg(src, big) { return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
   function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
   const fname = () => (state.title || 'Tourposter').replace(/\s+/g, '_').replace(/[^\wäöüÄÖÜß_-]/g, '');
-  $('#expng').addEventListener('click', async () => { if (!exportOk()) return; try { say('Rendert …'); const c = await renderPrint(); c.toBlob(b => { download(b, fname() + '_' + state.paper + '.png'); say('PNG gespeichert.', 'ok'); }, 'image/png'); } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
+  // Canvas -> Blob mit Zeitlimit; Safari liefert bei sehr großen Flächen (z. B. 40 × 60 cm = 33 MP) für PNG still null oder wirft
+  const canvasBlob = (c, type, q, ms = 120000) => new Promise(r => { let done = false; const fin = b => { if (!done) { done = true; r(b || null); } };
+    try { c.toBlob(fin, type, q); } catch (e) { console.warn('toBlob', e); fin(null); } setTimeout(() => fin(null), ms); });
+  $('#expng').addEventListener('click', async () => { if (!exportOk()) return; try { say('Rendert …'); const c = await renderPrint();
+    const mp = (c.width * c.height / 1e6).toFixed(0); say(`PNG wird kodiert (${c.width} × ${c.height} px, ${mp} MP) …`);
+    let b = await canvasBlob(c, 'image/png'), ext = 'png';
+    if (!b) { say('PNG war in diesem Browser nicht möglich (Bild zu groß) – speichert als JPEG mit 95 % …'); b = await canvasBlob(c, 'image/jpeg', .95); ext = 'jpg'; }
+    if (!b) throw new Error(`Bild konnte nicht kodiert werden (${c.width} × ${c.height} px ist für diesen Browser zu groß – kleineres Format wählen oder Chrome/Firefox nutzen)`);
+    download(b, fname() + '_' + state.paper + '.' + ext); say(ext === 'png' ? `PNG gespeichert (${(b.size / 1048576).toFixed(0)} MB).` : `Als JPEG gespeichert (${(b.size / 1048576).toFixed(0)} MB, 95 %) – PNG war für diesen Browser zu groß.`, 'ok');
+  } catch (e) { say('Fehler: ' + e.message, 'err'); console.error(e); } });
   // Webvariante: lange Kante 1600 px als JPEG – ein paar hundert Kilobyte statt vieler Megabyte.
   // Für Nachrichten, Mail und Web gedacht, zum Drucken taugt sie nicht.
   // Auf dem Handy bietet der Browser das Teilen-Menü an, sonst wird die Datei geladen.
